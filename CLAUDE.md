@@ -74,6 +74,40 @@ Popup 是标准的 Vue 3 单页挂载流程：
 
 Popup 专用样式应尽量靠近 popup entrypoint；只有确实需要跨扩展界面共享时再抽到共享位置。
 
+## 命名规范
+
+新增代码必须遵守以下规则；旧代码在修改时顺手修正同一作用域内明显不一致的命名，不做大面积无业务价值的重命名。
+
+### 文件与目录
+
+- 目录名统一小写；多词目录使用 `kebab-case`（如 `trade-translate`、`shared-utils`）
+- Vue 单文件组件使用 `PascalCase`（如 `TradeTranslatePanel.vue`、`BaseButton.vue`）
+- 普通 TypeScript 模块文件使用 `kebab-case`（如 `storage-bridge.ts`、`date-format.ts`）
+- Vue composables 使用 `useXxx.ts`（如 `useStorage.ts`）
+- WXT / 框架约定入口文件保留约定式命名（如 `background.ts`、`content.ts`、`main.ts`）
+- 配置文件遵循生态默认命名（如 `wxt.config.ts`、`tsconfig.json`）
+
+### Vue 组件与模板
+
+- 组件文件名与导入名使用 `PascalCase`
+- Vue 模板中组件标签使用 `kebab-case`（如 `<trade-translate-panel />`）
+- 自定义事件名使用 `kebab-case`（如 `item-click`、`update:model-value`）
+- 通用基础组件如有需要，使用 `Base` 前缀（如 `BaseButton.vue`）
+
+### TypeScript 标识符
+
+- 变量、函数、参数统一使用 `camelCase`（如 `redirectLocalStorageKey`、`getTradeDataKind`）
+- 布尔值优先使用可读前缀：`is` / `has` / `can` / `should`（如 `isEnabled`、`hasPermission`）
+- 事件处理函数使用 `handleXxx`（如 `handleClick`）
+- 工厂/转换函数使用动词前缀：`create` / `build` / `get` / `parse` / `to`（如 `createMessage`、`parseResponse`）
+- 类型别名、接口、类、枚举统一使用 `PascalCase`，不使用 `I` 前缀（如 `TradeDataKind`、`UserSettings`）
+- 缩写保持可读性：`userId`、`apiClient`、`baseUrl`；避免无语义缩写如 `cfg`、`tmpData2`
+
+### 常量
+
+- 模块级常量统一使用 `camelCase`（如 `logPrefix`、`translateDictionaryUrl`、`tradeDataPaths`）
+- 对象与数组常量保留 `camelCase + as const` 模式（如 `tradeDataPaths = { ... } as const`）
+
 ## 仓库文件中的 IDE 建议
 
 `README.md` 和 `.vscode/extensions.json` 建议使用 VS Code + Volar，以获得更好的 Vue 开发体验。

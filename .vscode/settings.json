@@ -1,0 +1,29 @@
+{
+	"editor.detectIndentation": false,
+	"editor.insertSpaces": false,
+	"editor.tabSize": 4,
+	"[typescript]": {
+		"editor.insertSpaces": false,
+		"editor.tabSize": 4
+	},
+	"[javascript]": {
+		"editor.insertSpaces": false,
+		"editor.tabSize": 4
+	},
+	"[vue]": {
+		"editor.insertSpaces": false,
+		"editor.tabSize": 4
+	},
+	"[json]": {
+		"editor.insertSpaces": false,
+		"editor.tabSize": 4
+	},
+	"[css]": {
+		"editor.insertSpaces": false,
+		"editor.tabSize": 4
+	},
+	"[html]": {
+		"editor.insertSpaces": false,
+		"editor.tabSize": 4
+	}
+}
