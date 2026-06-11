@@ -1,6 +1,4 @@
 import { type TranslateDictionary } from '@/src/translate-dictionary';
-import localTranslateDictionary from '@/assets/translate.json';
-import localTranslateMeta from '@/assets/translate-meta.json';
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
@@ -14,6 +12,8 @@ export const translateDictionaryUrl = 'https://zetaztt.github.io/poe2/translate.
 export const translateDictionaryMetaUrl = 'https://zetaztt.github.io/poe2/translate-meta.json';
 
 const translateDictionaryCacheKey = 'translateDictionaryCache';
+const localTranslateDictionaryPath = '/translate.json' as Parameters<typeof browser.runtime.getURL>[0];
+const localTranslateMetaPath = '/translate-meta.json' as Parameters<typeof browser.runtime.getURL>[0];
 
 interface TranslateMeta {
 	version: number;
@@ -23,6 +23,9 @@ interface CachedTranslateDictionary {
 	version: number;
 	dictionary: TranslateDictionary;
 }
+
+let localTranslateDictionaryPromise: Promise<TranslateDictionary | null> | null = null;
+let localTranslateMetaPromise: Promise<TranslateMeta | null> | null = null;
 
 export default defineBackground(() => {
 	console.debug('[poe2-extensions] background loaded.', { id: browser.runtime.id });
@@ -38,7 +41,7 @@ export default defineBackground(() => {
 async function fetchTranslateDictionary(
 	message: PoeTranslationFetchMessage,
 ): Promise<PoeTranslationFetchResultMessage | PoeTranslationFetchErrorMessage> {
-	let current = getLocalTranslateDictionary();
+	let current = await getLocalTranslateDictionary();
 	const cached = await getCachedTranslateDictionary();
 
 	if (cached) {
@@ -94,13 +97,49 @@ function getErrorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error ? error.message : fallback;
 }
 
-function getLocalTranslateDictionary(): CachedTranslateDictionary | null {
-	if (!isTranslateMeta(localTranslateMeta) || !isTranslateDictionary(localTranslateDictionary)) return null;
+async function getLocalTranslateDictionary(): Promise<CachedTranslateDictionary | null> {
+	const meta = await loadLocalTranslateMeta();
+	const dictionary = await loadLocalTranslateDictionary();
+	if (!meta || !dictionary) return null;
 
 	return {
-		version: localTranslateMeta.version,
-		dictionary: localTranslateDictionary,
+		version: meta.version,
+		dictionary,
 	};
+}
+
+function loadLocalTranslateMeta(): Promise<TranslateMeta | null> {
+	localTranslateMetaPromise ??= fetchLocalTranslateMeta();
+	return localTranslateMetaPromise;
+}
+
+async function fetchLocalTranslateMeta(): Promise<TranslateMeta | null> {
+	const meta = await fetchLocalJson(localTranslateMetaPath, '本地翻译字典版本读取失败');
+	return isTranslateMeta(meta) ? meta : null;
+}
+
+function loadLocalTranslateDictionary(): Promise<TranslateDictionary | null> {
+	localTranslateDictionaryPromise ??= fetchLocalTranslateDictionary();
+	return localTranslateDictionaryPromise;
+}
+
+async function fetchLocalTranslateDictionary(): Promise<TranslateDictionary | null> {
+	const dictionary = await fetchLocalJson(localTranslateDictionaryPath, '本地翻译字典读取失败');
+	return isTranslateDictionary(dictionary) ? dictionary : null;
+}
+
+async function fetchLocalJson(path: Parameters<typeof browser.runtime.getURL>[0], message: string): Promise<unknown> {
+	try {
+		const response = await fetch(browser.runtime.getURL(path), {
+			cache: 'no-store',
+		});
+
+		if (!response.ok) return null;
+		return await response.json();
+	} catch (error) {
+		console.warn(`[poe2-extensions] ${message}`, error);
+		return null;
+	}
 }
 
 async function getCachedTranslateDictionary(): Promise<CachedTranslateDictionary | null> {

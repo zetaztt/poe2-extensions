@@ -2,7 +2,8 @@ import crypto from "node:crypto";
 import fs from "fs";
 import { readAutoTranslateTexts, readManualTranslateTexts, readTexts } from "./utils";
 
-const translateMetaPath = "./assets/translate-meta.json";
+const translateMetaPath = "./public/translate-meta.json";
+const translateJsonPath = "./public/translate.json";
 
 interface TranslateMeta {
 	md5: string;
@@ -55,5 +56,5 @@ const md5 = crypto.createHash("md5").update(translateSortedJson).digest("hex");
 const previousTranslateMeta = readTranslateMeta();
 const version = previousTranslateMeta?.md5 === md5 ? previousTranslateMeta.version : Date.now();
 
-fs.writeFileSync("./assets/translate.json", translateJson)
+fs.writeFileSync(translateJsonPath, translateJson)
 writeTranslateMeta({ md5, version });
