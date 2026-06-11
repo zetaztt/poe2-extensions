@@ -1,5 +1,5 @@
-import { loadTranslateDictionary } from "../translate-dictionary";
-import { TradeStatConfig, TradeStatsGroup, Translated } from "./types";
+import { loadTranslateDictionary } from "../../translate-dictionary";
+import { TradeStatConfig, TradeStatsGroup, Translated } from "../types";
 
 export function observeItemElement() {
 	const itemObserver = new MutationObserver((mutations) => {

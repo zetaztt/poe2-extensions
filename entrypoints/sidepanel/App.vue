@@ -1,20 +1,32 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue';
-import { getTradeTranslateEnabled, setTradeTranslateEnabled } from '@/src/settings';
+import { getTradeItemCopyEnabled, getTradeTranslateEnabled, setTradeItemCopyEnabled, setTradeTranslateEnabled } from '@/src/settings';
+import { createTradeFeaturesUpdateMessage } from '@/src/trade/messages';
 
 const tradeTranslateEnabled = ref(false);
+const tradeItemCopyEnabled = ref(false);
 const isLoading = ref(true);
 const isSaving = ref(false);
 const statusText = ref('');
 
-const statusLabel = computed(() => tradeTranslateEnabled.value ? '已开启' : '已关闭');
+const statusLabel = computed(() => {
+	const translate = tradeTranslateEnabled.value ? '翻译已开启' : '翻译已关闭';
+	const itemCopy = tradeItemCopyEnabled.value ? '复制已开启' : '复制已关闭';
+	return `${translate}，${itemCopy}`;
+});
 
 onMounted(async () => {
-	tradeTranslateEnabled.value = await getTradeTranslateEnabled();
+	const [translateEnabled, itemCopyEnabled] = await Promise.all([
+		getTradeTranslateEnabled(),
+		getTradeItemCopyEnabled(),
+	]);
+
+	tradeTranslateEnabled.value = translateEnabled;
+	tradeItemCopyEnabled.value = itemCopyEnabled;
 	isLoading.value = false;
 });
 
-async function onToggle(event: Event): Promise<void> {
+async function onTranslateToggle(event: Event): Promise<void> {
 	const input = event.target as HTMLInputElement;
 	const nextValue = input.checked;
 	const previousValue = tradeTranslateEnabled.value;
@@ -36,6 +48,28 @@ async function onToggle(event: Event): Promise<void> {
 	}
 }
 
+async function onItemCopyToggle(event: Event): Promise<void> {
+	const input = event.target as HTMLInputElement;
+	const nextValue = input.checked;
+	const previousValue = tradeItemCopyEnabled.value;
+
+	tradeItemCopyEnabled.value = nextValue;
+	isSaving.value = true;
+	statusText.value = '';
+
+	try {
+		await setTradeItemCopyEnabled(nextValue);
+		const updated = await updateActiveTradeTabFeatures();
+		statusText.value = updated ? '设置已保存，trade2 页面已更新。' : '设置已保存，打开或刷新 trade2 页面后生效。';
+	} catch (error) {
+		tradeItemCopyEnabled.value = previousValue;
+		statusText.value = '设置保存失败，请稍后重试。';
+		console.error('[poe2-extensions] 复制物品文本设置保存失败', error);
+	} finally {
+		isSaving.value = false;
+	}
+}
+
 async function reloadActiveTradeTab(): Promise<boolean> {
 	const [tab] = await browser.tabs.query({
 		active: true,
@@ -46,6 +80,26 @@ async function reloadActiveTradeTab(): Promise<boolean> {
 
 	await browser.tabs.reload(tab.id);
 	return true;
+}
+
+async function updateActiveTradeTabFeatures(): Promise<boolean> {
+	const [tab] = await browser.tabs.query({
+		active: true,
+		currentWindow: true,
+	});
+
+	if (!tab?.id || !isTrade2Url(tab.url)) return false;
+
+	try {
+		await browser.tabs.sendMessage(tab.id, createTradeFeaturesUpdateMessage({
+			translate: tradeTranslateEnabled.value,
+			itemCopy: tradeItemCopyEnabled.value,
+		}));
+		return true;
+	} catch (error) {
+		console.warn('[poe2-extensions] trade2 页面设置同步失败', error);
+		return false;
+	}
 }
 
 function isTrade2Url(url: string | undefined): boolean {
@@ -79,13 +133,29 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeTranslateEnabled"
 					:disabled="isLoading || isSaving"
-					@change="onToggle"
+					@change="onTranslateToggle"
+				>
+				<span class="switch" aria-hidden="true"></span>
+			</label>
+
+			<label class="setting-row">
+				<span>
+					<span class="setting-title">复制物品文本</span>
+					<span class="setting-description">将 trade2 物品复制为 PoB 文本</span>
+				</span>
+
+				<input
+					class="switch-input"
+					type="checkbox"
+					:checked="tradeItemCopyEnabled"
+					:disabled="isLoading || isSaving"
+					@change="onItemCopyToggle"
 				>
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
 			<div class="status">
-				<span class="status-dot" :class="{ active: tradeTranslateEnabled }"></span>
+				<span class="status-dot" :class="{ active: tradeTranslateEnabled || tradeItemCopyEnabled }"></span>
 				<span>{{ isLoading ? '读取设置中' : statusLabel }}</span>
 			</div>
 
@@ -153,6 +223,10 @@ h2 {
 	justify-content: space-between;
 	gap: 16px;
 	cursor: pointer;
+}
+
+.setting-row + .setting-row {
+	margin-top: 14px;
 }
 
 .setting-title {

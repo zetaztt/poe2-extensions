@@ -1,3 +1,3 @@
-import { injextTrade } from '@/src/trade-translate/inject';
+import { injectTrade } from '@/src/trade/inject';
 
-export default defineUnlistedScript(injextTrade);
+export default defineUnlistedScript(injectTrade);

@@ -1,11 +1,11 @@
-import { logPrefix } from './trade-translate/utils';
+import { logPrefix } from './trade/utils';
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
 	PoeTranslationMessageType,
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationFetchResultMessage,
-} from './trade-translate/messages';
+} from './trade/translate/messages';
 
 export type TranslateDictionary = Record<string, string>;
 

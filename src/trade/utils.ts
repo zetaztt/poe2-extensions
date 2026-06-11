@@ -1,6 +1,6 @@
-import { TradeItemConfig, TradeItemUniqueConfig, type TradeSearchItem } from "./types";
+import type { TradeItemConfig, TradeItemUniqueConfig, TradeSearchItem } from "./types";
 
-export const logPrefix = '[poe2-extensions][translate]';
+export const logPrefix = '[poe2-extensions][trade]';
 
 export function isUniqueItem(item: TradeItemConfig): item is TradeItemUniqueConfig {
 	return Boolean('flags' in item && item.flags.unique);

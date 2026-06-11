@@ -1,6 +1,6 @@
-import { TradeFiltersDataResponse, TradeItemsDataResponse, TradeStatConfig, TradeStaticConfig, TradeStaticsDataResponse, TradeStatsResponse } from "@/src/trade-translate/types";
+import { TradeFiltersDataResponse, TradeItemsDataResponse, TradeStatConfig, TradeStaticConfig, TradeStaticsDataResponse, TradeStatsResponse } from "@/src/trade/types";
 import { readTexts, type TextData, writeTexts } from "./utils";
-import { isUniqueItem } from "@/src/trade-translate/utils";
+import { isUniqueItem } from "@/src/trade/utils";
 
 const poe2TwHref = "www.pathofexile.tw";
 const poe2Href = "www.pathofexile.com";

@@ -1,7 +1,7 @@
 import { proxy, XhrResponse } from 'ajax-hook';
-import { type TradeFiltersDataResponse, type TradeItemsDataResponse, type TradeStaticsDataResponse, type TradeStatsResponse, type Translated } from './types';
-import { loadTranslateDictionary, preloadTranslateDictionary, TranslateDictionary } from '../translate-dictionary';
-import { isUniqueItem } from './utils';
+import { type TradeFiltersDataResponse, type TradeItemsDataResponse, type TradeStaticsDataResponse, type TradeStatsResponse, type Translated } from '../types';
+import { loadTranslateDictionary, preloadTranslateDictionary, TranslateDictionary } from '../../translate-dictionary';
+import { isUniqueItem } from '../utils';
 
 export const tradeDataPaths = {
 	items: '/api/trade2/data/items',
@@ -20,7 +20,7 @@ export function getTradeDataKind(url: string): TradeDataKind | undefined {
 }
 
 export function isTradeDataUrl(url: string): boolean {
-	return getTradeDataKind(url) !== null;
+	return getTradeDataKind(url) !== undefined;
 }
 
 export async function processTradeData(response: XhrResponse) {

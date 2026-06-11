@@ -1,4 +1,4 @@
-import { logPrefix } from "./utils";
+import { logPrefix } from "../utils";
 import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./translate-data";
 import { observeItemElement } from "./item-element";
 
@@ -6,10 +6,11 @@ export const traditionalChineseScriptUrl = 'https://web.poecdn.com/js/translate.
 
 const scriptSelector = `script[src="${traditionalChineseScriptUrl}"]`;
 
-export function injextTrade() {
-	if ((document.querySelector('meta[property="og:site_name"') as HTMLMetaElement)?.content !== "Path of Exile") {
-		return;
-	}
+let installed = false;
+
+export function installTradeTranslate() {
+	if (installed) return;
+	installed = true;
 
 	injectTraditionalChineseScript();
 	installTranslateDataHook();

@@ -1,6 +1,6 @@
-import type { TranslateDictionary } from '../translate-dictionary';
+import type { TranslateDictionary } from '../../translate-dictionary';
 
-export const poeTranslationMessageSource = 'poe2-extensions:trade-translate';
+export const poeTranslationMessageSource = 'poe2-extensions:trade:translate';
 
 export const PoeTranslationMessageType = {
 	fetch: 'POE_TRANSLATION_FETCH',

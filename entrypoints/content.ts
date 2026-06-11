@@ -1,39 +1,56 @@
 import { injectScript } from 'wxt/utils/inject-script';
-import { getTradeTranslateEnabled } from '@/src/settings';
+import { getTradeItemCopyEnabled, getTradeTranslateEnabled } from '@/src/settings';
+import {
+	createTradeFeaturesUpdateMessage,
+	isPoeTradeMessage,
+	type TradeFeatures,
+} from '@/src/trade/messages';
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
 	PoeTranslationMessageType,
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationMessage,
-} from '@/src/trade-translate/messages';
+} from '@/src/trade/translate/messages';
 
 const backgroundResponseTimeoutMs = 15_000;
+
+let currentFeatures: TradeFeatures = {
+	translate: false,
+	itemCopy: false,
+};
 
 export default defineContentScript({
 	matches: ['https://www.pathofexile.com/trade2*'],
 	runAt: 'document_start',
 	main() {
-		void installTradeTranslation();
+		void installTrade();
 	},
 });
 
-async function installTradeTranslation(): Promise<void> {
-	if (!(await getTradeTranslateEnabled())) return;
+async function installTrade(): Promise<void> {
+	currentFeatures = {
+		translate: await getTradeTranslateEnabled(),
+		itemCopy: await getTradeItemCopyEnabled(),
+	};
 
 	installTranslationDictionaryBridge();
+	installTradeFeaturesBridge();
 
-	void injectScript('/injector.js', {
+	await injectScript('/injector.js', {
 		keepInDom: false,
 	}).catch((error) => {
-		console.error('[poe2-extensions][translate] 主世界脚本注入失败', error);
+		console.error('[poe2-extensions][trade] 主世界脚本注入失败', error);
 	});
+
+	postTradeFeaturesUpdate();
 }
 
 function installTranslationDictionaryBridge(): void {
 	window.addEventListener('message', async (event: MessageEvent<unknown>) => {
 		if (event.source !== window || !isPoeTranslationMessage(event.data)) return;
 		if (event.data.type !== PoeTranslationMessageType.fetch) return;
+		if (!currentFeatures.translate) return;
 
 		try {
 			const response = await sendRuntimeMessageWithTimeout(event.data);
@@ -42,6 +59,19 @@ function installTranslationDictionaryBridge(): void {
 			window.postMessage(createFetchErrorMessage(event.data.requestId, error), window.location.origin);
 		}
 	});
+}
+
+function installTradeFeaturesBridge(): void {
+	browser.runtime.onMessage.addListener((message: unknown) => {
+		if (!isPoeTradeMessage(message)) return;
+
+		currentFeatures = message.features;
+		postTradeFeaturesUpdate();
+	});
+}
+
+function postTradeFeaturesUpdate(): void {
+	window.postMessage(createTradeFeaturesUpdateMessage(currentFeatures), window.location.origin);
 }
 
 function sendRuntimeMessageWithTimeout(message: PoeTranslationMessage): Promise<PoeTranslationMessage> {

@@ -130,7 +130,19 @@ export interface TradeSearchItem {
 	identified?: boolean;
 	note?: string;
 	properties?: TradeSearchItemProperty[];
+	sockets?: TradeSearchItemSocket[];
+	socketedItems?: TradeSearchSocketedItem[];
+	notableProperties?: TradeSearchItemNotableProperty[];
+	implicitMods?: string[];
+	runeMods?: string[];
+	enchantMods?: string[];
+	fracturedMods?: string[];
 	explicitMods?: string[];
+	desecratedMods?: string[];
+	mutatedMods?: string[];
+	corrupted?: boolean;
+	unmetRequirements?: string[];
+	augmentedInfo?: string;
 	descrText?: string;
 	frameType?: number;
 	frameTypeId?: string;
@@ -145,6 +157,21 @@ export interface TradeSearchItemProperty {
 }
 
 export type TradeSearchItemPropertyValue = [string, number];
+
+export interface TradeSearchItemSocket {
+	group?: number;
+	attr?: string;
+	sColour?: string;
+}
+
+export interface TradeSearchSocketedItem {
+	frameType?: number;
+	baseType?: string;
+}
+
+export interface TradeSearchItemNotableProperty {
+	name: string;
+}
 
 export interface TradeSearchItemExtended {
 	mods?: Record<string, TradeSearchItemMod[]>;
@@ -186,4 +213,3 @@ declare global {
 		app?: TradeApp;
 	}
 }
-
