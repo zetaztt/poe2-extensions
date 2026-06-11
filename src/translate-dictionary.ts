@@ -7,8 +7,6 @@ import {
 	type PoeTranslationFetchResultMessage,
 } from './trade-translate/messages';
 
-export const translateDictionaryUrl = 'https://zetaztt.github.io/poe2/trade-translate-zh.json';
-
 export type TranslateDictionary = Record<string, string>;
 
 const dictionaryRequestTimeoutMs = 15_000;

@@ -1,4 +1,6 @@
-import { translateDictionaryUrl, type TranslateDictionary } from '@/src/translate-dictionary';
+import { type TranslateDictionary } from '@/src/translate-dictionary';
+import localTranslateDictionary from '@/assets/translate.json';
+import localTranslateMeta from '@/assets/translate-meta.json';
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
@@ -7,6 +9,20 @@ import {
 	type PoeTranslationFetchMessage,
 	type PoeTranslationFetchResultMessage,
 } from '@/src/trade-translate/messages';
+
+export const translateDictionaryUrl = 'https://zetaztt.github.io/poe2/translate.json';
+export const translateDictionaryMetaUrl = 'https://zetaztt.github.io/poe2/translate-meta.json';
+
+const translateDictionaryCacheKey = 'translateDictionaryCache';
+
+interface TranslateMeta {
+	version: number;
+}
+
+interface CachedTranslateDictionary {
+	version: number;
+	dictionary: TranslateDictionary;
+}
 
 export default defineBackground(() => {
 	console.debug('[poe2-extensions] background loaded.', { id: browser.runtime.id });
@@ -22,40 +38,38 @@ export default defineBackground(() => {
 async function fetchTranslateDictionary(
 	message: PoeTranslationFetchMessage,
 ): Promise<PoeTranslationFetchResultMessage | PoeTranslationFetchErrorMessage> {
-	try {
-		const response = await fetch(translateDictionaryUrl, {
-			cache: 'no-store',
-			headers: {
-				'Cache-Control': 'no-cache, no-store, must-revalidate',
-				Pragma: 'no-cache',
-				Expires: '0',
-			},
-		});
+	let current = getLocalTranslateDictionary();
+	const cached = await getCachedTranslateDictionary();
 
-		if (!response.ok) {
-			return createFetchErrorMessage(message.requestId, '翻译字典请求失败', response.status, response.statusText);
+	if (cached) {
+		if (!current || cached.version > current.version) {
+			current = cached;
+		} else {
+			await clearCachedTranslateDictionary();
 		}
-
-		let dictionary: unknown;
-		try {
-			dictionary = await response.json();
-		} catch (error) {
-			return createFetchErrorMessage(message.requestId, getErrorMessage(error, '翻译字典 JSON 解析失败'));
-		}
-
-		if (!isTranslateDictionary(dictionary)) {
-			return createFetchErrorMessage(message.requestId, '翻译字典 JSON 格式无效');
-		}
-
-		return {
-			source: poeTranslationMessageSource,
-			type: PoeTranslationMessageType.result,
-			requestId: message.requestId,
-			dictionary,
-		};
-	} catch (error) {
-		return createFetchErrorMessage(message.requestId, getErrorMessage(error, '翻译字典网络请求异常'));
 	}
+
+	if (!current) return createFetchErrorMessage(message.requestId, '本地翻译字典格式无效');
+
+	const remoteMeta = await fetchTranslateMeta();
+	if (remoteMeta && remoteMeta.version > current.version) {
+		const remoteDictionary = await fetchRemoteTranslateDictionary();
+
+		if (remoteDictionary) {
+			current = {
+				version: remoteMeta.version,
+				dictionary: remoteDictionary,
+			};
+			await cacheTranslateDictionary(current);
+		}
+	}
+
+	return {
+		source: poeTranslationMessageSource,
+		type: PoeTranslationMessageType.result,
+		requestId: message.requestId,
+		dictionary: current.dictionary,
+	};
 }
 
 function createFetchErrorMessage(
@@ -78,6 +92,87 @@ function createFetchErrorMessage(
 
 function getErrorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error ? error.message : fallback;
+}
+
+function getLocalTranslateDictionary(): CachedTranslateDictionary | null {
+	if (!isTranslateMeta(localTranslateMeta) || !isTranslateDictionary(localTranslateDictionary)) return null;
+
+	return {
+		version: localTranslateMeta.version,
+		dictionary: localTranslateDictionary,
+	};
+}
+
+async function getCachedTranslateDictionary(): Promise<CachedTranslateDictionary | null> {
+	try {
+		const values = await browser.storage.local.get(translateDictionaryCacheKey);
+		const cached = values[translateDictionaryCacheKey];
+
+		if (isCachedTranslateDictionary(cached)) return cached;
+
+		if (cached !== undefined) await clearCachedTranslateDictionary();
+		return null;
+	} catch (error) {
+		console.warn('[poe2-extensions] 翻译字典缓存读取失败', error);
+		return null;
+	}
+}
+
+async function cacheTranslateDictionary(cache: CachedTranslateDictionary): Promise<void> {
+	try {
+		await browser.storage.local.set({ [translateDictionaryCacheKey]: cache });
+	} catch (error) {
+		console.warn('[poe2-extensions] 翻译字典缓存写入失败', error);
+	}
+}
+
+async function clearCachedTranslateDictionary(): Promise<void> {
+	try {
+		await browser.storage.local.remove(translateDictionaryCacheKey);
+	} catch (error) {
+		console.warn('[poe2-extensions] 翻译字典缓存清理失败', error);
+	}
+}
+
+async function fetchTranslateMeta(): Promise<TranslateMeta | null> {
+	const meta = await fetchJson(translateDictionaryMetaUrl);
+	return isTranslateMeta(meta) ? meta : null;
+}
+
+async function fetchRemoteTranslateDictionary(): Promise<TranslateDictionary | null> {
+	const dictionary = await fetchJson(translateDictionaryUrl);
+	return isTranslateDictionary(dictionary) ? dictionary : null;
+}
+
+async function fetchJson(url: string): Promise<unknown> {
+	try {
+		const response = await fetch(url, {
+			cache: 'no-store',
+			headers: {
+				'Cache-Control': 'no-cache, no-store, must-revalidate',
+				Pragma: 'no-cache',
+				Expires: '0',
+			},
+		});
+
+		if (!response.ok) return null;
+		return await response.json();
+	} catch (error) {
+		console.warn('[poe2-extensions] 翻译字典远端请求失败', error);
+		return null;
+	}
+}
+
+function isTranslateMeta(value: unknown): value is TranslateMeta {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+	return typeof (value as TranslateMeta).version === 'number';
+}
+
+function isCachedTranslateDictionary(value: unknown): value is CachedTranslateDictionary {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+
+	const cache = value as CachedTranslateDictionary;
+	return typeof cache.version === 'number' && isTranslateDictionary(cache.dictionary);
 }
 
 function isTranslateDictionary(value: unknown): value is TranslateDictionary {

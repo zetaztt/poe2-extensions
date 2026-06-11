@@ -26,8 +26,8 @@ const features = [
 
 		<section class="card muted">
 			<h2>字典来源</h2>
-			<a href="https://zetaztt.github.io/poe2/trade-translate-zh.json" target="_blank">
-				trade-translate-zh.json
+			<a href="https://zetaztt.github.io/poe2/translate.json" target="_blank">
+				translate.json
 			</a>
 			<p>如果页面已在扩展安装前打开，请刷新 trade 页面以重新注入脚本。</p>
 		</section>

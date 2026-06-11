@@ -40,7 +40,7 @@ export interface TradeStatsGroup {
 	entries: TradeStatConfig[];
 }
 
-export interface TradeStatsRespone {
+export interface TradeStatsResponse {
 	result: TradeStatsGroup[];
 }
 
@@ -56,7 +56,7 @@ export interface TradeStaticsGroup {
 	entries: TradeStaticConfig[];
 }
 
-export interface TradeStaticsDataRespone {
+export interface TradeStaticsDataResponse {
 	result: TradeStaticsGroup[];
 }
 
@@ -83,7 +83,7 @@ export interface TradeFiltersGroup {
 	filters: FilterConfig[];
 }
 
-export interface TradeFiltersDataRespone {
+export interface TradeFiltersDataResponse {
 	result: TradeFiltersGroup[];
 }
 
@@ -110,3 +110,4 @@ declare global {
 export function isUniqueItem(item: TradeItemConfig): item is TradeItemUniqueConfig {
 	return Boolean('flags' in item && item.flags.unique);
 }
+

@@ -12,15 +12,23 @@
 		"zip": "wxt zip",
 		"zip:firefox": "wxt zip -b firefox",
 		"compile": "vue-tsc --noEmit",
-		"postinstall": "wxt prepare"
+		"postinstall": "wxt prepare && npx crawlee install-playwright-browsers",
+		"pull-translate": "tsx ./scripts/translate/pull-trade-texts.ts",
+		"auto-translate": "tsx ./scripts/translate/auto-translate.ts",
+		"build-translate": "tsx ./scripts/translate/build-translate.ts"
 	},
 	"dependencies": {
 		"ajax-hook": "^3.0.3",
+		"tsx": "^4.22.4",
 		"vue": "^3.5.29"
 	},
 	"devDependencies": {
 		"@types/jquery": "^3.5.32",
+		"@types/node": "^25.9.2",
 		"@wxt-dev/module-vue": "^1.0.3",
+		"crawlee": "^3.17.0",
+		"csv": "^6.5.1",
+		"playwright": "^1.60.0",
 		"typescript": "^5.9.3",
 		"vue-tsc": "^3.2.5",
 		"wxt": "^0.20.26"

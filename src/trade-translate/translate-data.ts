@@ -1,5 +1,5 @@
 import { proxy, XhrResponse } from 'ajax-hook';
-import { isUniqueItem, type TradeFiltersDataRespone, type TradeItemsDataResponse, type TradeStaticsDataRespone, type TradeStatsRespone, type Translated } from './types';
+import { isUniqueItem, type TradeFiltersDataResponse, type TradeItemsDataResponse, type TradeStaticsDataResponse, type TradeStatsResponse, type Translated } from './types';
 import { loadTranslateDictionary, preloadTranslateDictionary, TranslateDictionary } from '../translate-dictionary';
 
 export const tradeDataPaths = {
@@ -33,13 +33,13 @@ export async function processTradeData(response: XhrResponse) {
 			processItemsData(data as TradeItemsDataResponse, dictionary);
 			break;
 		case 'stats':
-			processStatsData(data as TradeStatsRespone, dictionary);
+			processStatsData(data as TradeStatsResponse, dictionary);
 			break;
 		case 'static':
-			processStaticData(data as TradeStaticsDataRespone, dictionary);
+			processStaticData(data as TradeStaticsDataResponse, dictionary);
 			break;
 		case 'filters':
-			processFilterData(data as TradeFiltersDataRespone, dictionary);
+			processFilterData(data as TradeFiltersDataResponse, dictionary);
 			break;
 	}
 
@@ -84,7 +84,7 @@ export function processItemsData(data: TradeItemsDataResponse, dictionary: Trans
 	}
 }
 
-export function processStatsData(data: TradeStatsRespone, dictionary: TranslateDictionary): void {
+export function processStatsData(data: TradeStatsResponse, dictionary: TranslateDictionary): void {
 	if (!Array.isArray(data.result)) return;
 
 	for (const group of data.result) {
@@ -107,7 +107,7 @@ export function processStatsData(data: TradeStatsRespone, dictionary: TranslateD
 	}
 }
 
-export function processStaticData(data: TradeStaticsDataRespone, dictionary: TranslateDictionary): void {
+export function processStaticData(data: TradeStaticsDataResponse, dictionary: TranslateDictionary): void {
 	if (!Array.isArray(data.result)) return;
 
 	for (const group of data.result) {
@@ -121,7 +121,7 @@ export function processStaticData(data: TradeStaticsDataRespone, dictionary: Tra
 	}
 }
 
-export function processFilterData(data: TradeFiltersDataRespone, dictionary: TranslateDictionary): void {
+export function processFilterData(data: TradeFiltersDataResponse, dictionary: TranslateDictionary): void {
 	if (!Array.isArray(data.result)) return;
 
 	for (const group of data.result) {

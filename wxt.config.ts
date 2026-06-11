@@ -11,7 +11,8 @@ export default defineConfig({
 			'https://web.poecdn.com/*',
 		],
 		"permissions": [
-			"scripting"
+			"scripting",
+			"storage"
 		],
 		web_accessible_resources: [
 			{
