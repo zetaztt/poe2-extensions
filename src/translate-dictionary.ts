@@ -1,4 +1,4 @@
-import { logPrefix } from './trade-translate/share';
+import { logPrefix } from './trade-translate/utils';
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,

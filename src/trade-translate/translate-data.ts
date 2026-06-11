@@ -1,6 +1,7 @@
 import { proxy, XhrResponse } from 'ajax-hook';
-import { isUniqueItem, type TradeFiltersDataResponse, type TradeItemsDataResponse, type TradeStaticsDataResponse, type TradeStatsResponse, type Translated } from './types';
+import { type TradeFiltersDataResponse, type TradeItemsDataResponse, type TradeStaticsDataResponse, type TradeStatsResponse, type Translated } from './types';
 import { loadTranslateDictionary, preloadTranslateDictionary, TranslateDictionary } from '../translate-dictionary';
+import { isUniqueItem } from './utils';
 
 export const tradeDataPaths = {
 	items: '/api/trade2/data/items',

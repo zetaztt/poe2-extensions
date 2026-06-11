@@ -1,4 +1,4 @@
-import { logPrefix } from "./share";
+import { logPrefix } from "./utils";
 
 export const redirectLocalStorageKeys = [
 	'lscache-trade2data',

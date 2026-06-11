@@ -1,4 +1,4 @@
-import { logPrefix } from "./share";
+import { logPrefix } from "./utils";
 import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./translate-data";
 import { observeItemElement } from "./item-element";
 

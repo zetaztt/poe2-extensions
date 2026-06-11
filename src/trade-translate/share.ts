@@ -1,1 +1,0 @@
-export const logPrefix = '[poe2-extensions][translate]';

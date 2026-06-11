@@ -110,30 +110,7 @@ export interface TradeSearchResult {
 }
 
 export interface TradeSearchResultEntry {
-	id: string;
-	listing: TradeSearchListing;
 	item: TradeSearchItem;
-}
-
-export interface TradeSearchListing {
-	method?: string;
-	indexed?: string;
-	stash?: {
-		name?: string;
-		x?: number;
-		y?: number;
-	};
-	price?: {
-		type?: string;
-		amount?: number;
-		currency?: string;
-	};
-	fee?: number;
-	account?: {
-		name?: string;
-		online?: null;
-	};
-	hideout_token?: string;
 }
 
 export interface TradeSearchItem {
@@ -210,6 +187,3 @@ declare global {
 	}
 }
 
-export function isUniqueItem(item: TradeItemConfig): item is TradeItemUniqueConfig {
-	return Boolean('flags' in item && item.flags.unique);
-}
