@@ -200,6 +200,10 @@ async function pullFilterTexts() {
 				setText(entryTextKey, entry.text, twEntry?.text);
 			}
 
+			if (entry.tip) {
+				setText(`${entryTextKey}/tip`, entry.tip, twEntry?.tip);
+			}
+
 			if (entry.option) {
 				for (const option of entry.option.options) {
 					const optionTextKey = `${entryTextKey}/${option.id}`;

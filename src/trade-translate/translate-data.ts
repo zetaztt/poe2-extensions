@@ -136,6 +136,10 @@ export function processFilterData(data: TradeFiltersDataResponse, dictionary: Tr
 				entry.text = dictionary[entry.text] ?? entry.text;
 			}
 
+			if (entry.tip) {
+				entry.tip = dictionary[entry.tip] ?? entry.tip;
+			}
+
 			if (entry.option?.options) {
 				for (const option of entry.option.options) {
 					option.text = dictionary[option.text] ?? option.text;
