@@ -44,7 +44,16 @@ async function translateItemElement(itemElement: HTMLElement) {
 	// const nodes = [];
 	let node: Text;
 	while (node = iterator.nextNode() as Text) {
-		node.textContent = dictionary[node.textContent] ?? node.textContent;
+		const text = node.textContent ?? "";
+
+		if (text.endsWith(": ")) {
+			const textWithoutSuffix = text.slice(0, -2);
+			const translatedText = dictionary[textWithoutSuffix];
+
+			node.textContent = translatedText ? `${translatedText}: ` : text;
+		} else {
+			node.textContent = dictionary[text] ?? text;
+		}
 	}
 
 	// console.log(nodes);
