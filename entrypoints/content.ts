@@ -1,4 +1,5 @@
 import { injectScript } from 'wxt/utils/inject-script';
+import { getTradeTranslateEnabled } from '@/src/settings';
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
@@ -13,15 +14,21 @@ export default defineContentScript({
 	matches: ['https://www.pathofexile.com/trade2*'],
 	runAt: 'document_start',
 	main() {
-		installTranslationDictionaryBridge();
-
-		void injectScript('/injector.js', {
-			keepInDom: false,
-		}).catch((error) => {
-			console.error('[poe2-extensions][translate] 主世界脚本注入失败', error);
-		});
+		void installTradeTranslation();
 	},
 });
+
+async function installTradeTranslation(): Promise<void> {
+	if (!(await getTradeTranslateEnabled())) return;
+
+	installTranslationDictionaryBridge();
+
+	void injectScript('/injector.js', {
+		keepInDom: false,
+	}).catch((error) => {
+		console.error('[poe2-extensions][translate] 主世界脚本注入失败', error);
+	});
+}
 
 function installTranslationDictionaryBridge(): void {
 	window.addEventListener('message', async (event: MessageEvent<unknown>) => {

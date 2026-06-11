@@ -13,19 +13,20 @@
 ## 技术栈
 
 - WXT：浏览器扩展工程、entrypoint 管理和构建。
-- Vue 3：popup 页面。
+- Vue 3：侧边栏页面。
 - TypeScript：扩展逻辑、注入脚本和翻译数据脚本。
-- Browser Extension APIs：`browser.runtime`、`browser.storage.local`、content script 通信。
+- Browser Extension APIs：`browser.runtime`、`browser.storage.local`、`browser.tabs`、Chrome Side Panel API、content script 通信。
 - Crawlee / Playwright：抓取或辅助生成翻译数据。
 - `csv`：读写翻译源数据。
 
 ## 目录说明
 
 - `entrypoints/`：WXT entrypoints。
-  - `background.ts`：background 逻辑，负责翻译字典的本地 fallback、缓存、远端版本检查和消息响应。
-  - `content.ts`：content script，运行在 trade2 页面，负责注入 `/injector.js` 并桥接页面消息与 background。
+  - `background.ts`：background 逻辑，负责侧边栏点击行为、翻译字典的本地 fallback、缓存、远端版本检查和消息响应。
+  - `content.ts`：content script，运行在 trade2 页面，负责读取中文翻译开关、注入 `/injector.js` 并桥接页面消息与 background。
   - `injector.unlisted.ts`：生成主世界注入脚本，实际调用 `src/trade-translate/inject.ts`。
-  - `popup/`：扩展 popup 的 Vue 页面和样式。
+  - `sidepanel/`：扩展侧边栏的 Vue 页面和样式，提供中文翻译开关。
+- `src/settings.ts`：全项目共享设置入口，目前包含默认关闭的 `tradeTranslateEnabled`。
 - `src/trade-translate/`：trade 中文化核心逻辑，包括消息类型、数据处理、DOM 处理、存储和共享常量。
 - `src/translate-dictionary.ts`：主世界脚本侧加载翻译字典的入口，通过 `window.postMessage` 请求 content/background。
 - `scripts/translate/`：翻译数据拉取、自动翻译和字典生成脚本。
@@ -49,13 +50,16 @@
 
 ## 扩展运行链路
 
-1. `entrypoints/content.ts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 运行。
-2. content script 安装 `window.postMessage` 桥接逻辑，并通过 WXT 的 `injectScript('/injector.js')` 注入主世界脚本。
-3. `entrypoints/injector.unlisted.ts` 调用 `injextTrade()`，在页面主世界安装 trade 数据 hook、DOM 观察和官方繁中脚本注入。
-4. 主世界脚本通过 `src/translate-dictionary.ts` 发出翻译字典请求。
-5. content script 将请求转发给 background。
-6. `entrypoints/background.ts` 在本地内置字典、`browser.storage.local` 缓存和远端 `https://zetaztt.github.io/poe2/` 字典之间选择可用的最新版本。
-7. 字典返回主世界脚本后，trade 数据和页面文本按命中字典进行中文化处理。
+1. `entrypoints/background.ts` 设置点击扩展图标打开侧边栏。
+2. `entrypoints/sidepanel/` 读取并写入 `src/settings.ts` 中的 `tradeTranslateEnabled`，该开关默认关闭；切换后会刷新当前活动的 trade2 标签页。
+3. `entrypoints/content.ts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 运行，并先读取 `tradeTranslateEnabled`。
+4. 如果中文翻译关闭，content script 不安装消息桥接，也不注入主世界脚本。
+5. 如果中文翻译开启，content script 安装 `window.postMessage` 桥接逻辑，并通过 WXT 的 `injectScript('/injector.js')` 注入主世界脚本。
+6. `entrypoints/injector.unlisted.ts` 调用 `injextTrade()`，在页面主世界安装 trade 数据 hook、DOM 观察和官方繁中脚本注入。
+7. 主世界脚本通过 `src/translate-dictionary.ts` 发出翻译字典请求。
+8. content script 将请求转发给 background。
+9. `entrypoints/background.ts` 在本地内置字典、`browser.storage.local` 缓存和远端 `https://zetaztt.github.io/poe2/` 字典之间选择可用的最新版本。
+10. 字典返回主世界脚本后，trade 数据和页面文本按命中字典进行中文化处理。
 
 ## 翻译数据流程
 
@@ -70,18 +74,21 @@
 ## 开发注意事项
 
 - 保持 WXT entrypoint 约定，不要绕过 `entrypoints/` 直接引入浏览器运行入口。
+- 新增功能设置应优先集中在 `src/settings.ts`，保持默认值、storage key 和读写函数可复用。
 - content script 与主世界脚本之间只能通过受控消息桥接；新增消息时同步更新类型守卫和消息类型定义。
 - background 返回的翻译字典必须经过结构校验，避免把无效远端或缓存数据传入页面。
 - 主世界 hook 会影响 trade2 页面运行时行为，修改 `src/trade-translate/` 时要尽量收窄影响范围。
+- 中文翻译开关默认关闭；修改注入链路时确认关闭状态不会注入官方繁中脚本、数据 hook 或 DOM 翻译逻辑。
 - 避免污染官方 trade2 本地缓存；涉及缓存 key 或 storage 改动时确认 `_zh` 隔离策略仍然有效。
 - 修改翻译数据时，优先改 CSV，再运行生成脚本更新 `assets/translate.json` 和 `assets/translate-meta.json`。
 - 项目当前没有专门测试框架；较大逻辑变更至少运行类型检查和构建。
 - 代码风格以现有文件为准：TypeScript 模块化、小范围类型守卫、中文日志和用户可见说明可以保留中文。
+- Git 提交日志使用中文，保持简短并说明核心变更。
 
 ## 验证建议
 
 - 文档或注释变更通常不需要运行测试。
 - TypeScript 或 Vue 逻辑变更后运行 `npm run compile`。
-- entrypoint、manifest、注入链路或构建相关改动后运行 `npm run build`。
+- entrypoint、manifest、侧边栏、注入链路或构建相关改动后运行 `npm run build`，确认 manifest 包含 `side_panel`、`sidePanel` 权限和 `action`，且没有 `action.default_popup`。
 - 翻译数据变更后运行 `npm run build-translate`，确认 `assets/translate.json` 与 `assets/translate-meta.json` 更新符合预期。
-- 涉及页面注入、hook、storage 或消息桥接的改动，建议在开发模式下手动打开 `https://www.pathofexile.com/trade2`，刷新页面并确认翻译效果、缓存隔离和控制台日志。
+- 涉及页面注入、hook、storage、侧边栏或消息桥接的改动，建议在开发模式下手动打开 `https://www.pathofexile.com/trade2`，确认默认关闭、侧边栏开关、自动刷新、翻译效果、缓存隔离和控制台日志。

@@ -29,6 +29,7 @@ let localTranslateMetaPromise: Promise<TranslateMeta | null> | null = null;
 
 export default defineBackground(() => {
 	console.debug('[poe2-extensions] background loaded.', { id: browser.runtime.id });
+	void enableSidePanelOnActionClick();
 
 	browser.runtime.onMessage.addListener((message: unknown) => {
 		if (!isPoeTranslationMessage(message)) return;
@@ -37,6 +38,38 @@ export default defineBackground(() => {
 		return fetchTranslateDictionary(message);
 	});
 });
+
+type ChromeSidePanelApi = {
+	setPanelBehavior?: (behavior: { openPanelOnActionClick: boolean }) => Promise<void> | void;
+	open?: (options: { windowId?: number }) => Promise<void> | void;
+};
+
+type ChromeActionApi = {
+	onClicked?: {
+		addListener: (listener: (tab: { windowId?: number }) => void) => void;
+	};
+};
+
+type ChromeApi = {
+	action?: ChromeActionApi;
+	sidePanel?: ChromeSidePanelApi;
+};
+
+async function enableSidePanelOnActionClick(): Promise<void> {
+	const chromeApi = (globalThis as typeof globalThis & { chrome?: ChromeApi }).chrome;
+
+	try {
+		await chromeApi?.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: true });
+	} catch (error) {
+		console.warn('[poe2-extensions] 侧边栏点击行为设置失败', error);
+	}
+
+	chromeApi?.action?.onClicked?.addListener((tab) => {
+		void Promise.resolve(chromeApi.sidePanel?.open?.({ windowId: tab.windowId })).catch((error) => {
+			console.warn('[poe2-extensions] 侧边栏打开失败', error);
+		});
+	});
+}
 
 async function fetchTranslateDictionary(
 	message: PoeTranslationFetchMessage,

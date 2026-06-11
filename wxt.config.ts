@@ -5,6 +5,9 @@ import * as path from "path";
 export default defineConfig({
 	modules: ['@wxt-dev/module-vue'],
 	manifest: {
+		action: {
+			default_title: 'POE2 Extensions',
+		},
 		host_permissions: [
 			'https://www.pathofexile.com/*',
 			'https://zetaztt.github.io/*',
@@ -12,7 +15,8 @@ export default defineConfig({
 		],
 		"permissions": [
 			"scripting",
-			"storage"
+			"storage",
+			"tabs"
 		],
 		web_accessible_resources: [
 			{
