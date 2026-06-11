@@ -3,9 +3,11 @@ export const defaultTradeTranslateEnabled = false;
 export const tradeItemCopyEnabledKey = 'tradeItemCopyEnabled';
 export const defaultTradeItemCopyEnabled = false;
 
+const settingsStorage = browser.storage.sync;
+
 export async function getTradeTranslateEnabled(): Promise<boolean> {
 	try {
-		const values = await browser.storage.local.get(tradeTranslateEnabledKey);
+		const values = await settingsStorage.get(tradeTranslateEnabledKey);
 		const value = values[tradeTranslateEnabledKey];
 
 		return typeof value === 'boolean' ? value : defaultTradeTranslateEnabled;
@@ -17,7 +19,7 @@ export async function getTradeTranslateEnabled(): Promise<boolean> {
 
 export async function getTradeItemCopyEnabled(): Promise<boolean> {
 	try {
-		const values = await browser.storage.local.get(tradeItemCopyEnabledKey);
+		const values = await settingsStorage.get(tradeItemCopyEnabledKey);
 		const value = values[tradeItemCopyEnabledKey];
 
 		return typeof value === 'boolean' ? value : defaultTradeItemCopyEnabled;
@@ -29,7 +31,7 @@ export async function getTradeItemCopyEnabled(): Promise<boolean> {
 
 export async function setTradeItemCopyEnabled(enabled: boolean): Promise<void> {
 	try {
-		await browser.storage.local.set({
+		await settingsStorage.set({
 			[tradeItemCopyEnabledKey]: enabled,
 		});
 	} catch (error) {
@@ -40,7 +42,7 @@ export async function setTradeItemCopyEnabled(enabled: boolean): Promise<void> {
 
 export async function setTradeTranslateEnabled(enabled: boolean): Promise<void> {
 	try {
-		await browser.storage.local.set({
+		await settingsStorage.set({
 			[tradeTranslateEnabledKey]: enabled,
 		});
 	} catch (error) {

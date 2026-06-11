@@ -15,7 +15,7 @@
 - WXT：浏览器扩展工程、entrypoint 管理和构建。
 - Vue 3：侧边栏页面。
 - TypeScript：扩展逻辑、注入脚本和翻译数据脚本。
-- Browser Extension APIs：`browser.runtime`、`browser.storage.local`、`browser.tabs`、Chrome Side Panel API、content script 通信。
+- Browser Extension APIs：`browser.runtime`、`browser.storage.local`、`browser.storage.sync`、`browser.tabs`、Chrome Side Panel API、content script 通信。
 - Crawlee / Playwright：抓取或辅助生成翻译数据。
 - `csv`：读写翻译源数据。
 
@@ -26,7 +26,7 @@
   - `content.ts`：content script，运行在 trade2 页面，负责读取中文翻译开关、注入 `/injector.js` 并桥接页面消息与 background。
   - `injector.unlisted.ts`：生成主世界注入脚本，实际调用 `src/trade/inject.ts`。
   - `sidepanel/`：扩展侧边栏的 Vue 页面和样式，提供中文翻译开关。
-- `src/settings.ts`：全项目共享设置入口，目前包含默认关闭的 `tradeTranslateEnabled`。
+- `src/settings.ts`：全项目云同步用户设置入口，目前包含默认关闭的 `tradeTranslateEnabled` 和 `tradeItemCopyEnabled`。
 - `src/trade/`：trade 页面主世界逻辑、通用类型和工具；`src/trade/translate/` 包含中文化核心逻辑。
 - `src/translate-dictionary.ts`：主世界脚本侧加载翻译字典的入口，通过 `window.postMessage` 请求 content/background。
 - `scripts/translate/`：翻译数据拉取、自动翻译和字典生成脚本。
@@ -51,7 +51,7 @@
 ## 扩展运行链路
 
 1. `entrypoints/background.ts` 设置点击扩展图标打开侧边栏。
-2. `entrypoints/sidepanel/` 读取并写入 `src/settings.ts` 中的 `tradeTranslateEnabled`，该开关默认关闭；切换后会刷新当前活动的 trade2 标签页。
+2. `entrypoints/sidepanel/` 读取并写入 `src/settings.ts` 中的云同步用户设置，开关默认关闭；切换后会刷新当前活动的 trade2 标签页。
 3. `entrypoints/content.ts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 运行，并先读取 `tradeTranslateEnabled`。
 4. 如果中文翻译关闭，content script 不安装消息桥接，也不注入主世界脚本。
 5. 如果中文翻译开启，content script 安装 `window.postMessage` 桥接逻辑，并通过 WXT 的 `injectScript('/injector.js')` 注入主世界脚本。
@@ -75,6 +75,7 @@
 
 - 保持 WXT entrypoint 约定，不要绕过 `entrypoints/` 直接引入浏览器运行入口。
 - 新增功能设置应优先集中在 `src/settings.ts`，保持默认值、storage key 和读写函数可复用。
+- 用户开关设置使用 `browser.storage.sync` 云同步；翻译字典缓存等大体积或临时数据继续使用 `browser.storage.local`。
 - content script 与主世界脚本之间只能通过受控消息桥接；新增消息时同步更新类型守卫和消息类型定义。
 - background 返回的翻译字典必须经过结构校验，避免把无效远端或缓存数据传入页面。
 - 主世界 hook 会影响 trade2 页面运行时行为，修改 `src/trade/` 时要尽量收窄影响范围。
