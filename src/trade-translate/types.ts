@@ -87,6 +87,108 @@ export interface TradeFiltersDataResponse {
 	result: TradeFiltersGroup[];
 }
 
+export interface TradeSearchesState {
+	transient: {
+		searches: TradeSearch[];
+	};
+}
+
+export interface TradeApp {
+	$store: TradeAppStore;
+}
+
+export interface TradeAppStore {
+	state: TradeSearchesState;
+}
+
+export interface TradeSearch {
+	results: TradeSearchResult[];
+}
+
+export interface TradeSearchResult {
+	items: Record<string, TradeSearchResultEntry>;
+}
+
+export interface TradeSearchResultEntry {
+	id: string;
+	listing: TradeSearchListing;
+	item: TradeSearchItem;
+}
+
+export interface TradeSearchListing {
+	method?: string;
+	indexed?: string;
+	stash?: {
+		name?: string;
+		x?: number;
+		y?: number;
+	};
+	price?: {
+		type?: string;
+		amount?: number;
+		currency?: string;
+	};
+	fee?: number;
+	account?: {
+		name?: string;
+		online?: null;
+	};
+	hideout_token?: string;
+}
+
+export interface TradeSearchItem {
+	realm?: string;
+	verified?: boolean;
+	w?: number;
+	h?: number;
+	icon?: string;
+	iconTierText?: string;
+	league?: string;
+	id: string;
+	name?: string;
+	typeLine?: string;
+	baseType?: string;
+	rarity?: string;
+	ilvl?: number;
+	identified?: boolean;
+	note?: string;
+	properties?: TradeSearchItemProperty[];
+	explicitMods?: string[];
+	descrText?: string;
+	frameType?: number;
+	frameTypeId?: string;
+	extended?: TradeSearchItemExtended;
+}
+
+export interface TradeSearchItemProperty {
+	name: string;
+	values?: TradeSearchItemPropertyValue[];
+	displayMode?: number;
+	type?: number;
+}
+
+export type TradeSearchItemPropertyValue = [string, number];
+
+export interface TradeSearchItemExtended {
+	mods?: Record<string, TradeSearchItemMod[]>;
+	hashes?: Record<string, TradeSearchItemHash[]>;
+}
+
+export interface TradeSearchItemMod {
+	name?: string;
+	tier?: string;
+	level?: number;
+	magnitudes?: TradeSearchItemModMagnitude[];
+}
+
+export interface TradeSearchItemModMagnitude {
+	hash?: string;
+	min?: string;
+	max?: string;
+}
+
+export type TradeSearchItemHash = [string, number[]];
+
 export interface ApiPluginsHookOptions {
 	on: "response",
 	hook: (response: Response) => void;
@@ -104,10 +206,10 @@ export interface PoePlugins {
 declare global {
 	interface Window {
 		poePlugins: PoePlugins;
+		app?: TradeApp;
 	}
 }
 
 export function isUniqueItem(item: TradeItemConfig): item is TradeItemUniqueConfig {
 	return Boolean('flags' in item && item.flags.unique);
 }
-
