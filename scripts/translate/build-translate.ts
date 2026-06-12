@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import fs from "fs";
 import { readAutoTranslateTexts, readManualTranslateTexts, readTexts } from "./utils";
 
-const translateMetaPath = "./public/translate-meta.json";
-const translateJsonPath = "./public/translate.json";
+const translateMetaPath = "./assets/translate-meta.json";
+const translateJsonPath = "./assets/translate.json";
 
 interface TranslateMeta {
 	md5: string;

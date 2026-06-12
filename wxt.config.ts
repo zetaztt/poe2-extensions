@@ -3,6 +3,8 @@ import * as path from "path";
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
+	srcDir: 'src',
+	publicDir: 'assets',
 	modules: ['@wxt-dev/module-vue'],
 	manifest: {
 		action: {

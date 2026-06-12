@@ -1,17 +1,17 @@
 import { injectScript } from 'wxt/utils/inject-script';
-import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from '@/src/settings';
+import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from '@/settings/settings';
 import {
 	createTradeFeaturesUpdateMessage,
 	isPoeTradeMessage,
 	type TradeFeatures,
-} from '@/src/trade/messages';
+} from '@/trade/messages';
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
 	PoeTranslationMessageType,
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationMessage,
-} from '@/src/trade/translate/messages';
+} from '@/trade/translate/messages';
 import {
 	createStatPresetErrorMessage,
 	createStatPresetResultMessage,
@@ -19,8 +19,8 @@ import {
 	isTradeStatPresetArray,
 	PoeStatPresetMessageType,
 	type PoeStatPresetRequestMessage,
-} from '@/src/trade/stat-preset/messages';
-import type { TradeStatPreset } from '@/src/trade/types';
+} from '@/trade/stat-preset/messages';
+import type { TradeStatPreset } from '@/trade/types';
 
 const backgroundResponseTimeoutMs = 15_000;
 const tradeStatPresetStorageKey = 'tradeStatPresets';

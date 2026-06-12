@@ -1,4 +1,4 @@
-import { type TranslateDictionary } from '@/src/translate-dictionary';
+import { type TranslateDictionary } from '@/translate-dictionary';
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
@@ -6,7 +6,7 @@ import {
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationFetchMessage,
 	type PoeTranslationFetchResultMessage,
-} from '@/src/trade/translate/messages';
+} from '@/trade/translate/messages';
 
 export const translateDictionaryUrl = 'https://zetaztt.github.io/poe2/translate.json';
 export const translateDictionaryMetaUrl = 'https://zetaztt.github.io/poe2/translate-meta.json';

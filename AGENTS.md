@@ -21,18 +21,19 @@
 
 ## 目录说明
 
-- `entrypoints/`：WXT entrypoints。
+- `src/entrypoints/`：WXT entrypoints。
   - `background.ts`：background 逻辑，负责侧边栏点击行为、翻译字典的本地 fallback、缓存、远端版本检查和消息响应。
   - `content.ts`：content script，运行在 trade2 页面，负责读取中文翻译开关、注入 `/injector.js` 并桥接页面消息与 background。
   - `injector.unlisted.ts`：生成主世界注入脚本，实际调用 `src/trade/inject.ts`。
   - `sidepanel/`：扩展侧边栏的 Vue 页面和样式，提供中文翻译开关。
-- `src/settings.ts`：全项目云同步用户设置入口，目前包含默认关闭的 `tradeTranslateEnabled` 和 `tradeItemCopyEnabled`。
+- `src/settings/settings.ts`：全项目云同步用户设置入口，目前包含默认关闭的 trade 功能开关。
+- `src/bookmarks/`：trade2 书签的数据类型、存储校验和增删改查业务逻辑。
+- `src/entrypoints/sidepanel/bookmarks/`、`src/entrypoints/sidepanel/settings/`：侧边栏对应功能的 Vue 页面和页面交互逻辑。
 - `src/trade/`：trade 页面主世界逻辑、通用类型和工具；`src/trade/translate/` 包含中文化核心逻辑。
 - `src/translate-dictionary.ts`：主世界脚本侧加载翻译字典的入口，通过 `window.postMessage` 请求 content/background。
 - `scripts/translate/`：翻译数据拉取、自动翻译和字典生成脚本。
 - `data/`：翻译源 CSV 数据。
-- `assets/`：扩展内置资源，包括生成的 `translate.json` 和 `translate-meta.json`。
-- `public/`：扩展图标等静态资源。
+- `assets/`：WXT `publicDir`，包含扩展图标以及生成的 `translate.json` 和 `translate-meta.json`，构建时原样复制到扩展输出目录。
 - `.wxt/`、`.output/`、`node_modules/`、`storage/`：本地生成或依赖目录，不应作为业务源码修改。
 
 ## 常用命令
@@ -50,15 +51,15 @@
 
 ## 扩展运行链路
 
-1. `entrypoints/background.ts` 设置点击扩展图标打开侧边栏。
-2. `entrypoints/sidepanel/` 读取并写入 `src/settings.ts` 中的云同步用户设置，开关默认关闭；切换后会刷新当前活动的 trade2 标签页。
-3. `entrypoints/content.ts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 运行，并先读取 `tradeTranslateEnabled`。
+1. `src/entrypoints/background.ts` 设置点击扩展图标打开侧边栏。
+2. `src/entrypoints/sidepanel/` 读取并写入 `src/settings/settings.ts` 中的云同步用户设置，开关默认关闭；切换后会刷新当前活动的 trade2 标签页。
+3. `src/entrypoints/content.ts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 运行，并先读取 `tradeTranslateEnabled`。
 4. 如果中文翻译关闭，content script 不安装消息桥接，也不注入主世界脚本。
 5. 如果中文翻译开启，content script 安装 `window.postMessage` 桥接逻辑，并通过 WXT 的 `injectScript('/injector.js')` 注入主世界脚本。
-6. `entrypoints/injector.unlisted.ts` 调用 `injectTrade()`，在页面主世界按开关安装 trade 功能。
+6. `src/entrypoints/injector.unlisted.ts` 调用 `injectTrade()`，在页面主世界按开关安装 trade 功能。
 7. 主世界脚本通过 `src/translate-dictionary.ts` 发出翻译字典请求。
 8. content script 将请求转发给 background。
-9. `entrypoints/background.ts` 在本地内置字典、`browser.storage.local` 缓存和远端 `https://zetaztt.github.io/poe2/` 字典之间选择可用的最新版本。
+9. `src/entrypoints/background.ts` 在本地内置字典、`browser.storage.local` 缓存和远端 `https://zetaztt.github.io/poe2/` 字典之间选择可用的最新版本。
 10. 字典返回主世界脚本后，trade 数据和页面文本按命中字典进行中文化处理。
 
 ## 翻译数据流程
@@ -73,8 +74,9 @@
 
 ## 开发注意事项
 
-- 保持 WXT entrypoint 约定，不要绕过 `entrypoints/` 直接引入浏览器运行入口。
-- 新增功能设置应优先集中在 `src/settings.ts`，保持默认值、storage key 和读写函数可复用。
+- 保持 WXT entrypoint 约定，不要绕过 `src/entrypoints/` 直接引入浏览器运行入口。
+- 新增功能设置应优先集中在 `src/settings/settings.ts`，保持默认值、storage key 和读写函数可复用。
+- sidepanel 的 Vue、DOM、拖拽、菜单和提示状态保留在对应页面目录；存储、校验和可复用业务操作放在 `src/bookmarks/`、`src/settings/` 等功能模块。
 - 用户开关设置使用 `browser.storage.sync` 云同步；翻译字典缓存等大体积或临时数据继续使用 `browser.storage.local`。
 - content script 与主世界脚本之间只能通过受控消息桥接；新增消息时同步更新类型守卫和消息类型定义。
 - background 返回的翻译字典必须经过结构校验，避免把无效远端或缓存数据传入页面。
