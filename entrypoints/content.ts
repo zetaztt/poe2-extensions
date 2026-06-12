@@ -1,5 +1,5 @@
 import { injectScript } from 'wxt/utils/inject-script';
-import { getTradeItemCopyEnabled, getTradeTranslateEnabled } from '@/src/settings';
+import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from '@/src/settings';
 import {
 	createTradeFeaturesUpdateMessage,
 	isPoeTradeMessage,
@@ -12,12 +12,23 @@ import {
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationMessage,
 } from '@/src/trade/translate/messages';
+import {
+	createStatPresetErrorMessage,
+	createStatPresetResultMessage,
+	isPoeStatPresetRequestMessage,
+	isTradeStatPresetArray,
+	PoeStatPresetMessageType,
+	type PoeStatPresetRequestMessage,
+} from '@/src/trade/stat-preset/messages';
+import type { TradeStatPreset } from '@/src/trade/types';
 
 const backgroundResponseTimeoutMs = 15_000;
+const tradeStatPresetStorageKey = 'tradeStatPresets';
 
 let currentFeatures: TradeFeatures = {
 	translate: false,
 	itemCopy: false,
+	statPreset: false,
 };
 
 export default defineContentScript({
@@ -32,9 +43,11 @@ async function installTrade(): Promise<void> {
 	currentFeatures = {
 		translate: await getTradeTranslateEnabled(),
 		itemCopy: await getTradeItemCopyEnabled(),
+		statPreset: await getTradeStatPresetEnabled(),
 	};
 
 	installTranslationDictionaryBridge();
+	installStatPresetStorageBridge();
 	installTradeFeaturesBridge();
 
 	await injectScript('/injector.js', {
@@ -44,6 +57,20 @@ async function installTrade(): Promise<void> {
 	});
 
 	postTradeFeaturesUpdate();
+}
+
+function installStatPresetStorageBridge(): void {
+	window.addEventListener('message', async (event: MessageEvent<unknown>) => {
+		if (event.source !== window || !isPoeStatPresetRequestMessage(event.data)) return;
+		if (!currentFeatures.statPreset) return;
+
+		try {
+			const presets = await handleStatPresetRequest(event.data);
+			window.postMessage(createStatPresetResultMessage(event.data.requestId, presets), window.location.origin);
+		} catch (error) {
+			window.postMessage(createStatPresetErrorMessage(event.data.requestId, error), window.location.origin);
+		}
+	});
 }
 
 function installTranslationDictionaryBridge(): void {
@@ -58,6 +85,55 @@ function installTranslationDictionaryBridge(): void {
 		} catch (error) {
 			window.postMessage(createFetchErrorMessage(event.data.requestId, error), window.location.origin);
 		}
+	});
+}
+
+async function handleStatPresetRequest(message: PoeStatPresetRequestMessage): Promise<TradeStatPreset[]> {
+	if (message.type === PoeStatPresetMessageType.list) {
+		return getStoredTradeStatPresets();
+	}
+
+	if (message.type === PoeStatPresetMessageType.save) {
+		const presets = await getStoredTradeStatPresets();
+		const nextPreset = {
+			name: message.preset.name.trim(),
+			query: message.preset.query,
+		};
+		if (!nextPreset.name) throw new Error('预设名称不能为空');
+
+		const existingIndex = presets.findIndex((preset) => preset.name === nextPreset.name);
+		if (existingIndex >= 0) {
+			presets[existingIndex] = nextPreset;
+		} else {
+			presets.push(nextPreset);
+		}
+
+		await setStoredTradeStatPresets(presets);
+		return presets;
+	}
+
+	const presets = await getStoredTradeStatPresets();
+	const nextPresets = presets.filter((preset) => preset.name !== message.name);
+	await setStoredTradeStatPresets(nextPresets);
+	return nextPresets;
+}
+
+async function getStoredTradeStatPresets(): Promise<TradeStatPreset[]> {
+	const values = await browser.storage.local.get(tradeStatPresetStorageKey);
+	const presets = values[tradeStatPresetStorageKey];
+
+	if (isTradeStatPresetArray(presets)) return presets;
+
+	if (presets !== undefined) {
+		await browser.storage.local.remove(tradeStatPresetStorageKey);
+	}
+
+	return [];
+}
+
+async function setStoredTradeStatPresets(presets: TradeStatPreset[]): Promise<void> {
+	await browser.storage.local.set({
+		[tradeStatPresetStorageKey]: presets,
 	});
 }
 

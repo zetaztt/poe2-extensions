@@ -9,6 +9,7 @@ const props = defineProps<{
 	isLoadingBookmarks: boolean;
 	tradeTranslateEnabled: boolean;
 	tradeItemCopyEnabled: boolean;
+	tradeStatPresetEnabled: boolean;
 	isLoadingSettings: boolean;
 	isSavingSettings: boolean;
 	settingsStatusText: string;
@@ -19,26 +20,33 @@ const emit = defineEmits<{
 	'open-folder-dialog': [];
 	'toggle-translate': [enabled: boolean];
 	'toggle-item-copy': [enabled: boolean];
+	'toggle-stat-preset': [enabled: boolean];
 }>();
 
 const statusLabel = computed(() => {
 	const translate = props.tradeTranslateEnabled ? '翻译已开启' : '翻译已关闭';
 	const itemCopy = props.tradeItemCopyEnabled ? '复制已开启' : '复制已关闭';
-	return `${translate}，${itemCopy}`;
+	const statPreset = props.tradeStatPresetEnabled ? '预设已开启' : '预设已关闭';
+	return `${translate}，${itemCopy}，${statPreset}`;
 });
 
 function formatPath(path: string[] | undefined): string {
 	return path?.length ? path.join(' / ') : '未选择';
 }
 
-function emitCheckbox(event: Event, type: 'translate' | 'itemCopy'): void {
+function emitCheckbox(event: Event, type: 'translate' | 'itemCopy' | 'statPreset'): void {
 	const input = event.target as HTMLInputElement;
 	if (type === 'translate') {
 		emit('toggle-translate', input.checked);
 		return;
 	}
 
-	emit('toggle-item-copy', input.checked);
+	if (type === 'itemCopy') {
+		emit('toggle-item-copy', input.checked);
+		return;
+	}
+
+	emit('toggle-stat-preset', input.checked);
 }
 </script>
 
@@ -109,8 +117,24 @@ function emitCheckbox(event: Event, type: 'translate' | 'itemCopy'): void {
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
+			<label class="setting-row">
+				<span>
+					<span class="setting-title">筛选预设保存</span>
+					<span class="setting-description">保存和复用 trade2 高级筛选 stat group</span>
+				</span>
+
+				<input
+					class="switch-input"
+					type="checkbox"
+					:checked="tradeStatPresetEnabled"
+					:disabled="isLoadingSettings || isSavingSettings"
+					@change="emitCheckbox($event, 'statPreset')"
+				>
+				<span class="switch" aria-hidden="true"></span>
+			</label>
+
 			<div class="status">
-				<span class="status-dot" :class="{ active: tradeTranslateEnabled || tradeItemCopyEnabled }"></span>
+				<span class="status-dot" :class="{ active: tradeTranslateEnabled || tradeItemCopyEnabled || tradeStatPresetEnabled }"></span>
 				<span>{{ isLoadingSettings ? '读取设置中' : statusLabel }}</span>
 			</div>
 

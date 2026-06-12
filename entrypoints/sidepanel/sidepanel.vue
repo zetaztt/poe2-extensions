@@ -1,6 +1,13 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { getTradeItemCopyEnabled, getTradeTranslateEnabled, setTradeItemCopyEnabled, setTradeTranslateEnabled } from '@/src/settings';
+import {
+	getTradeItemCopyEnabled,
+	getTradeStatPresetEnabled,
+	getTradeTranslateEnabled,
+	setTradeItemCopyEnabled,
+	setTradeStatPresetEnabled,
+	setTradeTranslateEnabled,
+} from '@/src/settings';
 import {
 	addCurrentTradeSearchBookmark,
 	getBookmarkFolderOptions,
@@ -24,6 +31,7 @@ type ActiveTab = 'bookmarks' | 'settings';
 const activeTab = ref<ActiveTab>('settings');
 const tradeTranslateEnabled = ref(false);
 const tradeItemCopyEnabled = ref(false);
+const tradeStatPresetEnabled = ref(false);
 const isLoadingSettings = ref(true);
 const isSavingSettings = ref(false);
 const settingsStatusText = ref('');
@@ -64,13 +72,15 @@ watch(activeTab, (tab) => {
 async function loadSettings(): Promise<void> {
 	isLoadingSettings.value = true;
 
-	const [translateEnabled, itemCopyEnabled] = await Promise.all([
+	const [translateEnabled, itemCopyEnabled, statPresetEnabled] = await Promise.all([
 		getTradeTranslateEnabled(),
 		getTradeItemCopyEnabled(),
+		getTradeStatPresetEnabled(),
 	]);
 
 	tradeTranslateEnabled.value = translateEnabled;
 	tradeItemCopyEnabled.value = itemCopyEnabled;
+	tradeStatPresetEnabled.value = statPresetEnabled;
 	isLoadingSettings.value = false;
 }
 
@@ -226,6 +236,26 @@ async function onItemCopyToggle(nextValue: boolean): Promise<void> {
 	}
 }
 
+async function onStatPresetToggle(nextValue: boolean): Promise<void> {
+	const previousValue = tradeStatPresetEnabled.value;
+
+	tradeStatPresetEnabled.value = nextValue;
+	isSavingSettings.value = true;
+	settingsStatusText.value = '';
+
+	try {
+		await setTradeStatPresetEnabled(nextValue);
+		const updated = await updateActiveTradeTabFeatures();
+		settingsStatusText.value = updated ? '设置已保存，trade2 页面已更新。' : '设置已保存，打开或刷新 trade2 页面后生效。';
+	} catch (error) {
+		tradeStatPresetEnabled.value = previousValue;
+		settingsStatusText.value = '设置保存失败，请稍后重试。';
+		console.error('[poe2-extensions] 筛选预设保存设置保存失败', error);
+	} finally {
+		isSavingSettings.value = false;
+	}
+}
+
 async function reloadActiveTradeTab(): Promise<boolean> {
 	const [tab] = await browser.tabs.query({
 		active: true,
@@ -250,6 +280,7 @@ async function updateActiveTradeTabFeatures(): Promise<boolean> {
 		await browser.tabs.sendMessage(tab.id, createTradeFeaturesUpdateMessage({
 			translate: tradeTranslateEnabled.value,
 			itemCopy: tradeItemCopyEnabled.value,
+			statPreset: tradeStatPresetEnabled.value,
 		}));
 		return true;
 	} catch (error) {
@@ -328,6 +359,7 @@ function formatPath(path: string[] | undefined): string {
 			:is-loading-bookmarks="isLoadingBookmarks"
 			:trade-translate-enabled="tradeTranslateEnabled"
 			:trade-item-copy-enabled="tradeItemCopyEnabled"
+			:trade-stat-preset-enabled="tradeStatPresetEnabled"
 			:is-loading-settings="isLoadingSettings"
 			:is-saving-settings="isSavingSettings"
 			:settings-status-text="settingsStatusText"
@@ -335,6 +367,7 @@ function formatPath(path: string[] | undefined): string {
 			@open-folder-dialog="openFolderDialog"
 			@toggle-translate="onTranslateToggle"
 			@toggle-item-copy="onItemCopyToggle"
+			@toggle-stat-preset="onStatPresetToggle"
 		/>
 
 		<BookmarkFolderDialog

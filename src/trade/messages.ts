@@ -7,6 +7,7 @@ export const PoeTradeMessageType = {
 export interface TradeFeatures {
 	translate: boolean;
 	itemCopy: boolean;
+	statPreset: boolean;
 }
 
 export type PoeTradeFeaturesUpdateMessage = {
@@ -40,6 +41,10 @@ export function isPoeTradeMessage(value: unknown): value is PoeTradeMessage {
 function isTradeFeatures(value: unknown): value is TradeFeatures {
 	if (typeof value !== 'object' || value === null) return false;
 
-	const features = value as { translate?: unknown; itemCopy?: unknown };
-	return typeof features.translate === 'boolean' && typeof features.itemCopy === 'boolean';
+	const features = value as { translate?: unknown; itemCopy?: unknown; statPreset?: unknown };
+	return (
+		typeof features.translate === 'boolean' &&
+		typeof features.itemCopy === 'boolean' &&
+		typeof features.statPreset === 'boolean'
+	);
 }

@@ -95,11 +95,26 @@ export interface TradeSearchesState {
 
 export interface TradeApp {
 	$store: TradeAppStore;
+	query?: TradeQueryState;
 }
 
 export interface TradeAppStore {
 	state: TradeSearchesState;
+	commit(type: 'pushStatGroup', payload: TradeStatPresetQuery): void;
 }
+
+export interface TradeQueryState {
+	query?: {
+		stats?: TradeStatPresetQuery[];
+	};
+}
+
+export interface TradeStatPreset {
+	name: string;
+	query: TradeStatPresetQuery;
+}
+
+export type TradeStatPresetQuery = Record<string, unknown>;
 
 export interface TradeSearch {
 	results: TradeSearchResult[];

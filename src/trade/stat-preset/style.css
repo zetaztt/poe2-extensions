@@ -1,0 +1,97 @@
+.poe2-extensions-stat-preset-save {
+	margin-left: 6px;
+}
+
+.poe2-extensions-stat-preset-picker {
+	display: block;
+	position: relative;
+	margin-top: 18px;
+}
+
+.poe2-extensions-stat-preset-picker .multiselect__option {
+	position: relative;
+	padding-right: 32px;
+}
+
+.poe2-extensions-stat-preset-delete {
+	position: absolute;
+	top: 50%;
+	right: 8px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #ff6f6f;
+	font: inherit;
+	line-height: 1;
+	cursor: pointer;
+	transform: translateY(-50%);
+}
+
+.poe2-extensions-stat-preset-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 1001;
+	display: grid;
+	place-items: center;
+	background: rgb(0 0 0 / 45%);
+}
+
+.poe2-extensions-stat-preset-modal[hidden] {
+	display: none;
+}
+
+.poe2-extensions-stat-preset-dialog {
+	box-sizing: border-box;
+	width: min(360px, calc(100vw - 32px));
+	padding: 18px;
+	border: 1px solid #c5a260;
+	border-radius: 6px;
+	background: #211a13;
+	color: #f4efe4;
+	box-shadow: 0 16px 40px rgb(0 0 0 / 45%);
+}
+
+.poe2-extensions-stat-preset-dialog h2 {
+	margin: 0 0 12px;
+	font-size: 16px;
+}
+
+.poe2-extensions-stat-preset-dialog input {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 34px;
+	padding: 6px 9px;
+	border: 1px solid #5c4c3a;
+	border-radius: 4px;
+	background: #15110c;
+	color: #f4efe4;
+}
+
+.poe2-extensions-stat-preset-message {
+	min-height: 18px;
+	margin: 8px 0 0;
+	color: #ffb36f;
+	font-size: 13px;
+}
+
+.poe2-extensions-stat-preset-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.poe2-extensions-stat-preset-actions button {
+	min-height: 30px;
+	padding: 0 12px;
+	border: 1px solid #d7a85f;
+	border-radius: 4px;
+	background: #6f5124;
+	color: #f4efe4;
+	cursor: pointer;
+}

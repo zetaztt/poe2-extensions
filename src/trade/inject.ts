@@ -1,10 +1,12 @@
 import { isPoeTradeMessage, type TradeFeatures } from './messages';
 import { setTradeItemCopyEnabled } from './item-copy/inject';
+import { setTradeStatPresetEnabled } from './stat-preset/inject';
 import { installTradeTranslate } from './translate/inject';
 
 let currentFeatures: TradeFeatures = {
 	translate: false,
 	itemCopy: false,
+	statPreset: false,
 };
 
 export function injectTrade(): void {
@@ -30,6 +32,7 @@ function applyTradeFeatures(features: TradeFeatures): void {
 	}
 
 	setTradeItemCopyEnabled(features.itemCopy);
+	setTradeStatPresetEnabled(features.statPreset);
 }
 
 export function getCurrentTradeFeatures(): TradeFeatures {
