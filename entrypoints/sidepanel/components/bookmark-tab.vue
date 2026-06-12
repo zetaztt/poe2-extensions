@@ -1,14 +1,15 @@
 <script lang="ts" setup>
-import { computed, ref, watch, type Directive } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Directive } from 'vue';
 import {
 	addCurrentTradeSearchBookmark,
 	createBookmarkFolder,
 	deleteBookmarkFolder,
 	deleteTradeBookmark,
+	moveBookmarkFolder,
+	moveTradeBookmark,
 	renameBookmarkFolder,
 	renameTradeBookmark,
 	replaceTradeBookmarkWithCurrentSearch,
-	type BookmarkFolderOption,
 	type TradeBookmarkGroup,
 	type TradeBookmarkItem,
 	type TradeBookmarkTreeNode,
@@ -19,11 +20,18 @@ type VisibleBookmarkFolder = TradeBookmarkTreeNode & {
 };
 
 type OpenMenu =
+	| { type: 'folder'; id: string; x?: number; y?: number }
+	| { type: 'bookmark'; id: string; x?: number; y?: number };
+
+type DragItem =
 	| { type: 'folder'; id: string }
 	| { type: 'bookmark'; id: string };
 
+type DropTarget =
+	| { type: 'folder'; id: string; position: 'before' | 'inside' | 'after' }
+	| { type: 'bookmark'; id: string; folderId: string; position: 'before' | 'after' };
+
 const props = defineProps<{
-	selectedFolder: BookmarkFolderOption;
 	bookmarkTree: TradeBookmarkTreeNode | null;
 	bookmarkGroups: TradeBookmarkGroup[];
 	bookmarkCount: number;
@@ -50,6 +58,8 @@ const localStatusText = ref('');
 const isLocalBusy = ref(false);
 const skipNextFolderRenameBlur = ref(false);
 const skipNextBookmarkRenameBlur = ref(false);
+const dragItem = ref<DragItem | null>(null);
+const dropTarget = ref<DropTarget | null>(null);
 
 const vFocus: Directive<HTMLInputElement> = {
 	mounted(element) {
@@ -82,8 +92,22 @@ watch(() => props.bookmarkTree, (tree) => {
 	expandedFolderIds.value = nextExpandedIds;
 }, { immediate: true });
 
+onMounted(() => {
+	document.addEventListener('click', closeMoreMenuOnOutsidePointer);
+	document.addEventListener('contextmenu', closeMoreMenuOnOutsidePointer);
+});
+
+onBeforeUnmount(() => {
+	document.removeEventListener('click', closeMoreMenuOnOutsidePointer);
+	document.removeEventListener('contextmenu', closeMoreMenuOnOutsidePointer);
+});
+
 function getFolderIndent(depth: number): string {
-	return `${Math.max(0, depth - 1) * 12}px`;
+	return `${Math.max(0, depth) * 8}px`;
+}
+
+function getBookmarkIndent(depth: number): string {
+	return `${Math.max(0, depth) * 8 + 22}px`;
 }
 
 function isFolderExpanded(folder: VisibleBookmarkFolder): boolean {
@@ -114,7 +138,7 @@ function onFolderDoubleClick(folder: VisibleBookmarkFolder): void {
 
 function toggleMoreMenu(menu: OpenMenu): void {
 	localStatusText.value = '';
-	if (openMenu.value?.type === menu.type && openMenu.value.id === menu.id) {
+	if (openMenu.value?.type === menu.type && openMenu.value.id === menu.id && menu.x === undefined) {
 		openMenu.value = null;
 		return;
 	}
@@ -124,6 +148,39 @@ function toggleMoreMenu(menu: OpenMenu): void {
 
 function closeMoreMenu(): void {
 	openMenu.value = null;
+}
+
+function closeMoreMenuOnOutsidePointer(event: MouseEvent): void {
+	if (!openMenu.value) return;
+
+	const target = event.target;
+	if (target instanceof HTMLElement && target.closest('.more-menu')) return;
+
+	closeMoreMenu();
+}
+
+function openContextMenu(event: MouseEvent, menu: OpenMenu): void {
+	if (isBusy.value) return;
+
+	event.preventDefault();
+	event.stopPropagation();
+	localStatusText.value = '';
+	openMenu.value = {
+		...menu,
+		x: event.clientX,
+		y: event.clientY,
+	};
+}
+
+function getMoreMenuStyle(menu: OpenMenu): Record<string, string> | undefined {
+	if (menu.x === undefined || menu.y === undefined) return undefined;
+
+	return {
+		position: 'fixed',
+		left: `${menu.x}px`,
+		top: `${menu.y}px`,
+		right: 'auto',
+	};
 }
 
 async function addCurrentSearchToFolder(folderId: string): Promise<void> {
@@ -366,6 +423,216 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	}
 }
 
+function onFolderDragStart(event: DragEvent, folder: VisibleBookmarkFolder): void {
+	if (isBusy.value || !folder.canModify || renamingFolderId.value === folder.id || isInteractiveDragSource(event)) {
+		event.preventDefault();
+		return;
+	}
+
+	dragItem.value = { type: 'folder', id: folder.id };
+	prepareDragEvent(event);
+	closeMoreMenu();
+}
+
+function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): void {
+	if (isBusy.value || renamingBookmarkId.value === bookmark.id || isInteractiveDragSource(event)) {
+		event.preventDefault();
+		return;
+	}
+
+	dragItem.value = { type: 'bookmark', id: bookmark.id };
+	prepareDragEvent(event);
+	closeMoreMenu();
+}
+
+function onFolderDragOver(event: DragEvent, folder: VisibleBookmarkFolder): void {
+	const target = getFolderDropTarget(event, folder);
+	if (!target) {
+		dropTarget.value = null;
+		return;
+	}
+
+	event.preventDefault();
+	event.stopPropagation();
+	dropTarget.value = target;
+	if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+}
+
+function onBookmarkDragOver(event: DragEvent, bookmark: TradeBookmarkItem): void {
+	const target = getBookmarkDropTarget(event, bookmark);
+	if (!target) {
+		dropTarget.value = null;
+		return;
+	}
+
+	event.preventDefault();
+	event.stopPropagation();
+	dropTarget.value = target;
+	if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+}
+
+async function onDrop(event: DragEvent): Promise<void> {
+	event.preventDefault();
+	event.stopPropagation();
+
+	const item = dragItem.value;
+	const target = dropTarget.value;
+	if (!item || !target || isBusy.value) {
+		clearDragState();
+		return;
+	}
+
+	isLocalBusy.value = true;
+	localStatusText.value = '';
+
+	try {
+		if (item.type === 'folder') {
+			const moveTarget = getFolderMoveTarget(item.id, target);
+			if (!moveTarget) return;
+
+			await moveBookmarkFolder(item.id, moveTarget.parentId, moveTarget.index);
+			if (target.type === 'folder' && target.position === 'inside') expandFolder(target.id);
+		} else {
+			const moveTarget = getBookmarkMoveTarget(item.id, target);
+			if (!moveTarget) return;
+
+			await moveTradeBookmark(item.id, moveTarget.folderId, moveTarget.index);
+			expandFolder(moveTarget.folderId);
+		}
+
+		emit('refresh');
+	} catch (error) {
+		localStatusText.value = error instanceof Error ? error.message : '移动失败，请稍后重试。';
+		console.error('[poe2-extensions] trade 书签拖拽移动失败', error);
+	} finally {
+		isLocalBusy.value = false;
+		clearDragState();
+	}
+}
+
+function onDragEnd(): void {
+	clearDragState();
+}
+
+function onPanelDragOver(event: DragEvent): void {
+	if (!dragItem.value) return;
+	event.preventDefault();
+}
+
+function onPanelDrop(event: DragEvent): void {
+	event.preventDefault();
+	clearDragState();
+}
+
+function getFolderDropClass(folder: VisibleBookmarkFolder): Record<string, boolean> {
+	return {
+		'dragging-source': dragItem.value?.type === 'folder' && dragItem.value.id === folder.id,
+		'drop-before': isFolderDropTarget(folder, 'before'),
+		'drop-inside': isFolderDropTarget(folder, 'inside'),
+		'drop-after': isFolderDropTarget(folder, 'after'),
+	};
+}
+
+function getBookmarkDropClass(bookmark: TradeBookmarkItem): Record<string, boolean> {
+	return {
+		'dragging-source': dragItem.value?.type === 'bookmark' && dragItem.value.id === bookmark.id,
+		'drop-before': isBookmarkDropTarget(bookmark, 'before'),
+		'drop-after': isBookmarkDropTarget(bookmark, 'after'),
+	};
+}
+
+function getFolderDropTarget(event: DragEvent, folder: VisibleBookmarkFolder): DropTarget | null {
+	const item = dragItem.value;
+	if (!item) return null;
+
+	if (item.type === 'bookmark') {
+		return { type: 'folder', id: folder.id, position: 'inside' };
+	}
+
+	if (item.id === folder.id || isFolderDescendant(item.id, folder.id)) return null;
+
+	const position = getRowDropPosition(event);
+	if (folder.displayDepth === 0) {
+		return { type: 'folder', id: folder.id, position: 'inside' };
+	}
+
+	return { type: 'folder', id: folder.id, position };
+}
+
+function getBookmarkDropTarget(event: DragEvent, bookmark: TradeBookmarkItem): DropTarget | null {
+	const item = dragItem.value;
+	if (!item || item.type !== 'bookmark' || item.id === bookmark.id || !bookmark.parentId) return null;
+
+	const position = getHalfDropPosition(event);
+	return {
+		type: 'bookmark',
+		id: bookmark.id,
+		folderId: bookmark.parentId,
+		position,
+	};
+}
+
+function getFolderMoveTarget(folderId: string, target: DropTarget): { parentId: string; index: number } | null {
+	if (target.type === 'bookmark') return null;
+
+	const tree = props.bookmarkTree;
+	if (!tree) return null;
+
+	if (target.position === 'inside') {
+		const targetFolder = findFolderInTree(tree, target.id);
+		if (!targetFolder) return null;
+		return {
+			parentId: targetFolder.id,
+			index: targetFolder.children.length,
+		};
+	}
+
+	const targetFolder = findFolderInTree(tree, target.id);
+	if (!targetFolder?.parentId) return null;
+	const parent = findFolderInTree(tree, targetFolder.parentId);
+	if (!parent) return null;
+
+	const targetIndex = parent.children.findIndex((folder) => folder.id === target.id);
+	if (targetIndex < 0) return null;
+
+	const index = target.position === 'after' ? targetIndex + 1 : targetIndex;
+	const currentIndex = parent.children.findIndex((folder) => folder.id === folderId);
+	if (currentIndex === index || currentIndex + 1 === index) return null;
+
+	return {
+		parentId: parent.id,
+		index,
+	};
+}
+
+function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folderId: string; index: number } | null {
+	const tree = props.bookmarkTree;
+	if (!tree) return null;
+
+	if (target.type === 'folder') {
+		const folder = findFolderInTree(tree, target.id);
+		if (!folder) return null;
+		return {
+			folderId: folder.id,
+			index: folder.bookmarks.length,
+		};
+	}
+
+	const folder = findFolderInTree(tree, target.folderId);
+	if (!folder) return null;
+	const targetIndex = folder.bookmarks.findIndex((bookmark) => bookmark.id === target.id);
+	if (targetIndex < 0) return null;
+
+	const index = target.position === 'after' ? targetIndex + 1 : targetIndex;
+	const currentIndex = folder.bookmarks.findIndex((bookmark) => bookmark.id === bookmarkId);
+	if (currentIndex === index || currentIndex + 1 === index) return null;
+
+	return {
+		folderId: folder.id,
+		index,
+	};
+}
+
 function clearFolderRename(): void {
 	renamingFolderId.value = '';
 	renamingFolderTitle.value = '';
@@ -374,6 +641,12 @@ function clearFolderRename(): void {
 function removeExpandedFolder(folderId: string): void {
 	const nextExpandedIds = new Set(expandedFolderIds.value);
 	nextExpandedIds.delete(folderId);
+	expandedFolderIds.value = nextExpandedIds;
+}
+
+function expandFolder(folderId: string): void {
+	const nextExpandedIds = new Set(expandedFolderIds.value);
+	nextExpandedIds.add(folderId);
 	expandedFolderIds.value = nextExpandedIds;
 }
 
@@ -401,6 +674,69 @@ function getAllFolderIds(node: TradeBookmarkTreeNode): string[] {
 		...node.children.flatMap(getAllFolderIds),
 	];
 }
+
+function findFolderInTree(node: TradeBookmarkTreeNode, folderId: string): TradeBookmarkTreeNode | null {
+	if (node.id === folderId) return node;
+
+	for (const child of node.children) {
+		const match = findFolderInTree(child, folderId);
+		if (match) return match;
+	}
+
+	return null;
+}
+
+function isFolderDescendant(parentFolderId: string, possibleDescendantId: string): boolean {
+	const tree = props.bookmarkTree;
+	const parent = tree ? findFolderInTree(tree, parentFolderId) : null;
+	return Boolean(parent && parent.id !== possibleDescendantId && findFolderInTree(parent, possibleDescendantId));
+}
+
+function getRowDropPosition(event: DragEvent): 'before' | 'inside' | 'after' {
+	const element = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+	if (!element) return 'inside';
+
+	const rect = element.getBoundingClientRect();
+	const offset = event.clientY - rect.top;
+	if (offset < rect.height / 3) return 'before';
+	if (offset > rect.height * 2 / 3) return 'after';
+	return 'inside';
+}
+
+function getHalfDropPosition(event: DragEvent): 'before' | 'after' {
+	const element = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+	if (!element) return 'after';
+
+	const rect = element.getBoundingClientRect();
+	return event.clientY - rect.top < rect.height / 2 ? 'before' : 'after';
+}
+
+function isFolderDropTarget(folder: VisibleBookmarkFolder, position: 'before' | 'inside' | 'after'): boolean {
+	const target = dropTarget.value;
+	return target?.type === 'folder' && target.id === folder.id && target.position === position;
+}
+
+function isBookmarkDropTarget(bookmark: TradeBookmarkItem, position: 'before' | 'after'): boolean {
+	const target = dropTarget.value;
+	return target?.type === 'bookmark' && target.id === bookmark.id && target.position === position;
+}
+
+function isInteractiveDragSource(event: DragEvent): boolean {
+	const target = event.target;
+	return target instanceof HTMLElement && Boolean(target.closest('button, input, textarea, select, .more-menu'));
+}
+
+function prepareDragEvent(event: DragEvent): void {
+	if (!event.dataTransfer) return;
+
+	event.dataTransfer.effectAllowed = 'move';
+	event.dataTransfer.setData('text/plain', 'poe2-trade-bookmark');
+}
+
+function clearDragState(): void {
+	dragItem.value = null;
+	dropTarget.value = null;
+}
 </script>
 
 <template>
@@ -413,6 +749,8 @@ function getAllFolderIds(node: TradeBookmarkTreeNode): string[] {
 			<section
 				v-else
 				class="panel bookmark-tree"
+				@dragover="onPanelDragOver"
+				@drop="onPanelDrop"
 			>
 				<div
 					v-for="folder in visibleBookmarkFolders"
@@ -421,8 +759,17 @@ function getAllFolderIds(node: TradeBookmarkTreeNode): string[] {
 				>
 					<div
 						class="folder-row"
-						:class="{ 'top-level': folder.displayDepth === 0 }"
+						:class="[
+							{ 'top-level': folder.displayDepth === 0 },
+							getFolderDropClass(folder),
+						]"
 						:style="{ paddingLeft: getFolderIndent(folder.displayDepth) }"
+						:draggable="folder.canModify && renamingFolderId !== folder.id && !isBusy"
+						@dragstart="onFolderDragStart($event, folder)"
+						@dragover="onFolderDragOver($event, folder)"
+						@drop="onDrop"
+						@dragend="onDragEnd"
+						@contextmenu="openContextMenu($event, { type: 'folder', id: folder.id })"
 					>
 						<button
 							v-if="folder.displayDepth > 0"
@@ -456,16 +803,6 @@ function getAllFolderIds(node: TradeBookmarkTreeNode): string[] {
 							{{ folder.title }}
 						</span>
 						<span class="folder-count">{{ folder.bookmarks.length }}</span>
-						<button
-							v-if="folder.displayDepth === 0"
-							class="row-action"
-							type="button"
-							:disabled="isLoadingBookmarks"
-							title="刷新书签"
-							@click.stop="emit('refresh')"
-						>
-							刷新
-						</button>
 						<button
 							class="row-action"
 							type="button"
@@ -508,6 +845,7 @@ function getAllFolderIds(node: TradeBookmarkTreeNode): string[] {
 							<div
 								v-if="openMenu?.type === 'folder' && openMenu.id === folder.id"
 								class="more-menu"
+								:style="getMoreMenuStyle(openMenu)"
 								@click.stop
 							>
 								<button type="button" @click="onCreateFolder(folder.id)">添加文件夹</button>
@@ -527,7 +865,14 @@ function getAllFolderIds(node: TradeBookmarkTreeNode): string[] {
 						v-show="isFolderExpanded(folder)"
 						:key="bookmark.id"
 						class="bookmark-item"
-						:style="{ marginLeft: getFolderIndent(folder.displayDepth) }"
+						:class="getBookmarkDropClass(bookmark)"
+						:style="{ marginLeft: getBookmarkIndent(folder.displayDepth) }"
+						:draggable="renamingBookmarkId !== bookmark.id && !isBusy"
+						@dragstart="onBookmarkDragStart($event, bookmark)"
+						@dragover="onBookmarkDragOver($event, bookmark)"
+						@drop="onDrop"
+						@dragend="onDragEnd"
+						@contextmenu="openContextMenu($event, { type: 'bookmark', id: bookmark.id })"
 					>
 						<button
 							v-if="renamingBookmarkId !== bookmark.id"
@@ -572,6 +917,7 @@ function getAllFolderIds(node: TradeBookmarkTreeNode): string[] {
 							<div
 								v-if="openMenu?.type === 'bookmark' && openMenu.id === bookmark.id"
 								class="more-menu"
+								:style="getMoreMenuStyle(openMenu)"
 								@click.stop
 							>
 								<button type="button" @click="onReplaceBookmark(bookmark)">用当前搜索替换</button>
@@ -643,6 +989,7 @@ p {
 }
 
 .folder-row {
+	position: relative;
 	display: grid;
 	grid-template-columns: 14px 16px minmax(0, 1fr) auto auto auto auto;
 	align-items: center;
@@ -654,11 +1001,38 @@ p {
 }
 
 .folder-row.top-level {
-	grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+	grid-template-columns: minmax(0, 1fr) auto auto auto;
 }
 
 .folder-row:hover {
 	background: #33271c;
+}
+
+.folder-row[draggable='true'],
+.bookmark-item[draggable='true'] {
+	cursor: grab;
+}
+
+.folder-row.dragging-source,
+.bookmark-item.dragging-source {
+	opacity: 0.48;
+}
+
+.folder-row.drop-inside {
+	outline: 1px solid #d7a85f;
+	background: #3d2f20;
+}
+
+.folder-row.drop-before,
+.folder-row.drop-after,
+.bookmark-item.drop-before,
+.bookmark-item.drop-after {
+	box-shadow: inset 0 2px 0 #d7a85f;
+}
+
+.folder-row.drop-after,
+.bookmark-item.drop-after {
+	box-shadow: inset 0 -2px 0 #d7a85f;
 }
 
 .tree-toggle,
@@ -747,7 +1121,7 @@ p {
 	position: absolute;
 	top: 30px;
 	right: 0;
-	z-index: 5;
+	z-index: 30;
 	min-width: 132px;
 	padding: 4px;
 	border: 1px solid #5c4c3a;
@@ -780,6 +1154,7 @@ p {
 }
 
 .bookmark-item {
+	position: relative;
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto auto;
 	align-items: center;

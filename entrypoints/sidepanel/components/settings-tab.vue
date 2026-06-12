@@ -1,12 +1,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue';
-import type { BookmarkFolderOption } from '@/src/trade/bookmarks';
 
 const props = defineProps<{
-	selectedFolder: BookmarkFolderOption | null;
-	folderMessage: string;
-	bookmarkStatusText: string;
-	isLoadingBookmarks: boolean;
 	tradeTranslateEnabled: boolean;
 	tradeItemCopyEnabled: boolean;
 	tradeStatPresetEnabled: boolean;
@@ -16,8 +11,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-	'refresh-bookmarks': [];
-	'open-folder-dialog': [];
 	'toggle-translate': [enabled: boolean];
 	'toggle-item-copy': [enabled: boolean];
 	'toggle-stat-preset': [enabled: boolean];
@@ -29,10 +22,6 @@ const statusLabel = computed(() => {
 	const statPreset = props.tradeStatPresetEnabled ? '预设已开启' : '预设已关闭';
 	return `${translate}，${itemCopy}，${statPreset}`;
 });
-
-function formatPath(path: string[] | undefined): string {
-	return path?.length ? path.join(' / ') : '未选择';
-}
 
 function emitCheckbox(event: Event, type: 'translate' | 'itemCopy' | 'statPreset'): void {
 	const input = event.target as HTMLInputElement;
@@ -52,38 +41,6 @@ function emitCheckbox(event: Event, type: 'translate' | 'itemCopy' | 'statPreset
 
 <template>
 	<section class="tab-content">
-		<section class="panel">
-			<div class="panel-header">
-				<div>
-					<h2>书签目录</h2>
-					<p class="setting-description">{{ selectedFolder ? formatPath(selectedFolder.path) : folderMessage }}</p>
-				</div>
-				<button
-					class="icon-button"
-					type="button"
-					title="刷新目录"
-					:disabled="isLoadingBookmarks"
-					@click="emit('refresh-bookmarks')"
-				>
-					↻
-				</button>
-			</div>
-
-			<div class="folder-setting">
-				<span class="folder-path">{{ selectedFolder ? formatPath(selectedFolder.path) : '未选择' }}</span>
-				<button
-					class="primary-button"
-					type="button"
-					:disabled="isLoadingBookmarks"
-					@click="emit('open-folder-dialog')"
-				>
-					更改目录
-				</button>
-			</div>
-
-			<p v-if="bookmarkStatusText" class="message">{{ bookmarkStatusText }}</p>
-		</section>
-
 		<section class="panel">
 			<label class="setting-row">
 				<span>
@@ -167,13 +124,6 @@ function emitCheckbox(event: Event, type: 'translate' | 'itemCopy' | 'statPreset
 	margin-top: 12px;
 }
 
-.panel-header {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	gap: 12px;
-}
-
 h2,
 p {
 	margin: 0;
@@ -194,51 +144,6 @@ h2 {
 	margin-top: 6px;
 	font-size: 13px;
 	line-height: 1.5;
-}
-
-.primary-button,
-.icon-button {
-	border: 1px solid #d7a85f;
-	border-radius: 6px;
-	background: #6f5124;
-	color: #f4efe4;
-	font: inherit;
-	cursor: pointer;
-}
-
-.primary-button {
-	min-height: 36px;
-	padding: 0 12px;
-	font-weight: 700;
-}
-
-.icon-button {
-	width: 32px;
-	height: 32px;
-	font-size: 18px;
-	line-height: 1;
-}
-
-.primary-button:disabled,
-.icon-button:disabled {
-	opacity: 0.6;
-	cursor: default;
-}
-
-.folder-setting {
-	display: grid;
-	grid-template-columns: 1fr auto;
-	align-items: center;
-	gap: 10px;
-	margin-top: 14px;
-}
-
-.folder-path {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	color: #f4efe4;
-	font-size: 13px;
 }
 
 .setting-row {

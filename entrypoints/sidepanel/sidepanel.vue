@@ -10,19 +10,13 @@ import {
 } from '@/src/settings';
 import {
 	addCurrentTradeSearchBookmark,
-	getBookmarkFolderOptions,
-	getSelectedTradeBookmarkFolder,
-	getTradeBookmarkGroups,
-	getTradeBookmarkTree,
+	getTradeBookmarkRootGroups,
+	getTradeBookmarkRootTree,
 	openTradeBookmark,
-	setSelectedTradeBookmarkFolder,
-	type BookmarkFolderOption,
-	type TradeBookmarkFolderSelection,
 	type TradeBookmarkGroup,
 	type TradeBookmarkTreeNode,
 } from '@/src/trade/bookmarks';
 import { createTradeFeaturesUpdateMessage } from '@/src/trade/messages';
-import BookmarkFolderDialog from './components/bookmark-folder-dialog.vue';
 import BookmarkTab from './components/bookmark-tab.vue';
 import SettingsTab from './components/settings-tab.vue';
 
@@ -36,27 +30,16 @@ const isLoadingSettings = ref(true);
 const isSavingSettings = ref(false);
 const settingsStatusText = ref('');
 
-const folderOptions = ref<BookmarkFolderOption[]>([]);
-const selectedFolder = ref<BookmarkFolderOption | null>(null);
-const folderSelection = ref<TradeBookmarkFolderSelection>({ status: 'none' });
 const bookmarkGroups = ref<TradeBookmarkGroup[]>([]);
 const bookmarkTree = ref<TradeBookmarkTreeNode | null>(null);
 const isLoadingBookmarks = ref(true);
 const isSavingBookmark = ref(false);
 const bookmarkStatusText = ref('');
-const selectedFolderId = ref('');
 const didInitializeBookmarks = ref(false);
-const isFolderDialogOpen = ref(false);
 
 const bookmarkCount = computed(() => (
 	bookmarkGroups.value.reduce((total, group) => total + group.bookmarks.length, 0)
 ));
-
-const folderMessage = computed(() => {
-	if (folderSelection.value.status === 'missing') return `同步的目录 ${formatPath(folderSelection.value.path)} 在当前设备未找到，请重新选择。`;
-	if (folderSelection.value.status === 'ambiguous') return `同步的目录 ${formatPath(folderSelection.value.path)} 有多个同名路径，请在当前设备重新选择。`;
-	return '请选择一个浏览器书签目录，用来保存和展示 trade2 搜索。';
-});
 
 onMounted(async () => {
 	await Promise.all([
@@ -89,34 +72,19 @@ async function loadBookmarks(): Promise<void> {
 	bookmarkStatusText.value = '';
 
 	try {
-		const [options, selection] = await Promise.all([
-			getBookmarkFolderOptions(),
-			getSelectedTradeBookmarkFolder(),
+		const [groups, tree] = await Promise.all([
+			getTradeBookmarkRootGroups(),
+			getTradeBookmarkRootTree(),
 		]);
 
-		folderOptions.value = options;
-		folderSelection.value = selection;
-		selectedFolder.value = selection.folder ?? null;
-		selectedFolderId.value = selection.folder?.id ?? '';
-
-		if (selection.folder) {
-			const [groups, tree] = await Promise.all([
-				getTradeBookmarkGroups(selection.folder.id),
-				getTradeBookmarkTree(selection.folder.id),
-			]);
-			bookmarkGroups.value = groups;
-			bookmarkTree.value = tree;
-			if (!didInitializeBookmarks.value) activeTab.value = 'bookmarks';
-		} else {
-			bookmarkGroups.value = [];
-			bookmarkTree.value = null;
-			activeTab.value = 'settings';
-		}
+		bookmarkGroups.value = groups;
+		bookmarkTree.value = tree;
+		if (!didInitializeBookmarks.value) activeTab.value = 'bookmarks';
 	} catch (error) {
 		bookmarkGroups.value = [];
 		bookmarkTree.value = null;
 		activeTab.value = 'settings';
-		bookmarkStatusText.value = '书签读取失败，请确认扩展已获得书签权限。';
+		bookmarkStatusText.value = '本地书签读取失败，请稍后重试。';
 		console.error('[poe2-extensions] trade 书签读取失败', error);
 	} finally {
 		didInitializeBookmarks.value = true;
@@ -124,46 +92,11 @@ async function loadBookmarks(): Promise<void> {
 	}
 }
 
-function openFolderDialog(): void {
-	isFolderDialogOpen.value = true;
-	bookmarkStatusText.value = '';
-}
-
-function closeFolderDialog(): void {
-	isFolderDialogOpen.value = false;
-}
-
-async function onFolderSelected(folderId: string): Promise<void> {
-	isLoadingBookmarks.value = true;
-	bookmarkStatusText.value = '';
-
-	try {
-		const folder = await setSelectedTradeBookmarkFolder(folderId);
-		selectedFolder.value = folder;
-		selectedFolderId.value = folder.id;
-		folderSelection.value = { status: 'selected', folder };
-		const [groups, tree] = await Promise.all([
-			getTradeBookmarkGroups(folder.id),
-			getTradeBookmarkTree(folder.id),
-		]);
-		bookmarkGroups.value = groups;
-		bookmarkTree.value = tree;
-		activeTab.value = 'bookmarks';
-		bookmarkStatusText.value = '书签目录已保存。';
-		closeFolderDialog();
-	} catch (error) {
-		bookmarkStatusText.value = '书签目录保存失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签目录保存失败', error);
-	} finally {
-		isLoadingBookmarks.value = false;
-	}
-}
-
 async function onAddCurrentSearch(folderId?: string): Promise<void> {
-	const rootFolderId = selectedFolder.value?.id;
+	const rootFolderId = bookmarkTree.value?.id;
 	const targetFolderId = folderId ?? rootFolderId;
 	if (!targetFolderId || !rootFolderId) {
-		bookmarkStatusText.value = '请先选择书签目录。';
+		bookmarkStatusText.value = '本地书签未加载，请稍后重试。';
 		return;
 	}
 
@@ -173,8 +106,8 @@ async function onAddCurrentSearch(folderId?: string): Promise<void> {
 	try {
 		await addCurrentTradeSearchBookmark(targetFolderId);
 		const [groups, tree] = await Promise.all([
-			getTradeBookmarkGroups(rootFolderId),
-			getTradeBookmarkTree(rootFolderId),
+			getTradeBookmarkRootGroups(),
+			getTradeBookmarkRootTree(),
 		]);
 		bookmarkGroups.value = groups;
 		bookmarkTree.value = tree;
@@ -290,7 +223,6 @@ async function updateActiveTradeTabFeatures(): Promise<boolean> {
 }
 
 function setActiveTab(tab: ActiveTab): void {
-	if (tab === 'bookmarks' && !selectedFolder.value) return;
 	activeTab.value = tab;
 }
 
@@ -305,9 +237,6 @@ function isTrade2Url(url: string | undefined): boolean {
 	}
 }
 
-function formatPath(path: string[] | undefined): string {
-	return path?.length ? path.join(' / ') : '未选择';
-}
 </script>
 
 <template>
@@ -317,9 +246,8 @@ function formatPath(path: string[] | undefined): string {
 			<h1>Trade 工具</h1>
 		</header>
 
-		<nav class="tabs" :class="{ single: !selectedFolder }" aria-label="侧边栏页面">
+		<nav class="tabs" aria-label="侧边栏页面">
 			<button
-				v-if="selectedFolder"
 				class="tab-button"
 				:class="{ active: activeTab === 'bookmarks' }"
 				type="button"
@@ -338,8 +266,7 @@ function formatPath(path: string[] | undefined): string {
 		</nav>
 
 		<BookmarkTab
-			v-if="activeTab === 'bookmarks' && selectedFolder"
-			:selected-folder="selectedFolder"
+			v-if="activeTab === 'bookmarks'"
 			:bookmark-tree="bookmarkTree"
 			:bookmark-groups="bookmarkGroups"
 			:bookmark-count="bookmarkCount"
@@ -353,28 +280,15 @@ function formatPath(path: string[] | undefined): string {
 
 		<SettingsTab
 			v-else
-			:selected-folder="selectedFolder"
-			:folder-message="folderMessage"
-			:bookmark-status-text="bookmarkStatusText"
-			:is-loading-bookmarks="isLoadingBookmarks"
 			:trade-translate-enabled="tradeTranslateEnabled"
 			:trade-item-copy-enabled="tradeItemCopyEnabled"
 			:trade-stat-preset-enabled="tradeStatPresetEnabled"
 			:is-loading-settings="isLoadingSettings"
 			:is-saving-settings="isSavingSettings"
 			:settings-status-text="settingsStatusText"
-			@refresh-bookmarks="loadBookmarks"
-			@open-folder-dialog="openFolderDialog"
 			@toggle-translate="onTranslateToggle"
 			@toggle-item-copy="onItemCopyToggle"
 			@toggle-stat-preset="onStatPresetToggle"
-		/>
-
-		<BookmarkFolderDialog
-			:open="isFolderDialogOpen"
-			:selected-folder="selectedFolder"
-			@close="closeFolderDialog"
-			@selected="onFolderSelected"
 		/>
 	</main>
 </template>
