@@ -14,6 +14,7 @@ export default defineConfig({
 			'https://web.poecdn.com/*',
 		],
 		"permissions": [
+			"bookmarks",
 			"scripting",
 			"storage",
 			"tabs"

@@ -2,8 +2,11 @@ export const tradeTranslateEnabledKey = 'tradeTranslateEnabled';
 export const defaultTradeTranslateEnabled = false;
 export const tradeItemCopyEnabledKey = 'tradeItemCopyEnabled';
 export const defaultTradeItemCopyEnabled = false;
+export const tradeBookmarkFolderIdKey = 'tradeBookmarkFolderId';
+export const tradeBookmarkFolderPathKey = 'tradeBookmarkFolderPath';
 
 const settingsStorage = browser.storage.sync;
+const localSettingsStorage = browser.storage.local;
 
 export async function getTradeTranslateEnabled(): Promise<boolean> {
 	try {
@@ -49,4 +52,62 @@ export async function setTradeTranslateEnabled(enabled: boolean): Promise<void> 
 		console.warn('[poe2-extensions] 中文翻译设置写入失败', error);
 		throw error;
 	}
+}
+
+export async function getTradeBookmarkFolderId(): Promise<string | null> {
+	try {
+		const values = await localSettingsStorage.get(tradeBookmarkFolderIdKey);
+		const value = values[tradeBookmarkFolderIdKey];
+
+		return typeof value === 'string' ? value : null;
+	} catch (error) {
+		console.warn('[poe2-extensions] trade 书签目录 ID 读取失败', error);
+		return null;
+	}
+}
+
+export async function setTradeBookmarkFolderId(folderId: string): Promise<void> {
+	try {
+		await localSettingsStorage.set({
+			[tradeBookmarkFolderIdKey]: folderId,
+		});
+	} catch (error) {
+		console.warn('[poe2-extensions] trade 书签目录 ID 写入失败', error);
+		throw error;
+	}
+}
+
+export async function clearTradeBookmarkFolderId(): Promise<void> {
+	try {
+		await localSettingsStorage.remove(tradeBookmarkFolderIdKey);
+	} catch (error) {
+		console.warn('[poe2-extensions] trade 书签目录 ID 清理失败', error);
+	}
+}
+
+export async function getTradeBookmarkFolderPath(): Promise<string[] | null> {
+	try {
+		const values = await settingsStorage.get(tradeBookmarkFolderPathKey);
+		const value = values[tradeBookmarkFolderPathKey];
+
+		return isStringArray(value) ? value : null;
+	} catch (error) {
+		console.warn('[poe2-extensions] trade 书签目录路径读取失败', error);
+		return null;
+	}
+}
+
+export async function setTradeBookmarkFolderPath(path: string[]): Promise<void> {
+	try {
+		await settingsStorage.set({
+			[tradeBookmarkFolderPathKey]: path,
+		});
+	} catch (error) {
+		console.warn('[poe2-extensions] trade 书签目录路径写入失败', error);
+		throw error;
+	}
+}
+
+function isStringArray(value: unknown): value is string[] {
+	return Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'string');
 }

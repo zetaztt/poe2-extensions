@@ -84,6 +84,7 @@
 - 修改翻译数据时，优先改 CSV，再运行生成脚本更新 `assets/translate.json` 和 `assets/translate-meta.json`。
 - 项目当前没有专门测试框架；较大逻辑变更至少运行类型检查和构建。
 - 代码风格以现有文件为准：TypeScript 模块化、小范围类型守卫、中文日志和用户可见说明可以保留中文。
+- 新增源码文件默认使用 `kebab-case` 命名，Vue 单文件组件也使用 `kebab-case.vue`；保留 WXT 约定文件名如 `injector.unlisted.ts`，历史文件除非本次改动涉及不强制批量重命名。
 - Git 提交日志使用中文，保持简短并说明核心变更。
 
 ## 验证建议
