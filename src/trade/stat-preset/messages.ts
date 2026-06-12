@@ -1,10 +1,11 @@
 import type { TradeStatPreset, TradeStatPresetQuery } from '../types';
 
-export const poeStatPresetMessageSource = 'poe2-extensions:trade-stat-preset';
+const poeStatPresetMessageSource = 'poe2-extensions:trade-stat-preset';
 
 export const PoeStatPresetMessageType = {
 	list: 'STAT_PRESET_LIST',
 	save: 'STAT_PRESET_SAVE',
+	rename: 'STAT_PRESET_RENAME',
 	delete: 'STAT_PRESET_DELETE',
 	result: 'STAT_PRESET_RESULT',
 	error: 'STAT_PRESET_ERROR',
@@ -16,26 +17,32 @@ interface PoeStatPresetBaseMessage {
 	requestId: string;
 }
 
-export interface PoeStatPresetListMessage extends PoeStatPresetBaseMessage {
+interface PoeStatPresetListMessage extends PoeStatPresetBaseMessage {
 	type: typeof PoeStatPresetMessageType.list;
 }
 
-export interface PoeStatPresetSaveMessage extends PoeStatPresetBaseMessage {
+interface PoeStatPresetSaveMessage extends PoeStatPresetBaseMessage {
 	type: typeof PoeStatPresetMessageType.save;
 	preset: TradeStatPreset;
 }
 
-export interface PoeStatPresetDeleteMessage extends PoeStatPresetBaseMessage {
+interface PoeStatPresetRenameMessage extends PoeStatPresetBaseMessage {
+	type: typeof PoeStatPresetMessageType.rename;
+	oldName: string;
+	newName: string;
+}
+
+interface PoeStatPresetDeleteMessage extends PoeStatPresetBaseMessage {
 	type: typeof PoeStatPresetMessageType.delete;
 	name: string;
 }
 
-export interface PoeStatPresetResultMessage extends PoeStatPresetBaseMessage {
+interface PoeStatPresetResultMessage extends PoeStatPresetBaseMessage {
 	type: typeof PoeStatPresetMessageType.result;
 	presets: TradeStatPreset[];
 }
 
-export interface PoeStatPresetErrorMessage extends PoeStatPresetBaseMessage {
+interface PoeStatPresetErrorMessage extends PoeStatPresetBaseMessage {
 	type: typeof PoeStatPresetMessageType.error;
 	error: {
 		message: string;
@@ -45,13 +52,12 @@ export interface PoeStatPresetErrorMessage extends PoeStatPresetBaseMessage {
 export type PoeStatPresetRequestMessage =
 	| PoeStatPresetListMessage
 	| PoeStatPresetSaveMessage
+	| PoeStatPresetRenameMessage
 	| PoeStatPresetDeleteMessage;
 
 export type PoeStatPresetResponseMessage =
 	| PoeStatPresetResultMessage
 	| PoeStatPresetErrorMessage;
-
-export type PoeStatPresetMessage = PoeStatPresetRequestMessage | PoeStatPresetResponseMessage;
 
 export function createStatPresetListMessage(requestId: string): PoeStatPresetListMessage {
 	return {
@@ -67,6 +73,20 @@ export function createStatPresetSaveMessage(requestId: string, preset: TradeStat
 		type: PoeStatPresetMessageType.save,
 		requestId,
 		preset,
+	};
+}
+
+export function createStatPresetRenameMessage(
+	requestId: string,
+	oldName: string,
+	newName: string,
+): PoeStatPresetRenameMessage {
+	return {
+		source: poeStatPresetMessageSource,
+		type: PoeStatPresetMessageType.rename,
+		requestId,
+		oldName,
+		newName,
 	};
 }
 
@@ -109,10 +129,15 @@ export function isPoeStatPresetRequestMessage(value: unknown): value is PoeStatP
 		type?: unknown;
 		preset?: unknown;
 		name?: unknown;
+		oldName?: unknown;
+		newName?: unknown;
 	};
 
 	if (message.type === PoeStatPresetMessageType.list) return true;
 	if (message.type === PoeStatPresetMessageType.save) return isTradeStatPreset(message.preset);
+	if (message.type === PoeStatPresetMessageType.rename) {
+		return typeof message.oldName === 'string' && typeof message.newName === 'string';
+	}
 	if (message.type === PoeStatPresetMessageType.delete) return typeof message.name === 'string';
 
 	return false;

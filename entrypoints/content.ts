@@ -112,6 +112,27 @@ async function handleStatPresetRequest(message: PoeStatPresetRequestMessage): Pr
 		return presets;
 	}
 
+	if (message.type === PoeStatPresetMessageType.rename) {
+		const presets = await getStoredTradeStatPresets();
+		const oldName = message.oldName.trim();
+		const newName = message.newName.trim();
+		if (!newName) throw new Error('预设名称不能为空');
+
+		const existingIndex = presets.findIndex((preset) => preset.name === oldName);
+		if (existingIndex < 0) throw new Error('未找到要重命名的预设');
+		if (oldName === newName) return presets;
+		if (presets.some((preset) => preset.name === newName)) {
+			throw new Error('预设名称已存在');
+		}
+
+		presets[existingIndex] = {
+			...presets[existingIndex],
+			name: newName,
+		};
+		await setStoredTradeStatPresets(presets);
+		return presets;
+	}
+
 	const presets = await getStoredTradeStatPresets();
 	const nextPresets = presets.filter((preset) => preset.name !== message.name);
 	await setStoredTradeStatPresets(nextPresets);

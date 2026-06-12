@@ -4,6 +4,7 @@ import statPresetStyle from './style.css?raw';
 import {
 	createStatPresetDeleteMessage,
 	createStatPresetListMessage,
+	createStatPresetRenameMessage,
 	createStatPresetSaveMessage,
 	isPoeStatPresetResponseMessage,
 	PoeStatPresetMessageType,
@@ -25,9 +26,11 @@ let refreshTimer: number | null = null;
 let modalStatIndex = -1;
 let presetInput: HTMLInputElement | null = null;
 let presetDropdown: HTMLElement | null = null;
+let modalTitle: HTMLElement | null = null;
 let modalInput: HTMLInputElement | null = null;
 let modalMessage: HTMLElement | null = null;
 let presets: TradeStatPreset[] = [];
+let modalRenameName: string | null = null;
 
 const pendingRequests = new Map<string, {
 	resolve: (message: PoeStatPresetResponseMessage) => void;
@@ -85,9 +88,11 @@ function uninstallStatPreset(): void {
 	presets = [];
 	presetInput = null;
 	presetDropdown = null;
+	modalTitle = null;
 	modalInput = null;
 	modalMessage = null;
 	modalStatIndex = -1;
+	modalRenameName = null;
 }
 
 function ensureBodyReady(callback: () => void): void {
@@ -281,15 +286,15 @@ function installModal(): void {
 	cancelButton.textContent = '取消';
 
 	saveButton.addEventListener('click', () => {
-		void saveCurrentStatPreset();
+		void submitStatPresetModal();
 	}, { signal: abortController?.signal });
-	cancelButton.addEventListener('click', closeModal, { signal: abortController?.signal });
+	cancelButton.addEventListener('click', cancelModal, { signal: abortController?.signal });
 	modal.addEventListener('click', (event) => {
-		if (event.target === modal) closeModal();
+		if (event.target === modal) cancelModal();
 	}, { signal: abortController?.signal });
 	input.addEventListener('keydown', (event) => {
-		if (event.key === 'Enter') void saveCurrentStatPreset();
-		if (event.key === 'Escape') closeModal();
+		if (event.key === 'Enter') void submitStatPresetModal();
+		if (event.key === 'Escape') cancelModal();
 	}, { signal: abortController?.signal });
 
 	actions.append(saveButton, cancelButton);
@@ -297,6 +302,7 @@ function installModal(): void {
 	modal.appendChild(dialog);
 	document.body.appendChild(modal);
 
+	modalTitle = title;
 	modalInput = input;
 	modalMessage = message;
 }
@@ -320,24 +326,61 @@ function openModal(statIndex: number): void {
 	if (!modal || !modalInput) return;
 
 	modalStatIndex = statIndex;
+	modalRenameName = null;
+	if (modalTitle) modalTitle.textContent = '保存筛选预设';
 	modalInput.value = '';
 	setModalMessage('');
 	modal.hidden = false;
 	window.setTimeout(() => modalInput?.focus(), 0);
 }
 
+function openRenameModal(name: string): void {
+	const modal = document.getElementById(modalId);
+	if (!modal || !modalInput) return;
+
+	modalStatIndex = -1;
+	modalRenameName = name;
+	if (modalTitle) modalTitle.textContent = '重命名筛选预设';
+	modalInput.value = name;
+	setModalMessage('');
+	modal.hidden = false;
+	window.setTimeout(() => {
+		modalInput?.focus();
+		modalInput?.select();
+	}, 0);
+}
+
 function closeModal(): void {
 	const modal = document.getElementById(modalId);
 	if (modal) modal.hidden = true;
 	modalStatIndex = -1;
+	modalRenameName = null;
 }
 
-async function saveCurrentStatPreset(): Promise<void> {
+function cancelModal(): void {
+	const restorePresetPickerFocus = modalRenameName !== null;
+	closeModal();
+
+	if (!restorePresetPickerFocus) return;
+	window.setTimeout(() => {
+		if (!presetInput) return;
+		presetInput.focus();
+		renderPresetDropdown(presetInput.value);
+		showPresetDropdown();
+	}, 0);
+}
+
+async function submitStatPresetModal(): Promise<void> {
 	if (!modalInput) return;
 
 	const name = modalInput.value.trim();
 	if (!name) {
 		setModalMessage('请输入预设名称');
+		return;
+	}
+
+	if (modalRenameName !== null) {
+		await renamePreset(modalRenameName, name);
 		return;
 	}
 
@@ -421,26 +464,42 @@ function renderPresetDropdown(filter = ''): void {
 		});
 
 		const label = document.createElement('span');
+		label.className = 'poe2-extensions-stat-preset-item-label';
 		label.textContent = preset.name;
+
+		const renameButton = document.createElement('button');
+		renameButton.type = 'button';
+		renameButton.className = 'poe2-extensions-stat-preset-rename';
+		renameButton.title = '重命名预设';
+		renameButton.addEventListener('mousedown', stopPresetActionEvent, {
+			signal: abortController?.signal,
+		});
+		renameButton.addEventListener('click', (event) => {
+			event.stopPropagation();
+			openRenameModal(preset.name);
+		}, { signal: abortController?.signal });
 
 		const deleteButton = document.createElement('button');
 		deleteButton.type = 'button';
 		deleteButton.className = 'poe2-extensions-stat-preset-delete';
 		deleteButton.title = '删除预设';
-		deleteButton.textContent = 'x';
-		deleteButton.addEventListener('mousedown', (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-		}, { signal: abortController?.signal });
+		deleteButton.addEventListener('mousedown', stopPresetActionEvent, {
+			signal: abortController?.signal,
+		});
 		deleteButton.addEventListener('click', (event) => {
 			event.stopPropagation();
 			void deletePreset(preset.name);
 		}, { signal: abortController?.signal });
 
-		option.append(label, deleteButton);
+		option.append(label, renameButton, deleteButton);
 		item.appendChild(option);
 		presetDropdown.appendChild(item);
 	}
+}
+
+function stopPresetActionEvent(event: Event): void {
+	event.preventDefault();
+	event.stopPropagation();
 }
 
 function showPresetDropdown(): void {
@@ -479,6 +538,22 @@ async function deletePreset(name: string): Promise<void> {
 	}
 }
 
+async function renamePreset(oldName: string, newName: string): Promise<void> {
+	if (oldName === newName) {
+		closeModal();
+		return;
+	}
+
+	try {
+		presets = await requestRenamePreset(oldName, newName);
+		renderPresetDropdown(presetInput?.value ?? '');
+		closeModal();
+	} catch (error) {
+		setModalMessage(error instanceof Error ? error.message : '重命名失败，请稍后重试');
+		console.warn(`${logPrefix} 筛选预设重命名失败`, error);
+	}
+}
+
 async function reloadPresets(): Promise<void> {
 	try {
 		presets = await requestPresetList();
@@ -496,12 +571,21 @@ function requestSavePreset(preset: TradeStatPreset): Promise<TradeStatPreset[]> 
 	return sendStorageRequest(createStatPresetSaveMessage(createRequestId(), preset));
 }
 
+function requestRenamePreset(oldName: string, newName: string): Promise<TradeStatPreset[]> {
+	return sendStorageRequest(createStatPresetRenameMessage(createRequestId(), oldName, newName));
+}
+
 function requestDeletePreset(name: string): Promise<TradeStatPreset[]> {
 	return sendStorageRequest(createStatPresetDeleteMessage(createRequestId(), name));
 }
 
 function sendStorageRequest(
-	message: ReturnType<typeof createStatPresetListMessage | typeof createStatPresetSaveMessage | typeof createStatPresetDeleteMessage>,
+	message: ReturnType<
+		| typeof createStatPresetListMessage
+		| typeof createStatPresetSaveMessage
+		| typeof createStatPresetRenameMessage
+		| typeof createStatPresetDeleteMessage
+	>,
 ): Promise<TradeStatPreset[]> {
 	return new Promise((resolve, reject) => {
 		const timeoutId = window.setTimeout(() => {
