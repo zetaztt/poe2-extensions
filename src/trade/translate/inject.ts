@@ -1,6 +1,7 @@
 import { logPrefix } from "../utils";
 import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./translate-data";
 import { observeItemElement } from "./item-element";
+import { installLocalStorageHook } from "./storage";
 
 export const traditionalChineseScriptUrl = 'https://web.poecdn.com/js/translate.zh_TW.js';
 
@@ -15,6 +16,7 @@ export function installTradeTranslate() {
 	injectTraditionalChineseScript();
 	installTranslateDataHook();
 	observeItemElement()
+	installLocalStorageHook()
 
 	// installPoePluginsHook();
 }
