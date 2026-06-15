@@ -37,6 +37,14 @@ export type PoeTranslationMessage =
 	| PoeTranslationFetchResultMessage
 	| PoeTranslationFetchErrorMessage;
 
+export function createPoeTranslationFetchMessage(requestId: string): PoeTranslationFetchMessage {
+	return {
+		source: poeTranslationMessageSource,
+		type: PoeTranslationMessageType.fetch,
+		requestId,
+	};
+}
+
 export function isPoeTranslationMessage(value: unknown): value is PoeTranslationMessage {
 	const type = (value as { type?: unknown })?.type;
 

@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
+import ArbitrageTab from './arbitrage/arbitrage-tab.vue';
 import BookmarkTab from './bookmarks/bookmark-tab.vue';
+import DictionaryTab from './dictionary/dictionary-tab.vue';
 import SettingsTab from './settings/settings-tab.vue';
 
-type ActiveTab = 'bookmarks' | 'settings';
+type ActiveTab = 'bookmarks' | 'arbitrage' | 'dictionary' | 'settings';
 
 const activeTab = ref<ActiveTab>('settings');
 const didInitializeBookmarks = ref(false);
@@ -38,6 +40,22 @@ function onBookmarksInitialized(success: boolean): void {
 			</button>
 			<button
 				class="tab-button"
+				:class="{ active: activeTab === 'arbitrage' }"
+				type="button"
+				@click="setActiveTab('arbitrage')"
+			>
+				差价
+			</button>
+			<button
+				class="tab-button"
+				:class="{ active: activeTab === 'dictionary' }"
+				type="button"
+				@click="setActiveTab('dictionary')"
+			>
+				词典
+			</button>
+			<button
+				class="tab-button"
 				:class="{ active: activeTab === 'settings' }"
 				type="button"
 				@click="setActiveTab('settings')"
@@ -50,6 +68,13 @@ function onBookmarksInitialized(success: boolean): void {
 			v-show="activeTab === 'bookmarks'"
 			:active="activeTab === 'bookmarks'"
 			@initialized="onBookmarksInitialized"
+		/>
+
+		<ArbitrageTab v-show="activeTab === 'arbitrage'" />
+
+		<DictionaryTab
+			v-show="activeTab === 'dictionary'"
+			:active="activeTab === 'dictionary'"
 		/>
 
 		<SettingsTab v-show="activeTab === 'settings'" />
@@ -86,8 +111,11 @@ h1 {
 }
 
 .tabs {
+	position: sticky;
+	top: 0;
+	z-index: 10;
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: repeat(4, 1fr);
 	gap: 6px;
 	margin-bottom: 12px;
 	padding: 4px;
