@@ -1,9 +1,61 @@
-:root {
-	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-	line-height: 1.5;
+@font-face {
+	font-family: FontinRegular;
+	font-style: normal;
 	font-weight: 400;
-	color: #f4efe4;
-	background: #15110c;
+	src: url('/sidepanel/fontin-regular.woff') format('woff');
+}
+
+@font-face {
+	font-family: FontinSmallCaps;
+	font-style: normal;
+	font-weight: 400;
+	src: url('/sidepanel/fontin-smallcaps.woff') format('woff');
+}
+
+@font-face {
+	font-family: FontinBold;
+	font-style: normal;
+	font-weight: 400;
+	src: url('/sidepanel/fontin-bold.woff') format('woff');
+}
+
+@font-face {
+	font-family: Cinzel;
+	font-style: normal;
+	font-weight: 400;
+	src: url('/sidepanel/cinzel-regular.woff') format('woff');
+}
+
+:root {
+	--color-background-0: #060606;
+	--color-background-1: #121212;
+	--color-background-2: #181818;
+	--color-background-3: #222;
+	--color-border: #333;
+	--color-border-strong: #444;
+	--color-text: #9d9d9d;
+	--color-text-primary: #e2e2e2;
+	--color-text-secondary: #f5f5f5;
+	--color-accent: #a38d6d;
+	--color-accent-dark: #837053;
+	--color-accent-bright: #dfcf99;
+	--color-link: #43a2e6;
+	--color-danger: #d20000;
+	--color-success: #82ad6a;
+	--color-warning: #da9f39;
+	--color-button-primary: #123452;
+	--color-button-primary-border: #375a7c;
+	--color-button-secondary: #684200;
+	--color-button-secondary-border: #8a5e12;
+	--control-height: 34px;
+	--shadow-inset: inset 0 1px 2px rgb(0 0 0 / 40%), inset 0 1px 1px rgb(0 0 0 / 20%), inset 0 2px 2px rgb(0 0 0 / 20%);
+	font-family: Verdana, Arial, Helvetica, "Microsoft YaHei", sans-serif;
+	font-size: 14px;
+	line-height: 1.2;
+	font-weight: 400;
+	color: var(--color-text-primary);
+	background: var(--color-background-0);
+	color-scheme: dark;
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
 	-webkit-font-smoothing: antialiased;
@@ -18,9 +70,43 @@
 body {
 	min-width: 320px;
 	margin: 0;
+	background: #0e1115 url('/sidepanel/act4.webp') no-repeat fixed top center;
+	background-size: auto 100vh;
 }
 
 button,
-input {
+input,
+select {
 	font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+	outline: 1px solid #fff;
+	outline-offset: -2px;
+}
+
+::selection {
+	color: var(--color-text-secondary);
+	background: rgb(146 103 27 / 55%);
+}
+
+::-webkit-scrollbar {
+	width: 12px;
+	height: 12px;
+}
+
+::-webkit-scrollbar-track {
+	background: #111;
+}
+
+::-webkit-scrollbar-thumb {
+	border: 2px solid #111;
+	background: #444;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #666;
 }

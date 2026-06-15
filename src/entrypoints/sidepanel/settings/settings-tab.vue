@@ -231,18 +231,19 @@ function isTrade2Url(url: string | undefined): boolean {
 <style scoped>
 .tab-content {
 	display: grid;
-	gap: 12px;
+	gap: 0;
+	padding: 8px;
+	background: #000;
 }
 
 .panel {
-	padding: 14px;
-	border: 1px solid #3b3024;
-	border-radius: 8px;
-	background: #211a13;
+	border: 0;
+	border-radius: 0;
+	background: #000;
 }
 
 .panel + .panel {
-	margin-top: 12px;
+	margin-top: 8px;
 }
 
 h2,
@@ -251,20 +252,26 @@ p {
 }
 
 h2 {
-	font-size: 16px;
+	padding: 5px 2px;
+	border-bottom: 1px solid #4a4a4a;
+	color: #e2e2e2;
+	background: #000;
+	font-family: FontinSmallCaps, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 14px;
+	font-weight: 400;
 }
 
 .setting-description,
 .message,
 .muted {
-	color: #c9bba7;
+	color: var(--color-text);
 }
 
 .setting-description {
 	display: block;
-	margin-top: 6px;
-	font-size: 13px;
-	line-height: 1.5;
+	margin-top: 3px;
+	font-size: 11px;
+	line-height: 1.35;
 }
 
 .setting-row {
@@ -272,18 +279,29 @@ h2 {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 16px;
+	gap: 8px;
+	min-height: 48px;
+	padding: 6px 10px;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	border-bottom-color: #000;
+	background: #101112;
 	cursor: pointer;
 }
 
-.setting-row + .setting-row {
-	margin-top: 14px;
+.setting-row:hover {
+	background: #151719;
+}
+
+.setting-row > span:first-child {
+	min-width: 0;
 }
 
 .setting-title {
 	display: block;
-	font-size: 16px;
-	font-weight: 700;
+	color: var(--color-text-secondary);
+	font-size: 14px;
+	font-weight: 400;
 }
 
 .switch-input {
@@ -295,34 +313,30 @@ h2 {
 .switch {
 	position: relative;
 	flex: 0 0 auto;
-	width: 46px;
-	height: 26px;
-	border: 1px solid #5c4c3a;
-	border-radius: 999px;
-	background: #33271c;
-	transition: background 160ms ease, border-color 160ms ease;
+	width: 84px;
+	height: 32px;
+	border: 1px solid #333;
+	border-radius: 0;
+	background: #1e2124;
 }
 
 .switch::after {
-	position: absolute;
-	top: 3px;
-	left: 3px;
-	width: 18px;
-	height: 18px;
-	border-radius: 50%;
-	background: #c9bba7;
-	content: '';
-	transition: transform 160ms ease, background 160ms ease;
+	display: grid;
+	height: 100%;
+	place-items: center;
+	color: #9d9d9d;
+	content: '关闭';
+	font-size: 13px;
 }
 
 .switch-input:checked + .switch {
-	border-color: #d7a85f;
-	background: #6f5124;
+	border-color: #8a5e12;
+	background: #684200;
 }
 
 .switch-input:checked + .switch::after {
-	transform: translateX(20px);
-	background: #f4efe4;
+	color: #fff;
+	content: '开启';
 }
 
 .switch-input:disabled + .switch {
@@ -333,31 +347,48 @@ h2 {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	margin-top: 14px;
-	color: #c9bba7;
-	font-size: 13px;
+	min-height: 34px;
+	padding: 6px 10px;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	color: #dcdcdc;
+	background: #1e2124;
+	font-size: 12px;
 }
 
 .status-dot {
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	background: #72533c;
+	width: 12px;
+	height: 12px;
+	border: 1px solid #4a4a4a;
+	border-radius: 0;
+	background: #111;
 }
 
 .status-dot.active {
-	background: #d7a85f;
+	border-color: #a38d6d;
+	background: #a38d6d;
+	box-shadow: none;
 }
 
 .message {
-	margin-top: 10px;
-	font-size: 13px;
-	line-height: 1.5;
+	padding: 8px 10px;
+	border: 1px solid #333;
+	font-size: 11px;
+	line-height: 1.4;
 }
 
 a {
-	display: inline-block;
-	margin-top: 10px;
-	color: #d7a85f;
+	display: block;
+	padding: 8px 10px;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	color: #43a2e6;
+	background: #1e2124;
+	text-decoration: none;
+}
+
+a:hover {
+	color: var(--color-text-secondary);
+	text-decoration: underline;
 }
 </style>

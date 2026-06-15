@@ -753,6 +753,7 @@ function clearDragState(): void {
 					v-for="folder in visibleBookmarkFolders"
 					:key="folder.id"
 					class="bookmark-folder"
+					:style="{ marginLeft: `${Math.max(0, folder.displayDepth - 1) * 8}px` }"
 				>
 					<BookmarkFolder
 						v-model:rename-title="renamingFolderTitle"
@@ -787,7 +788,6 @@ function clearDragState(): void {
 						:key="bookmark.id"
 						v-model:rename-title="renamingBookmarkTitle"
 						:bookmark="bookmark"
-						:display-depth="folder.displayDepth"
 						:busy="isBusy"
 						:renaming="renamingBookmarkId === bookmark.id"
 						:drop-class="getBookmarkDropClass(bookmark)"
@@ -816,14 +816,16 @@ function clearDragState(): void {
 <style scoped>
 .tab-content {
 	display: grid;
-	gap: 12px;
+	gap: 0;
+	padding: 8px;
+	background: #000;
 }
 
 .panel {
-	padding: 14px;
-	border: 1px solid #3b3024;
-	border-radius: 8px;
-	background: #211a13;
+	padding: 4px;
+	border: 0;
+	border-radius: 0;
+	background: #000;
 }
 
 p {
@@ -832,28 +834,31 @@ p {
 
 .message,
 .muted {
-	color: #c9bba7;
+	color: var(--color-text);
 }
 
 .message {
-	margin-top: 10px;
-	font-size: 13px;
-	line-height: 1.5;
+	padding: 7px 9px;
+	border: 1px solid #8a6d3b;
+	background: #101112;
+	font-size: 11px;
+	line-height: 1.4;
 }
 
 .bookmark-list {
 	display: grid;
-	gap: 12px;
+	gap: 4px;
 }
 
 .bookmark-tree {
 	display: grid;
-	gap: 6px;
-	padding: 8px;
+	gap: 1px;
+	padding: 0;
 }
 
 .bookmark-folder {
 	display: grid;
-	gap: 6px;
+	gap: 1px;
 }
+
 </style>

@@ -573,18 +573,20 @@ function isPositiveNumber(value: number | null): value is number {
 .asset-list,
 .opportunity-list {
 	display: grid;
-	gap: 10px;
+	gap: 1px;
 }
 
 .arbitrage-tab {
-	gap: 12px;
+	gap: 8px;
+	padding: 8px;
+	background: #000;
 }
 
 .panel {
-	padding: 14px;
-	border: 1px solid #3b3024;
-	border-radius: 8px;
-	background: #211a13;
+	padding: 8px;
+	border: 0;
+	border-radius: 0;
+	background: #000;
 }
 
 .section-heading,
@@ -598,13 +600,22 @@ function isPositiveNumber(value: number | null): value is number {
 	gap: 10px;
 }
 
+.section-heading {
+	min-height: 28px;
+	padding: 2px 0 5px;
+	border-bottom: 1px solid #4a4a4a;
+}
+
 h2,
 p {
 	margin: 0;
 }
 
 h2 {
-	font-size: 16px;
+	color: #e2e2e2;
+	font-family: FontinSmallCaps, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 14px;
+	font-weight: 400;
 }
 
 .section-heading p,
@@ -613,12 +624,12 @@ h2 {
 .empty-state,
 .status-text,
 .missing-list {
-	color: #c9bba7;
-	font-size: 12px;
+	color: var(--color-text);
+	font-size: 11px;
 }
 
 .section-heading p {
-	margin-top: 3px;
+	margin-top: 2px;
 }
 
 form,
@@ -628,7 +639,7 @@ form,
 .filter-toggle,
 .opportunity-list,
 .missing-list {
-	margin-top: 12px;
+	margin-top: 6px;
 }
 
 .add-row,
@@ -674,8 +685,8 @@ input,
 select,
 button {
 	min-width: 0;
-	min-height: 34px;
-	border-radius: 6px;
+	min-height: var(--control-height);
+	border-radius: 0;
 	font: inherit;
 }
 
@@ -683,35 +694,55 @@ input,
 select {
 	width: 100%;
 	padding: 6px 8px;
-	border: 1px solid #5c4c3a;
+	border: 1px solid #000;
 	outline: none;
-	background: #15110c;
-	color: #f4efe4;
+	background: #1e2124;
+	box-shadow: var(--shadow-inset);
+	color: #e2e2e2;
 }
 
 input:focus,
 select:focus {
-	border-color: #d7a85f;
-	box-shadow: 0 0 0 2px rgb(215 168 95 / 15%);
+	border-color: #a38d6d;
+	box-shadow: var(--shadow-inset);
 }
 
 button {
 	padding: 0 10px;
-	border: 1px solid #d7a85f;
-	background: #6f5124;
-	color: #f4efe4;
+	border: 1px solid #444;
+	background: #1e2124;
+	color: #e2e2e2;
 	cursor: pointer;
 }
 
 button:hover {
-	background: #85632e;
+	border-color: #666;
+	background: #292d30;
+	color: #fff;
+}
+
+form button[type='submit'] {
+	border-color: var(--color-button-secondary-border);
+	background: var(--color-button-secondary);
+	color: #fff;
+}
+
+form button[type='submit']:hover {
+	border-color: #b17b1c;
+	background: #805200;
 }
 
 .danger-button,
 .icon-button {
-	border-color: #72533c;
+	border-color: #4a2b2b;
 	background: transparent;
-	color: #d6a58b;
+	color: #d20000;
+}
+
+.danger-button:hover,
+.icon-button:hover {
+	border-color: var(--color-danger);
+	background: rgb(200 103 110 / 12%);
 }
 
 .icon-button {
@@ -721,16 +752,17 @@ button:hover {
 }
 
 .product-quote {
-	padding: 10px;
-	border: 1px solid #3b3024;
-	border-radius: 7px;
-	background: #19140f;
+	padding: 8px;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	border-radius: 0;
+	background: #101112;
 }
 
 .product-quote-heading span,
 .opportunity-heading span {
-	color: #d7a85f;
-	font-size: 12px;
+	color: #a38d6d;
+	font-size: 11px;
 }
 
 .product-quote-heading strong {
@@ -742,8 +774,8 @@ button:hover {
 	padding: 0;
 	border: 0;
 	background: transparent;
-	color: #d7a85f;
-	font-size: 12px;
+	color: #43a2e6;
+	font-size: 11px;
 }
 
 .link-button:hover {
@@ -755,8 +787,8 @@ button:hover {
 	display: grid;
 	gap: 5px;
 	margin-top: 10px;
-	color: #c9bba7;
-	font-size: 12px;
+	color: var(--color-text);
+	font-size: 11px;
 }
 
 .split-prices .price-field,
@@ -770,8 +802,12 @@ button:hover {
 
 .filter-toggle {
 	justify-content: flex-start;
-	color: #c9bba7;
-	font-size: 13px;
+	padding: 7px 8px;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	background: #1e2124;
+	color: #e2e2e2;
+	font-size: 11px;
 }
 
 .filter-toggle input {
@@ -780,19 +816,19 @@ button:hover {
 }
 
 .opportunity {
-	padding: 11px;
-	border: 1px solid #4a3b2b;
-	border-left: 3px solid #8b6a3d;
-	border-radius: 7px;
-	background: #19140f;
+	padding: 8px;
+	border: 1px solid #000;
+	border-left: 3px solid #837053;
+	border-radius: 0;
+	background: #101112;
 }
 
 .opportunity.qualified {
-	border-left-color: #8ebd72;
+	border-left-color: var(--color-success);
 }
 
 .opportunity.loss {
-	border-left-color: #b86b5e;
+	border-left-color: var(--color-danger);
 }
 
 .opportunity p {
@@ -806,17 +842,17 @@ button:hover {
 }
 
 .result-values strong {
-	color: #d7a85f;
+	color: #dfcf99;
 }
 
 .result-values small {
 	margin-left: auto;
-	color: #c9bba7;
+	color: var(--color-text);
 }
 
 .missing-list {
 	padding-top: 10px;
-	border-top: 1px solid #3b3024;
+	border-top: 1px solid #333;
 }
 
 .missing-list p {
@@ -832,12 +868,13 @@ button:hover {
 	position: sticky;
 	bottom: 8px;
 	padding: 8px 10px;
-	border: 1px solid #6f5124;
-	border-radius: 6px;
-	background: #211a13;
+	border: 1px solid #8a6d3b;
+	border-radius: 0;
+	background: rgb(16 17 18 / 96%);
+	box-shadow: 0 4px 16px #000;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 500px) {
 	.add-row,
 	.product-add,
 	.product-quote-form,
@@ -848,7 +885,7 @@ button:hover {
 
 	.exchange-form,
 	.exchange-row {
-		grid-template-columns: 1fr 1fr auto;
+		grid-template-columns: minmax(52px, 0.7fr) minmax(58px, 1fr) auto;
 	}
 
 	.exchange-form button,
@@ -859,6 +896,27 @@ button:hover {
 
 	.threshold-grid {
 		grid-template-columns: 1fr;
+	}
+
+	.result-heading {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.result-heading select {
+		width: 100%;
+	}
+}
+
+@media (max-width: 360px) {
+	.exchange-form,
+	.exchange-row {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.exchange-form > span,
+	.exchange-row > span {
+		display: none;
 	}
 }
 </style>

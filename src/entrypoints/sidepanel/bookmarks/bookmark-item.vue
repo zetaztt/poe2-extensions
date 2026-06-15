@@ -5,7 +5,6 @@ import BookmarkMenu from './bookmark-menu.vue';
 
 defineProps<{
 	bookmark: TradeBookmarkItem;
-	displayDepth: number;
 	busy: boolean;
 	renaming: boolean;
 	dropClass: Record<string, boolean>;
@@ -39,6 +38,11 @@ const vFocus: Directive<HTMLInputElement> = {
 };
 
 function onMenuAction(actionId: string): void {
+	if (actionId === 'rename') {
+		emit('start-rename');
+		return;
+	}
+
 	if (actionId === 'replace') {
 		emit('replace');
 		return;
@@ -52,7 +56,6 @@ function onMenuAction(actionId: string): void {
 	<div
 		class="bookmark-item"
 		:class="dropClass"
-		:style="{ marginLeft: `${Math.max(0, displayDepth) * 8 + 22}px` }"
 		:draggable="!renaming && !busy"
 		@dragstart="emit('drag-start', $event)"
 		@dragover="emit('drag-over', $event)"
@@ -95,6 +98,7 @@ function onMenuAction(actionId: string): void {
 			:disabled="busy"
 			:menu-style="menuStyle"
 			:actions="[
+				{ id: 'rename', label: '重命名' },
 				{ id: 'replace', label: '用当前搜索替换' },
 				{ id: 'delete', label: '删除' },
 			]"
@@ -110,15 +114,20 @@ function onMenuAction(actionId: string): void {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto auto;
 	align-items: center;
-	min-height: 30px;
-	margin-top: 2px;
-	border: 0;
-	border-radius: 6px;
-	background: transparent;
+	box-sizing: border-box;
+	height: 30px;
+	margin-bottom: 3px;
+	margin-left: 12px;
+	border: 1px solid #000;
+	border-left-color: #333;
+	border-radius: 0;
+	background: #101112;
 }
 
 .bookmark-item:hover {
-	background: #33271c;
+	border-color: #000;
+	border-left-color: #a38d6d;
+	background: #181818;
 }
 
 .bookmark-item[draggable='true'] {
@@ -131,17 +140,18 @@ function onMenuAction(actionId: string): void {
 
 .bookmark-item.drop-before,
 .bookmark-item.drop-after {
-	box-shadow: inset 0 2px 0 #d7a85f;
+	box-shadow: inset 0 2px 0 var(--color-accent-bright);
 }
 
 .bookmark-item.drop-after {
-	box-shadow: inset 0 -2px 0 #d7a85f;
+	box-shadow: inset 0 -2px 0 var(--color-accent-bright);
 }
 
 .bookmark-open {
 	min-width: 0;
+	height: 100%;
 	border: 0;
-	padding: 5px 8px;
+	padding: 0;
 	color: inherit;
 	text-align: left;
 	background: transparent;
@@ -150,11 +160,18 @@ function onMenuAction(actionId: string): void {
 }
 
 .bookmark-title {
-	display: block;
+	display: flex;
+	align-items: center;
+	box-sizing: border-box;
+	height: 100%;
 	overflow: hidden;
+	padding: 6px 12px;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-weight: 700;
+	color: #fff8e1;
+	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 1.1em;
+	font-weight: 400;
 }
 
 .bookmark-rename {
@@ -166,21 +183,22 @@ function onMenuAction(actionId: string): void {
 	min-width: 0;
 	width: 100%;
 	height: 26px;
-	border: 1px solid #d7a85f;
-	border-radius: 4px;
+	border: 1px solid #a38d6d;
+	border-radius: 0;
 	padding: 0 6px;
-	color: #f4efe4;
-	background: #15110c;
+	color: var(--color-text-secondary);
+	background: #1e2124;
+	box-shadow: var(--shadow-inset);
 	font: inherit;
 }
 
 .row-action {
-	min-height: 26px;
-	border: 1px solid #5c4c3a;
-	border-radius: 5px;
-	padding: 0 7px;
-	background: #33271c;
-	color: #f4efe4;
+	min-height: 25px;
+	border: 1px solid #444;
+	border-radius: 0;
+	padding: 0 6px;
+	background: #1e2124;
+	color: #e2e2e2;
 	font: inherit;
 	font-size: 12px;
 	white-space: nowrap;
@@ -188,11 +206,19 @@ function onMenuAction(actionId: string): void {
 }
 
 .row-action:hover {
-	border-color: #d7a85f;
+	border-color: #666;
+	color: #fff;
+	background: #292d30;
 }
 
 .row-action:disabled {
 	opacity: 0.6;
 	cursor: default;
+}
+
+@media (max-width: 380px) {
+	.row-action {
+		display: none;
+	}
 }
 </style>

@@ -42,8 +42,18 @@ const vFocus: Directive<HTMLInputElement> = {
 };
 
 function onMenuAction(actionId: string): void {
+	if (actionId === 'add-bookmark') {
+		emit('add-bookmark');
+		return;
+	}
+
 	if (actionId === 'create') {
 		emit('create-folder');
+		return;
+	}
+
+	if (actionId === 'rename') {
+		emit('start-rename');
 		return;
 	}
 
@@ -58,7 +68,6 @@ function onMenuAction(actionId: string): void {
 			{ 'top-level': folder.displayDepth === 0 },
 			dropClass,
 		]"
-		:style="{ paddingLeft: `${Math.max(0, folder.displayDepth) * 8}px` }"
 		:draggable="folder.canModify && !renaming && !busy"
 		@dragstart="emit('drag-start', $event)"
 		@dragover="emit('drag-over', $event)"
@@ -74,9 +83,15 @@ function onMenuAction(actionId: string): void {
 			:title="expanded ? '折叠' : '展开'"
 			@click.stop="emit('toggle-expanded')"
 		>
-			{{ hasContent ? (expanded ? '▾' : '▸') : '' }}
+			<img
+				class="tree-toggle-icon"
+				:src="hasContent && expanded
+					? '/sidepanel/filter-toggle-expanded.png'
+					: '/sidepanel/filter-toggle-collapsed.png'"
+				alt=""
+				aria-hidden="true"
+			>
 		</button>
-		<span v-if="folder.displayDepth > 0" class="folder-icon" aria-hidden="true"></span>
 		<input
 			v-if="renaming"
 			v-model="renameTitle"
@@ -99,7 +114,7 @@ function onMenuAction(actionId: string): void {
 		</span>
 		<span class="folder-count">{{ folder.bookmarks.length }}</span>
 		<button
-			class="row-action"
+			class="row-action primary-action"
 			type="button"
 			:disabled="busy"
 			title="添加当前搜索到此文件夹"
@@ -109,7 +124,7 @@ function onMenuAction(actionId: string): void {
 		</button>
 		<button
 			v-if="folder.displayDepth === 0"
-			class="row-action"
+			class="row-action secondary-action"
 			type="button"
 			:disabled="busy"
 			title="添加子文件夹"
@@ -119,7 +134,7 @@ function onMenuAction(actionId: string): void {
 		</button>
 		<button
 			v-if="folder.displayDepth > 0 && folder.canModify"
-			class="row-action"
+			class="row-action secondary-action"
 			type="button"
 			:disabled="busy"
 			title="重命名文件夹"
@@ -133,7 +148,9 @@ function onMenuAction(actionId: string): void {
 			:disabled="busy"
 			:menu-style="menuStyle"
 			:actions="[
+				{ id: 'add-bookmark', label: '添加当前搜索' },
 				{ id: 'create', label: '添加文件夹' },
+				{ id: 'rename', label: '重命名', disabled: !folder.canModify },
 				{ id: 'delete', label: '删除', disabled: !folder.canModify },
 			]"
 			@toggle="emit('toggle-menu')"
@@ -146,21 +163,42 @@ function onMenuAction(actionId: string): void {
 .folder-row {
 	position: relative;
 	display: grid;
-	grid-template-columns: 14px 16px minmax(0, 1fr) auto auto auto auto;
+	grid-template-columns: 15px minmax(0, 1fr) auto auto auto auto;
 	align-items: center;
-	min-height: 32px;
+	box-sizing: border-box;
+	height: 30px;
+	margin-bottom: 3px;
 	gap: 7px;
-	border-radius: 6px;
-	padding-right: 6px;
-	color: #f4efe4;
+	border: 0;
+	border-bottom: 1px solid #465260;
+	border-radius: 0;
+	padding: 0 4px;
+	color: #dfcf99;
+	background: #000;
+	text-shadow: 1px 1px 2px #1e2124;
 }
 
 .folder-row.top-level {
 	grid-template-columns: minmax(0, 1fr) auto auto auto;
+	height: auto;
+	min-height: 31px;
+	margin-bottom: 0;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	padding-right: 4px;
+	color: var(--color-text-primary);
+	background: #101112;
+	text-shadow: none;
 }
 
 .folder-row:hover {
-	background: #33271c;
+	color: #fff;
+}
+
+.folder-row.top-level:hover {
+	border-color: #000;
+	border-left-color: #a38d6d;
+	background: #181818;
 }
 
 .folder-row[draggable='true'] {
@@ -172,27 +210,27 @@ function onMenuAction(actionId: string): void {
 }
 
 .folder-row.drop-inside {
-	outline: 1px solid #d7a85f;
-	background: #3d2f20;
+	outline: 1px solid #dfcf99;
+	background: #1e2124;
 }
 
 .folder-row.drop-before,
 .folder-row.drop-after {
-	box-shadow: inset 0 2px 0 #d7a85f;
+	box-shadow: inset 0 2px 0 var(--color-accent-bright);
 }
 
 .folder-row.drop-after {
-	box-shadow: inset 0 -2px 0 #d7a85f;
+	box-shadow: inset 0 -2px 0 var(--color-accent-bright);
 }
 
 .tree-toggle {
-	width: 14px;
-	height: 26px;
+	display: grid;
+	width: 15px;
+	height: 15px;
 	border: 0;
 	padding: 0;
-	color: #c9bba7;
 	background: transparent;
-	font: inherit;
+	place-items: center;
 	cursor: pointer;
 }
 
@@ -200,44 +238,46 @@ function onMenuAction(actionId: string): void {
 	cursor: default;
 }
 
-.folder-icon {
-	position: relative;
+.tree-toggle-icon {
+	display: block;
 	width: 15px;
-	height: 11px;
-	border-radius: 2px;
-	background: #d7a85f;
-}
-
-.folder-icon::before {
-	position: absolute;
-	top: -3px;
-	left: 1px;
-	width: 7px;
-	height: 4px;
-	border-radius: 2px 2px 0 0;
-	background: #d7a85f;
-	content: '';
+	height: 15px;
 }
 
 .folder-title {
+	display: flex;
+	align-items: center;
+	box-sizing: border-box;
+	height: 30px;
 	overflow: hidden;
+	padding: 6px 12px;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-weight: 700;
+	color: #fff8e1;
+	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 1.1em;
+	font-weight: 400;
+}
+
+.top-level .folder-title {
+	height: auto;
+	padding: 0;
+	color: #e2e2e2;
+	font-size: inherit;
 }
 
 .folder-count {
-	color: #c9bba7;
-	font-size: 12px;
+	color: #a38d6d;
+	font-size: 11px;
 }
 
 .row-action {
-	min-height: 26px;
-	border: 1px solid #5c4c3a;
-	border-radius: 5px;
-	padding: 0 7px;
-	background: #33271c;
-	color: #f4efe4;
+	min-height: 25px;
+	border: 1px solid #444;
+	border-radius: 0;
+	padding: 0 6px;
+	background: #1e2124;
+	color: #e2e2e2;
 	font: inherit;
 	font-size: 12px;
 	white-space: nowrap;
@@ -245,7 +285,9 @@ function onMenuAction(actionId: string): void {
 }
 
 .row-action:hover {
-	border-color: #d7a85f;
+	border-color: #666;
+	color: #fff;
+	background: #292d30;
 }
 
 .row-action:disabled {
@@ -257,11 +299,26 @@ function onMenuAction(actionId: string): void {
 	min-width: 0;
 	width: 100%;
 	height: 26px;
-	border: 1px solid #d7a85f;
-	border-radius: 4px;
+	border: 1px solid #a38d6d;
+	border-radius: 0;
 	padding: 0 6px;
-	color: #f4efe4;
-	background: #15110c;
+	color: var(--color-text-secondary);
+	background: #1e2124;
+	box-shadow: var(--shadow-inset);
 	font: inherit;
+}
+
+@media (max-width: 430px) {
+	.folder-row {
+		grid-template-columns: 15px minmax(0, 1fr) auto auto auto;
+	}
+
+	.folder-row.top-level {
+		grid-template-columns: minmax(0, 1fr) auto auto;
+	}
+
+	.folder-row .secondary-action {
+		display: none;
+	}
 }
 </style>

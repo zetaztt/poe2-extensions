@@ -251,37 +251,45 @@ function createRequestId(): string {
 <style scoped>
 .dictionary-tab {
 	display: grid;
-	gap: 12px;
+	gap: 0;
+	padding: 8px;
+	background: #000;
 }
 
 .panel {
-	padding: 14px;
-	border: 1px solid #3b3024;
-	border-radius: 8px;
-	background: #211a13;
+	padding: 8px;
+	border: 0;
+	border-radius: 0;
+	background: #000;
 }
 
 .search-label {
 	display: block;
-	margin-bottom: 8px;
-	font-size: 16px;
-	font-weight: 700;
+	margin: -8px -8px 8px;
+	padding: 5px 2px;
+	border-bottom: 1px solid #4a4a4a;
+	color: #e2e2e2;
+	background: #000;
+	font-family: FontinSmallCaps, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 14px;
+	font-weight: 400;
 }
 
 .search-input {
 	width: 100%;
-	min-height: 38px;
-	padding: 8px 10px;
-	border: 1px solid #5c4c3a;
-	border-radius: 6px;
+	min-height: var(--control-height);
+	padding: 6px 8px;
+	border: 1px solid #000;
+	border-radius: 0;
 	outline: none;
-	background: #15110c;
-	color: #f4efe4;
+	background: #1e2124;
+	box-shadow: var(--shadow-inset);
+	color: #e2e2e2;
 }
 
 .search-input:focus {
-	border-color: #d7a85f;
-	box-shadow: 0 0 0 2px rgb(215 168 95 / 15%);
+	border-color: #a38d6d;
+	box-shadow: var(--shadow-inset);
 }
 
 .search-input:disabled {
@@ -292,16 +300,19 @@ function createRequestId(): string {
 .state-panel,
 .original,
 .copy-error {
-	color: #c9bba7;
+	color: var(--color-text);
 }
 
 .search-description {
-	margin: 8px 0 0;
-	font-size: 13px;
-	line-height: 1.5;
+	margin: 6px 0 0;
+	font-size: 11px;
+	line-height: 1.4;
 }
 
 .state-panel {
+	margin-top: 1px;
+	border: 1px solid #222;
+	background: #101112;
 	font-size: 14px;
 	text-align: center;
 }
@@ -312,15 +323,15 @@ function createRequestId(): string {
 
 .state-panel.error,
 .copy-error {
-	color: #ffb36f;
+	color: var(--color-warning);
 }
 
 .retry-button,
 .copy-button {
-	border: 1px solid #d7a85f;
-	border-radius: 5px;
-	background: #6f5124;
-	color: #f4efe4;
+	border: 1px solid var(--color-button-primary-border);
+	border-radius: 0;
+	background: var(--color-button-primary);
+	color: #fff;
 	cursor: pointer;
 }
 
@@ -337,7 +348,7 @@ function createRequestId(): string {
 
 .result-list {
 	display: grid;
-	gap: 8px;
+	gap: 1px;
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -346,11 +357,17 @@ function createRequestId(): string {
 .result-item {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 12px;
-	border: 1px solid #3b3024;
-	border-radius: 8px;
-	background: #211a13;
+	gap: 10px;
+	min-height: 46px;
+	padding: 6px 8px;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	border-radius: 0;
+	background: #101112;
+}
+
+.result-item:hover {
+	background: #181818;
 }
 
 .result-content {
@@ -366,12 +383,13 @@ function createRequestId(): string {
 }
 
 .translated {
-	color: #d7a85f;
-	font-size: 15px;
+	color: #e2e2e2;
+	font-size: 13px;
 }
 
 .original {
-	font-size: 13px;
+	font-family: FontinRegular, Verdana, Arial, sans-serif;
+	font-size: 12px;
 }
 
 .copy-button {
@@ -383,6 +401,19 @@ function createRequestId(): string {
 
 .retry-button:hover,
 .copy-button:hover {
-	background: #85632e;
+	border-color: #527da7;
+	background: #183f63;
+	color: #fff;
+}
+
+@media (max-width: 360px) {
+	.result-item {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.copy-button {
+		width: 100%;
+	}
 }
 </style>

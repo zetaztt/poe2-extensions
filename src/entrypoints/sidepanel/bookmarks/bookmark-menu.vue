@@ -55,9 +55,9 @@ const emit = defineEmits<{
 	width: 26px;
 	height: 26px;
 	border: 0;
-	border-radius: 5px;
+	border-radius: 0;
 	padding: 0;
-	color: #c9bba7;
+	color: var(--color-text);
 	background: transparent;
 	font: inherit;
 	font-size: 18px;
@@ -66,8 +66,8 @@ const emit = defineEmits<{
 }
 
 .more-button:hover {
-	background: #33271c;
-	color: #f4efe4;
+	background: #1e2124;
+	color: #fff;
 }
 
 .more-button:disabled {
@@ -81,11 +81,11 @@ const emit = defineEmits<{
 	right: 0;
 	z-index: 30;
 	min-width: 132px;
-	padding: 4px;
-	border: 1px solid #5c4c3a;
-	border-radius: 6px;
-	background: #18130e;
-	box-shadow: 0 10px 24px rgb(0 0 0 / 0.4);
+	padding: 3px;
+	border: 1px solid #444;
+	border-radius: 0;
+	background: #000;
+	box-shadow: 0 4px 16px #000;
 }
 
 .more-menu button {
@@ -93,9 +93,9 @@ const emit = defineEmits<{
 	width: 100%;
 	min-height: 30px;
 	border: 0;
-	border-radius: 4px;
+	border-radius: 0;
 	padding: 0 10px;
-	color: #f4efe4;
+	color: var(--color-text-primary);
 	text-align: left;
 	background: transparent;
 	cursor: pointer;
@@ -103,7 +103,8 @@ const emit = defineEmits<{
 }
 
 .more-menu button:hover:not(:disabled) {
-	background: #33271c;
+	color: #fff;
+	background: #1e2124;
 }
 
 .more-menu button:disabled {

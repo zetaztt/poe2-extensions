@@ -84,20 +84,25 @@ function onBookmarksInitialized(success: boolean): void {
 <style scoped>
 .app {
 	min-height: 100vh;
-	padding: 20px;
-	color: #f4efe4;
-	background: #15110c;
+	padding: 0 8px 12px;
+	color: var(--color-text-primary);
+	background: rgb(0 0 0 / 38%);
 }
 
 .header {
-	margin-bottom: 16px;
+	height: 92px;
+	padding: 22px 12px 12px;
+	border-bottom: 1px solid rgb(0 0 0 / 80%);
+	background: linear-gradient(90deg, rgb(14 17 21 / 82%), rgb(14 17 21 / 28%));
+	text-shadow: 1px 1px 2px #000;
 }
 
 .eyebrow {
-	margin: 0 0 6px;
-	color: #d7a85f;
-	font-size: 12px;
-	letter-spacing: 0.08em;
+	margin: 0 0 4px;
+	color: #a38d6d;
+	font-family: FontinSmallCaps, Verdana, Arial, sans-serif;
+	font-size: 13px;
+	letter-spacing: 0.04em;
 	text-transform: uppercase;
 }
 
@@ -107,7 +112,10 @@ p {
 }
 
 h1 {
+	color: #f5f5f5;
+	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
 	font-size: 24px;
+	font-weight: 400;
 }
 
 .tabs {
@@ -116,12 +124,11 @@ h1 {
 	z-index: 10;
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
-	gap: 6px;
-	margin-bottom: 12px;
-	padding: 4px;
-	border: 1px solid #3b3024;
-	border-radius: 8px;
-	background: #211a13;
+	gap: 0;
+	margin-bottom: 0;
+	border: 0;
+	background: #000;
+	box-shadow: none;
 }
 
 .tabs.single {
@@ -129,17 +136,38 @@ h1 {
 }
 
 .tab-button {
-	min-height: 34px;
-	border: 0;
-	border-radius: 6px;
-	background: transparent;
-	color: #c9bba7;
+	height: 32px;
+	border: 1px solid #000;
+	border-bottom-color: #333;
+	border-radius: 0;
+	background: #0a0a0ae6;
+	color: #e9cf9f;
 	font: inherit;
+	font-family: FontinSmallCaps, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 1.1em;
 	cursor: pointer;
 }
 
+.tab-button:hover {
+	color: #fff;
+	background: #1e2124;
+}
+
 .tab-button.active {
-	background: #6f5124;
-	color: #f4efe4;
+	border-color: #8a5e12;
+	color: #e9cf9f;
+	background: #5a3806;
+}
+
+@media (max-width: 380px) {
+	.app {
+		padding-right: 6px;
+		padding-left: 6px;
+	}
+
+	.header {
+		height: 78px;
+		padding-top: 16px;
+	}
 }
 </style>
