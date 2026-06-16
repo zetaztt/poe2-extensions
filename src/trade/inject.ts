@@ -1,5 +1,5 @@
 import { isPoeTradeMessage, type TradeFeatures } from "./messages";
-import { setTradeItemCopyEnabled } from "./item-copy/inject";
+import { setTradeItemCopyEnabled } from "./item-code/inject";
 import { setTradeStatPresetEnabled } from "./stat-preset/inject";
 import { installTradeTranslate } from "./translate/inject";
 
