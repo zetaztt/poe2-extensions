@@ -1,9 +1,12 @@
-import type { TradeSearchItem } from '../types';
+import type { TradeSearchItem } from "../types";
 
-type MergedRuneMod = 'unmerged' | number | {
-	min: number;
-	max: number;
-};
+type MergedRuneMod =
+	| "unmerged"
+	| number
+	| {
+			min: number;
+			max: number;
+	  };
 
 export function formatTradeItemText(item: TradeSearchItem): string {
 	const lines = [
@@ -32,7 +35,7 @@ export function formatTradeItemText(item: TradeSearchItem): string {
 		...getAugmentedInfo(item),
 	);
 
-	return lines.filter((line) => line.trim() !== '').join('\n');
+	return lines.filter((line) => line.trim() !== "").join("\n");
 }
 
 function getBasicInfo(item: TradeSearchItem): string[] {
@@ -41,7 +44,7 @@ function getBasicInfo(item: TradeSearchItem): string[] {
 	if (item.rarity) lines.push(`Rarity: ${item.rarity}`);
 
 	if (item.name || item.typeLine) {
-		lines.push(`${item.name || ''}${item.name && item.typeLine ? '\n' : ''}${item.typeLine || ''}`.trim());
+		lines.push(`${item.name || ""}${item.name && item.typeLine ? "\n" : ""}${item.typeLine || ""}`.trim());
 	}
 
 	if (item.ilvl !== undefined) lines.push(`Item Level: ${item.ilvl}`);
@@ -51,11 +54,11 @@ function getBasicInfo(item: TradeSearchItem): string[] {
 
 function getProperties(item: TradeSearchItem): string[] {
 	return (item.properties || [])
-		.map((property) => (
+		.map((property) =>
 			property.name && property.values?.length
-				? `${property.name}: ${property.values.map((value) => value[0]).join(', ')}`
-				: ''
-		))
+				? `${property.name}: ${property.values.map((value) => value[0]).join(", ")}`
+				: "",
+		)
 		.filter(Boolean);
 }
 
@@ -65,13 +68,13 @@ function getSockets(item: TradeSearchItem): string[] {
 	const socketCount = sockets.length;
 
 	if (socketCount) {
-		lines.push(`Sockets: ${sockets.map(() => 'S').join(' ')}`);
+		lines.push(`Sockets: ${sockets.map(() => "S").join(" ")}`);
 	}
 
 	const runes = (item.socketedItems || []).filter((socketedItem) => socketedItem.frameType === 5);
 
 	for (let i = 0; i < socketCount; i += 1) {
-		lines.push(i < runes.length ? `Rune: ${runes[i].baseType ?? ''}` : 'Rune: None');
+		lines.push(i < runes.length ? `Rune: ${runes[i].baseType ?? ""}` : "Rune: None");
 	}
 
 	return lines;
@@ -106,11 +109,11 @@ function getMutatedMods(item: TradeSearchItem): string[] {
 }
 
 function getCorruptionLine(item: TradeSearchItem): string[] {
-	return item.corrupted ? ['Corrupted'] : [];
+	return item.corrupted ? ["Corrupted"] : [];
 }
 
 function getUnmetInfo(item: TradeSearchItem): string[] {
-	return item.unmetRequirements?.length ? [`Unmet: ${item.unmetRequirements.join(', ')}`] : [];
+	return item.unmetRequirements?.length ? [`Unmet: ${item.unmetRequirements.join(", ")}`] : [];
 }
 
 function getAugmentedInfo(item: TradeSearchItem): string[] {
@@ -161,7 +164,7 @@ function processRuneEffect(mod: string, merged: Record<string, MergedRuneMod>): 
 
 	const plusMatch = content.match(/^\+(\d+)(\s.+)?$/);
 	if (plusMatch) {
-		const [, value, text = ''] = plusMatch;
+		const [, value, text = ""] = plusMatch;
 		addNumberRuneMod(merged, `+${text.trim()}`, Number.parseInt(value, 10));
 		return;
 	}
@@ -173,30 +176,30 @@ function processRuneEffect(mod: string, merged: Record<string, MergedRuneMod>): 
 		return;
 	}
 
-	merged[content] = 'unmerged';
+	merged[content] = "unmerged";
 }
 
 function addNumberRuneMod(merged: Record<string, MergedRuneMod>, key: string, value: number): void {
 	const current = merged[key];
-	merged[key] = typeof current === 'number' ? current + value : value;
+	merged[key] = typeof current === "number" ? current + value : value;
 }
 
 function formatMergedRuneMods(merged: Record<string, MergedRuneMod>): string[] {
 	return Object.entries(merged).map(([key, value]) => {
-		if (value === 'unmerged') {
+		if (value === "unmerged") {
 			return `{enchant}{rune}${key}`;
 		}
 
 		if (isRangeRuneMod(value)) {
-			return `{enchant}{rune}Adds ${value.min} to ${value.max} ${key.replace(/^Adds X to Y /, '')}`;
+			return `{enchant}{rune}Adds ${value.min} to ${value.max} ${key.replace(/^Adds X to Y /, "")}`;
 		}
 
 		const isInt = Number.isInteger(value);
 		const needsPercent = !/^to\s/i.test(key) && !/^\+/.test(key);
-		return `{enchant}{rune}${isInt ? value : value.toFixed(2)}${needsPercent ? '%' : ''} ${key}`;
+		return `{enchant}{rune}${isInt ? value : value.toFixed(2)}${needsPercent ? "%" : ""} ${key}`;
 	});
 }
 
 function isRangeRuneMod(value: MergedRuneMod | undefined): value is { min: number; max: number } {
-	return typeof value === 'object' && value !== null && 'min' in value && 'max' in value;
+	return typeof value === "object" && value !== null && "min" in value && "max" in value;
 }

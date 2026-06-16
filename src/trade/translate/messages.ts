@@ -1,11 +1,11 @@
-import type { TranslateDictionary } from '../../translate-dictionary';
+import type { TranslateDictionary } from "../../translate-dictionary";
 
-export const poeTranslationMessageSource = 'poe2-extensions:trade:translate';
+export const poeTranslationMessageSource = "poe2-extensions:trade:translate";
 
 export const PoeTranslationMessageType = {
-	fetch: 'POE_TRANSLATION_FETCH',
-	result: 'POE_TRANSLATION_FETCH_RESULT',
-	error: 'POE_TRANSLATION_FETCH_ERROR',
+	fetch: "POE_TRANSLATION_FETCH",
+	result: "POE_TRANSLATION_FETCH_RESULT",
+	error: "POE_TRANSLATION_FETCH_ERROR",
 } as const;
 
 export type PoeTranslationFetchMessage = {
@@ -49,13 +49,11 @@ export function isPoeTranslationMessage(value: unknown): value is PoeTranslation
 	const type = (value as { type?: unknown })?.type;
 
 	return (
-		typeof value === 'object' &&
+		typeof value === "object" &&
 		value !== null &&
 		(value as { source?: unknown }).source === poeTranslationMessageSource &&
-		(
-			type === PoeTranslationMessageType.fetch ||
+		(type === PoeTranslationMessageType.fetch ||
 			type === PoeTranslationMessageType.result ||
-			type === PoeTranslationMessageType.error
-		)
+			type === PoeTranslationMessageType.error)
 	);
 }

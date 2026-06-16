@@ -100,7 +100,7 @@ export interface TradeApp {
 
 export interface TradeAppStore {
 	state: TradeSearchesState;
-	commit(type: 'pushStatGroup', payload: TradeStatPresetQuery): void;
+	commit(type: "pushStatGroup", payload: TradeStatPresetQuery): void;
 }
 
 export interface TradeQueryState {
@@ -209,7 +209,7 @@ export interface TradeSearchItemModMagnitude {
 export type TradeSearchItemHash = [string, number[]];
 
 export interface ApiPluginsHookOptions {
-	on: "response",
+	on: "response";
 	hook: (response: Response) => void;
 }
 
@@ -218,7 +218,7 @@ export interface ApiPlugin {
 }
 
 export interface PoePlugins {
-	getPlugin(name: 'api-plugins', value: ApiPlugin): ApiPlugin;
+	getPlugin(name: "api-plugins", value: ApiPlugin): ApiPlugin;
 	getPlugin(name: string, value: unknown): unknown;
 }
 

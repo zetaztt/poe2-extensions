@@ -1,37 +1,29 @@
 <script lang="ts" setup>
-import { computed, onMounted, reactive, ref } from 'vue';
-import {
-	calculateArbitrageOpportunities,
-	formatNumber,
-	sortArbitrageOpportunities,
-} from '@/arbitrage/calculations';
-import {
-	createEmptyArbitrageState,
-	loadArbitrageState,
-	saveArbitrageState,
-} from '@/arbitrage/storage';
+import { computed, onMounted, reactive, ref } from "vue";
+import { calculateArbitrageOpportunities, formatNumber, sortArbitrageOpportunities } from "@/arbitrage/calculations";
+import { createEmptyArbitrageState, loadArbitrageState, saveArbitrageState } from "@/arbitrage/storage";
 import type {
 	ArbitrageCurrency,
 	ArbitrageProduct,
 	ArbitrageState,
 	CurrencyExchangeQuote,
 	ProductPriceQuote,
-} from '@/arbitrage/types';
+} from "@/arbitrage/types";
 
 const state = reactive<ArbitrageState>(createEmptyArbitrageState());
 const isLoading = ref(true);
-const statusText = ref('');
+const statusText = ref("");
 const expandedQuoteIds = ref(new Set<string>());
 
-const newCurrencyName = ref('');
-const newCurrencySymbol = ref('');
-const newProductName = ref('');
-const exchangeSourceCurrencyId = ref('');
+const newCurrencyName = ref("");
+const newCurrencySymbol = ref("");
+const newProductName = ref("");
+const exchangeSourceCurrencyId = ref("");
 const exchangeSourceAmount = ref<number | null>(null);
-const exchangeTargetCurrencyId = ref('');
+const exchangeTargetCurrencyId = ref("");
 const exchangeTargetAmount = ref<number | null>(null);
-const quoteProductId = ref('');
-const quoteCurrencyId = ref('');
+const quoteProductId = ref("");
+const quoteCurrencyId = ref("");
 const quotePrice = ref<number | null>(null);
 
 const calculation = computed(() => calculateArbitrageOpportunities(state));
@@ -45,9 +37,7 @@ const visibleOpportunities = computed(() => {
 onMounted(async () => {
 	Object.assign(state, await loadArbitrageState());
 	expandedQuoteIds.value = new Set(
-		state.productQuotes
-			.filter((quote) => quote.buyPrice !== quote.sellPrice)
-			.map((quote) => quote.id),
+		state.productQuotes.filter((quote) => quote.buyPrice !== quote.sellPrice).map((quote) => quote.id),
 	);
 	syncDraftSelections();
 	isLoading.value = false;
@@ -57,45 +47,44 @@ function addCurrency(): void {
 	const name = newCurrencyName.value.trim();
 	const symbol = newCurrencySymbol.value.trim();
 	if (!name || !symbol) {
-		showStatus('请填写货币名称和简称。');
+		showStatus("请填写货币名称和简称。");
 		return;
 	}
 	if (state.currencies.some((currency) => currency.symbol.toLocaleLowerCase() === symbol.toLocaleLowerCase())) {
-		showStatus('货币简称不能重复。');
+		showStatus("货币简称不能重复。");
 		return;
 	}
 
-	state.currencies.push({ id: createId('currency'), name, symbol });
-	newCurrencyName.value = '';
-	newCurrencySymbol.value = '';
+	state.currencies.push({ id: createId("currency"), name, symbol });
+	newCurrencyName.value = "";
+	newCurrencySymbol.value = "";
 	syncDraftSelections();
-	void persist('货币已添加。');
+	void persist("货币已添加。");
 }
 
 function addProduct(): void {
 	const name = newProductName.value.trim();
 	if (!name) {
-		showStatus('请填写商品名称。');
+		showStatus("请填写商品名称。");
 		return;
 	}
 
-	state.products.push({ id: createId('product'), name });
-	newProductName.value = '';
+	state.products.push({ id: createId("product"), name });
+	newProductName.value = "";
 	syncDraftSelections();
-	void persist('商品已添加。');
+	void persist("商品已添加。");
 }
 
-function updateCurrency(currency: ArbitrageCurrency, field: 'name' | 'symbol', event: Event): void {
+function updateCurrency(currency: ArbitrageCurrency, field: "name" | "symbol", event: Event): void {
 	const value = getInputValue(event).trim();
 	if (!value) return;
 	if (
-		field === 'symbol'
-		&& state.currencies.some((item) => (
-			item.id !== currency.id
-			&& item.symbol.toLocaleLowerCase() === value.toLocaleLowerCase()
-		))
+		field === "symbol" &&
+		state.currencies.some(
+			(item) => item.id !== currency.id && item.symbol.toLocaleLowerCase() === value.toLocaleLowerCase(),
+		)
 	) {
-		showStatus('货币简称不能重复。');
+		showStatus("货币简称不能重复。");
 		return;
 	}
 
@@ -114,13 +103,13 @@ function deleteCurrency(currency: ArbitrageCurrency): void {
 	if (!window.confirm(`确定删除货币“${currency.name}（${currency.symbol}）”及其全部关联报价吗？`)) return;
 
 	state.currencies = state.currencies.filter((item) => item.id !== currency.id);
-	state.exchangeQuotes = state.exchangeQuotes.filter((quote) => (
-		quote.sourceCurrencyId !== currency.id && quote.targetCurrencyId !== currency.id
-	));
+	state.exchangeQuotes = state.exchangeQuotes.filter(
+		(quote) => quote.sourceCurrencyId !== currency.id && quote.targetCurrencyId !== currency.id,
+	);
 	state.productQuotes = state.productQuotes.filter((quote) => quote.currencyId !== currency.id);
 	delete state.minimumProfitByCurrency[currency.id];
 	syncDraftSelections();
-	void persist('货币及关联报价已删除。');
+	void persist("货币及关联报价已删除。");
 }
 
 function deleteProduct(product: ArbitrageProduct): void {
@@ -129,23 +118,23 @@ function deleteProduct(product: ArbitrageProduct): void {
 	state.products = state.products.filter((item) => item.id !== product.id);
 	state.productQuotes = state.productQuotes.filter((quote) => quote.productId !== product.id);
 	syncDraftSelections();
-	void persist('商品及关联报价已删除。');
+	void persist("商品及关联报价已删除。");
 }
 
 function addExchangeQuote(): void {
 	if (
-		!exchangeSourceCurrencyId.value
-		|| !exchangeTargetCurrencyId.value
-		|| exchangeSourceCurrencyId.value === exchangeTargetCurrencyId.value
-		|| !isPositiveNumber(exchangeSourceAmount.value)
-		|| !isPositiveNumber(exchangeTargetAmount.value)
+		!exchangeSourceCurrencyId.value ||
+		!exchangeTargetCurrencyId.value ||
+		exchangeSourceCurrencyId.value === exchangeTargetCurrencyId.value ||
+		!isPositiveNumber(exchangeSourceAmount.value) ||
+		!isPositiveNumber(exchangeTargetAmount.value)
 	) {
-		showStatus('请选择两种不同货币，并填写有效的兑换数量。');
+		showStatus("请选择两种不同货币，并填写有效的兑换数量。");
 		return;
 	}
 
 	state.exchangeQuotes.push({
-		id: createId('exchange'),
+		id: createId("exchange"),
 		sourceCurrencyId: exchangeSourceCurrencyId.value,
 		sourceAmount: exchangeSourceAmount.value,
 		targetCurrencyId: exchangeTargetCurrencyId.value,
@@ -153,12 +142,12 @@ function addExchangeQuote(): void {
 	});
 	exchangeSourceAmount.value = null;
 	exchangeTargetAmount.value = null;
-	void persist('兑换报价已添加。');
+	void persist("兑换报价已添加。");
 }
 
 function updateExchangeAmount(
 	quote: CurrencyExchangeQuote,
-	field: 'sourceAmount' | 'targetAmount',
+	field: "sourceAmount" | "targetAmount",
 	event: Event,
 ): void {
 	const value = parsePositiveInput(event);
@@ -169,13 +158,13 @@ function updateExchangeAmount(
 
 function updateExchangeCurrency(
 	quote: CurrencyExchangeQuote,
-	field: 'sourceCurrencyId' | 'targetCurrencyId',
+	field: "sourceCurrencyId" | "targetCurrencyId",
 	event: Event,
 ): void {
 	const value = getInputValue(event);
-	const other = field === 'sourceCurrencyId' ? quote.targetCurrencyId : quote.sourceCurrencyId;
+	const other = field === "sourceCurrencyId" ? quote.targetCurrencyId : quote.sourceCurrencyId;
 	if (!value || value === other) {
-		showStatus('兑换报价必须选择两种不同货币。');
+		showStatus("兑换报价必须选择两种不同货币。");
 		return;
 	}
 	quote[field] = value;
@@ -189,25 +178,27 @@ function deleteExchangeQuote(id: string): void {
 
 function addProductQuote(): void {
 	if (!quoteProductId.value || !quoteCurrencyId.value || !isPositiveNumber(quotePrice.value)) {
-		showStatus('请选择商品和货币，并填写有效价格。');
+		showStatus("请选择商品和货币，并填写有效价格。");
 		return;
 	}
-	if (state.productQuotes.some((quote) => (
-		quote.productId === quoteProductId.value && quote.currencyId === quoteCurrencyId.value
-	))) {
-		showStatus('该商品已经存在此货币报价，可直接编辑。');
+	if (
+		state.productQuotes.some(
+			(quote) => quote.productId === quoteProductId.value && quote.currencyId === quoteCurrencyId.value,
+		)
+	) {
+		showStatus("该商品已经存在此货币报价，可直接编辑。");
 		return;
 	}
 
 	state.productQuotes.push({
-		id: createId('price'),
+		id: createId("price"),
 		productId: quoteProductId.value,
 		currencyId: quoteCurrencyId.value,
 		buyPrice: quotePrice.value,
 		sellPrice: quotePrice.value,
 	});
 	quotePrice.value = null;
-	void persist('商品报价已添加。');
+	void persist("商品报价已添加。");
 }
 
 function updateUnifiedPrice(quote: ProductPriceQuote, event: Event): void {
@@ -218,7 +209,7 @@ function updateUnifiedPrice(quote: ProductPriceQuote, event: Event): void {
 	void persist();
 }
 
-function updateSplitPrice(quote: ProductPriceQuote, field: 'buyPrice' | 'sellPrice', event: Event): void {
+function updateSplitPrice(quote: ProductPriceQuote, field: "buyPrice" | "sellPrice", event: Event): void {
 	const value = parsePositiveInput(event);
 	if (value === null) return;
 	quote[field] = value;
@@ -267,24 +258,24 @@ function updateShowOnlyQualified(event: Event): void {
 
 function updateSort(event: Event): void {
 	const value = getInputValue(event);
-	if (value !== 'order' && value !== 'profit' && value !== 'return') return;
+	if (value !== "order" && value !== "profit" && value !== "return") return;
 	state.sort = value;
 	void persist();
 }
 
 function getCurrencySymbol(currencyId: string): string {
-	return state.currencies.find((currency) => currency.id === currencyId)?.symbol ?? '?';
+	return state.currencies.find((currency) => currency.id === currencyId)?.symbol ?? "?";
 }
 
 function getProductName(productId: string): string {
-	return state.products.find((product) => product.id === productId)?.name ?? '未知商品';
+	return state.products.find((product) => product.id === productId)?.name ?? "未知商品";
 }
 
 function isExpanded(quoteId: string): boolean {
 	return expandedQuoteIds.value.has(quoteId);
 }
 
-async function persist(message = ''): Promise<void> {
+async function persist(message = ""): Promise<void> {
 	try {
 		await saveArbitrageState({
 			currencies: state.currencies,
@@ -298,20 +289,20 @@ async function persist(message = ''): Promise<void> {
 		});
 		if (message) showStatus(message);
 	} catch (error) {
-		showStatus('本地保存失败，请稍后重试。');
-		console.error('[poe2-extensions] 倒卖差价数据保存失败', error);
+		showStatus("本地保存失败，请稍后重试。");
+		console.error("[poe2-extensions] 倒卖差价数据保存失败", error);
 	}
 }
 
 function syncDraftSelections(): void {
-	const firstCurrencyId = state.currencies[0]?.id ?? '';
-	const secondCurrencyId = state.currencies.find((currency) => currency.id !== firstCurrencyId)?.id ?? '';
+	const firstCurrencyId = state.currencies[0]?.id ?? "";
+	const secondCurrencyId = state.currencies.find((currency) => currency.id !== firstCurrencyId)?.id ?? "";
 	if (!state.currencies.some((currency) => currency.id === exchangeSourceCurrencyId.value)) {
 		exchangeSourceCurrencyId.value = firstCurrencyId;
 	}
 	if (
-		!state.currencies.some((currency) => currency.id === exchangeTargetCurrencyId.value)
-		|| exchangeTargetCurrencyId.value === exchangeSourceCurrencyId.value
+		!state.currencies.some((currency) => currency.id === exchangeTargetCurrencyId.value) ||
+		exchangeTargetCurrencyId.value === exchangeSourceCurrencyId.value
 	) {
 		exchangeTargetCurrencyId.value = secondCurrencyId;
 	}
@@ -319,7 +310,7 @@ function syncDraftSelections(): void {
 		quoteCurrencyId.value = firstCurrencyId;
 	}
 	if (!state.products.some((product) => product.id === quoteProductId.value)) {
-		quoteProductId.value = state.products[0]?.id ?? '';
+		quoteProductId.value = state.products[0]?.id ?? "";
 	}
 }
 
@@ -346,7 +337,7 @@ function parseNonNegativeInput(event: Event): number | null {
 }
 
 function isPositiveNumber(value: number | null): value is number {
-	return typeof value === 'number' && Number.isFinite(value) && value > 0;
+	return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 </script>
 
@@ -364,25 +355,31 @@ function isPositiveNumber(value: number | null): value is number {
 				</div>
 
 				<form class="add-row" @submit.prevent="addCurrency">
-					<input v-model="newCurrencyName" type="text" placeholder="货币名称，如崇高石">
-					<input v-model="newCurrencySymbol" type="text" placeholder="简称，如 e">
+					<input v-model="newCurrencyName" type="text" placeholder="货币名称，如崇高石" />
+					<input v-model="newCurrencySymbol" type="text" placeholder="简称，如 e" />
 					<button type="submit">添加货币</button>
 				</form>
 				<div class="asset-list">
 					<div v-for="currency in state.currencies" :key="currency.id" class="asset-row">
-						<input :value="currency.name" aria-label="货币名称" @change="updateCurrency(currency, 'name', $event)">
-						<input :value="currency.symbol" aria-label="货币简称" @change="updateCurrency(currency, 'symbol', $event)">
+						<input
+							:value="currency.name"
+							aria-label="货币名称"
+							@change="updateCurrency(currency, 'name', $event)" />
+						<input
+							:value="currency.symbol"
+							aria-label="货币简称"
+							@change="updateCurrency(currency, 'symbol', $event)" />
 						<button class="danger-button" type="button" @click="deleteCurrency(currency)">删除</button>
 					</div>
 				</div>
 
 				<form class="add-row product-add" @submit.prevent="addProduct">
-					<input v-model="newProductName" type="text" placeholder="商品名称">
+					<input v-model="newProductName" type="text" placeholder="商品名称" />
 					<button type="submit">添加商品</button>
 				</form>
 				<div class="asset-list">
 					<div v-for="product in state.products" :key="product.id" class="asset-row product-row">
-						<input :value="product.name" aria-label="商品名称" @change="updateProduct(product, $event)">
+						<input :value="product.name" aria-label="商品名称" @change="updateProduct(product, $event)" />
 						<button class="danger-button" type="button" @click="deleteProduct(product)">删除</button>
 					</div>
 				</div>
@@ -397,7 +394,7 @@ function isPositiveNumber(value: number | null): value is number {
 				</div>
 
 				<form class="exchange-form" @submit.prevent="addExchangeQuote">
-					<input v-model.number="exchangeSourceAmount" type="number" min="0" step="any" placeholder="数量">
+					<input v-model.number="exchangeSourceAmount" type="number" min="0" step="any" placeholder="数量" />
 					<select v-model="exchangeSourceCurrencyId" aria-label="来源货币">
 						<option value="" disabled>来源货币</option>
 						<option v-for="currency in state.currencies" :key="currency.id" :value="currency.id">
@@ -405,7 +402,7 @@ function isPositiveNumber(value: number | null): value is number {
 						</option>
 					</select>
 					<span>→</span>
-					<input v-model.number="exchangeTargetAmount" type="number" min="0" step="any" placeholder="数量">
+					<input v-model.number="exchangeTargetAmount" type="number" min="0" step="any" placeholder="数量" />
 					<select v-model="exchangeTargetCurrencyId" aria-label="目标货币">
 						<option value="" disabled>目标货币</option>
 						<option v-for="currency in state.currencies" :key="currency.id" :value="currency.id">
@@ -417,16 +414,40 @@ function isPositiveNumber(value: number | null): value is number {
 
 				<div class="quote-list">
 					<div v-for="quote in state.exchangeQuotes" :key="quote.id" class="exchange-row">
-						<input :value="quote.sourceAmount" type="number" min="0" step="any" @change="updateExchangeAmount(quote, 'sourceAmount', $event)">
-						<select :value="quote.sourceCurrencyId" @change="updateExchangeCurrency(quote, 'sourceCurrencyId', $event)">
-							<option v-for="currency in state.currencies" :key="currency.id" :value="currency.id">{{ currency.symbol }}</option>
+						<input
+							:value="quote.sourceAmount"
+							type="number"
+							min="0"
+							step="any"
+							@change="updateExchangeAmount(quote, 'sourceAmount', $event)" />
+						<select
+							:value="quote.sourceCurrencyId"
+							@change="updateExchangeCurrency(quote, 'sourceCurrencyId', $event)">
+							<option v-for="currency in state.currencies" :key="currency.id" :value="currency.id">
+								{{ currency.symbol }}
+							</option>
 						</select>
 						<span>→</span>
-						<input :value="quote.targetAmount" type="number" min="0" step="any" @change="updateExchangeAmount(quote, 'targetAmount', $event)">
-						<select :value="quote.targetCurrencyId" @change="updateExchangeCurrency(quote, 'targetCurrencyId', $event)">
-							<option v-for="currency in state.currencies" :key="currency.id" :value="currency.id">{{ currency.symbol }}</option>
+						<input
+							:value="quote.targetAmount"
+							type="number"
+							min="0"
+							step="any"
+							@change="updateExchangeAmount(quote, 'targetAmount', $event)" />
+						<select
+							:value="quote.targetCurrencyId"
+							@change="updateExchangeCurrency(quote, 'targetCurrencyId', $event)">
+							<option v-for="currency in state.currencies" :key="currency.id" :value="currency.id">
+								{{ currency.symbol }}
+							</option>
 						</select>
-						<button class="icon-button" type="button" title="删除报价" @click="deleteExchangeQuote(quote.id)">×</button>
+						<button
+							class="icon-button"
+							type="button"
+							title="删除报价"
+							@click="deleteExchangeQuote(quote.id)">
+							×
+						</button>
 					</div>
 				</div>
 			</section>
@@ -442,12 +463,16 @@ function isPositiveNumber(value: number | null): value is number {
 				<form class="product-quote-form" @submit.prevent="addProductQuote">
 					<select v-model="quoteProductId">
 						<option value="" disabled>选择商品</option>
-						<option v-for="product in state.products" :key="product.id" :value="product.id">{{ product.name }}</option>
+						<option v-for="product in state.products" :key="product.id" :value="product.id">
+							{{ product.name }}
+						</option>
 					</select>
-					<input v-model.number="quotePrice" type="number" min="0" step="any" placeholder="价格">
+					<input v-model.number="quotePrice" type="number" min="0" step="any" placeholder="价格" />
 					<select v-model="quoteCurrencyId">
 						<option value="" disabled>货币</option>
-						<option v-for="currency in state.currencies" :key="currency.id" :value="currency.id">{{ currency.symbol }}</option>
+						<option v-for="currency in state.currencies" :key="currency.id" :value="currency.id">
+							{{ currency.symbol }}
+						</option>
 					</select>
 					<button type="submit">添加</button>
 				</form>
@@ -458,9 +483,15 @@ function isPositiveNumber(value: number | null): value is number {
 							<strong>{{ getProductName(quote.productId) }}</strong>
 							<span>{{ getCurrencySymbol(quote.currencyId) }}</span>
 							<button type="button" class="link-button" @click="toggleProductQuote(quote)">
-								{{ isExpanded(quote.id) ? '收起' : '展开买卖价' }}
+								{{ isExpanded(quote.id) ? "收起" : "展开买卖价" }}
 							</button>
-							<button class="icon-button" type="button" title="删除报价" @click="deleteProductQuote(quote.id)">×</button>
+							<button
+								class="icon-button"
+								type="button"
+								title="删除报价"
+								@click="deleteProductQuote(quote.id)">
+								×
+							</button>
 						</div>
 						<label v-if="!isExpanded(quote.id)" class="price-field">
 							<span>价格</span>
@@ -469,17 +500,26 @@ function isPositiveNumber(value: number | null): value is number {
 								type="number"
 								min="0"
 								step="any"
-								@change="updateUnifiedPrice(quote, $event)"
-							>
+								@change="updateUnifiedPrice(quote, $event)" />
 						</label>
 						<div v-else class="split-prices">
 							<label class="price-field">
 								<span>买入价</span>
-								<input :value="quote.buyPrice ?? ''" type="number" min="0" step="any" @change="updateSplitPrice(quote, 'buyPrice', $event)">
+								<input
+									:value="quote.buyPrice ?? ''"
+									type="number"
+									min="0"
+									step="any"
+									@change="updateSplitPrice(quote, 'buyPrice', $event)" />
 							</label>
 							<label class="price-field">
 								<span>卖出价</span>
-								<input :value="quote.sellPrice ?? ''" type="number" min="0" step="any" @change="updateSplitPrice(quote, 'sellPrice', $event)">
+								<input
+									:value="quote.sellPrice ?? ''"
+									type="number"
+									min="0"
+									step="any"
+									@change="updateSplitPrice(quote, 'sellPrice', $event)" />
 							</label>
 						</div>
 					</article>
@@ -496,7 +536,12 @@ function isPositiveNumber(value: number | null): value is number {
 				<div class="threshold-grid">
 					<label class="price-field">
 						<span>最低收益率（%）</span>
-						<input :value="state.minimumReturnPercent" type="number" min="0" step="any" @change="updateMinimumReturn">
+						<input
+							:value="state.minimumReturnPercent"
+							type="number"
+							min="0"
+							step="any"
+							@change="updateMinimumReturn" />
 					</label>
 					<label v-for="currency in state.currencies" :key="currency.id" class="price-field">
 						<span>最低利润（{{ currency.symbol }}）</span>
@@ -505,8 +550,7 @@ function isPositiveNumber(value: number | null): value is number {
 							type="number"
 							min="0"
 							step="any"
-							@change="updateMinimumProfit(currency.id, $event)"
-						>
+							@change="updateMinimumProfit(currency.id, $event)" />
 					</label>
 				</div>
 			</section>
@@ -524,7 +568,7 @@ function isPositiveNumber(value: number | null): value is number {
 					</select>
 				</div>
 				<label class="filter-toggle">
-					<input type="checkbox" :checked="state.showOnlyQualified" @change="updateShowOnlyQualified">
+					<input type="checkbox" :checked="state.showOnlyQualified" @change="updateShowOnlyQualified" />
 					仅显示达到利润门槛的机会
 				</label>
 
@@ -533,19 +577,22 @@ function isPositiveNumber(value: number | null): value is number {
 						v-for="opportunity in visibleOpportunities"
 						:key="opportunity.id"
 						class="opportunity"
-						:class="{ qualified: opportunity.qualified, loss: opportunity.profit < 0 }"
-					>
+						:class="{ qualified: opportunity.qualified, loss: opportunity.profit < 0 }">
 						<div class="opportunity-heading">
 							<strong>{{ opportunity.title }}</strong>
-							<span>{{ opportunity.type === 'currency' ? '货币' : '商品' }}</span>
+							<span>{{ opportunity.type === "currency" ? "货币" : "商品" }}</span>
 						</div>
 						<p>{{ opportunity.description }}</p>
 						<div class="result-values">
 							<strong>
-								{{ opportunity.profit >= 0 ? '+' : '' }}{{ formatNumber(opportunity.profit) }}{{ getCurrencySymbol(opportunity.buyCurrencyId) }}
+								{{ opportunity.profit >= 0 ? "+" : "" }}{{ formatNumber(opportunity.profit)
+								}}{{ getCurrencySymbol(opportunity.buyCurrencyId) }}
 							</strong>
-							<span>{{ opportunity.returnPercent >= 0 ? '+' : '' }}{{ formatNumber(opportunity.returnPercent) }}%</span>
-							<small>{{ opportunity.qualified ? '已达门槛' : '未达门槛' }}</small>
+							<span
+								>{{ opportunity.returnPercent >= 0 ? "+" : ""
+								}}{{ formatNumber(opportunity.returnPercent) }}%</span
+							>
+							<small>{{ opportunity.qualified ? "已达门槛" : "未达门槛" }}</small>
 						</div>
 					</article>
 				</div>
@@ -553,11 +600,9 @@ function isPositiveNumber(value: number | null): value is number {
 
 				<div v-if="calculation.missingExchanges.length" class="missing-list">
 					<strong>缺少直接兑换报价</strong>
-					<p
-						v-for="missing in calculation.missingExchanges"
-						:key="missing.id"
-					>
-						{{ missing.productName }}：{{ getCurrencySymbol(missing.sellCurrencyId) }} → {{ getCurrencySymbol(missing.buyCurrencyId) }}
+					<p v-for="missing in calculation.missingExchanges" :key="missing.id">
+						{{ missing.productName }}：{{ getCurrencySymbol(missing.sellCurrencyId) }} →
+						{{ getCurrencySymbol(missing.buyCurrencyId) }}
 					</p>
 				</div>
 			</section>
@@ -721,13 +766,13 @@ button:hover {
 	color: #fff;
 }
 
-form button[type='submit'] {
+form button[type="submit"] {
 	border-color: var(--color-button-secondary-border);
 	background: var(--color-button-secondary);
 	color: #fff;
 }
 
-form button[type='submit']:hover {
+form button[type="submit"]:hover {
 	border-color: #b17b1c;
 	background: #805200;
 }

@@ -11,15 +11,13 @@ export function observeItemElement() {
 					}
 				}
 			}
-
-
 		}
 	});
 
 	itemObserver.observe(document.body, {
 		childList: true,
 		subtree: true,
-		characterData: true // 关键：监听文本节点内容变化 (如时间动态更新)
+		characterData: true, // 关键：监听文本节点内容变化 (如时间动态更新)
 	});
 }
 
@@ -36,14 +34,11 @@ async function translateItemElement(itemElement: HTMLElement) {
 		return;
 	}
 
-	const iterator = document.createNodeIterator(
-		itemElement,
-		NodeFilter.SHOW_TEXT
-	);
+	const iterator = document.createNodeIterator(itemElement, NodeFilter.SHOW_TEXT);
 
 	// const nodes = [];
 	let node: Text;
-	while (node = iterator.nextNode() as Text) {
+	while ((node = iterator.nextNode() as Text)) {
 		const text = node.textContent ?? "";
 
 		if (text.endsWith(": ")) {
@@ -66,12 +61,10 @@ function translateItemStatFieldText(element: HTMLSpanElement) {
 
 	const statsData = getStatsData();
 
-	const config = statsData.find(g => g.id === groupId)?.entries.find(e => e.id === id);
+	const config = statsData.find((g) => g.id === groupId)?.entries.find((e) => e.id === id);
 
 	if (config) {
-		const {
-			_translateText,
-		} = config as Translated<TradeStatConfig>;
+		const { _translateText } = config as Translated<TradeStatConfig>;
 
 		if (!_translateText) return;
 
@@ -90,5 +83,5 @@ function translateItemStatFieldText(element: HTMLSpanElement) {
 let statsData: TradeStatsGroup[];
 
 function getStatsData() {
-	return statsData ??= JSON.parse(localStorage.getItem("lscache-trade2stats")!)
+	return (statsData ??= JSON.parse(localStorage.getItem("lscache-trade2stats")!));
 }

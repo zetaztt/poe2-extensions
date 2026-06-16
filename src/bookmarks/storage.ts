@@ -1,13 +1,9 @@
-import type {
-	StoredTradeBookmark,
-	StoredTradeBookmarkFolder,
-	StoredTradeBookmarkTree,
-} from './types';
+import type { StoredTradeBookmark, StoredTradeBookmarkFolder, StoredTradeBookmarkTree } from "./types";
 
-export const rootFolderId = 'trade-bookmarks-root';
+export const rootFolderId = "trade-bookmarks-root";
 
-const tradeBookmarkTreeStorageKey = 'tradeBookmarkTree';
-const rootFolderTitle = 'Trade 书签';
+const tradeBookmarkTreeStorageKey = "tradeBookmarkTree";
+const rootFolderTitle = "Trade 书签";
 const storage = browser.storage.local;
 
 export async function getBookmarkTree(): Promise<StoredTradeBookmarkTree> {
@@ -49,27 +45,28 @@ function isStoredBookmarkTree(value: unknown): value is StoredTradeBookmarkTree 
 
 function isStoredFolder(value: unknown, isRoot = false): value is StoredTradeBookmarkFolder {
 	if (!isRecord(value)) return false;
-	if (typeof value.id !== 'string' || typeof value.title !== 'string') return false;
-	if (!isRoot && typeof value.parentId !== 'string') return false;
+	if (typeof value.id !== "string" || typeof value.title !== "string") return false;
+	if (!isRoot && typeof value.parentId !== "string") return false;
 	if (isRoot && value.parentId !== undefined) return false;
-	if (typeof value.createdAt !== 'number' || typeof value.updatedAt !== 'number') return false;
+	if (typeof value.createdAt !== "number" || typeof value.updatedAt !== "number") return false;
 	if (!Array.isArray(value.children) || !Array.isArray(value.bookmarks)) return false;
 
-	return value.children.every((child) => isStoredFolder(child))
-		&& value.bookmarks.every(isStoredBookmark);
+	return value.children.every((child) => isStoredFolder(child)) && value.bookmarks.every(isStoredBookmark);
 }
 
 function isStoredBookmark(value: unknown): value is StoredTradeBookmark {
 	if (!isRecord(value)) return false;
 
-	return typeof value.id === 'string'
-		&& typeof value.title === 'string'
-		&& typeof value.url === 'string'
-		&& typeof value.parentId === 'string'
-		&& typeof value.dateAdded === 'number'
-		&& typeof value.updatedAt === 'number';
+	return (
+		typeof value.id === "string" &&
+		typeof value.title === "string" &&
+		typeof value.url === "string" &&
+		typeof value.parentId === "string" &&
+		typeof value.dateAdded === "number" &&
+		typeof value.updatedAt === "number"
+	);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null;
+	return typeof value === "object" && value !== null;
 }

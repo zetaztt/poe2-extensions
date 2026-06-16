@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import type { Directive } from 'vue';
-import type { TradeBookmarkTreeNode } from '@/bookmarks/types';
-import BookmarkMenu from './bookmark-menu.vue';
+import type { Directive } from "vue";
+import type { TradeBookmarkTreeNode } from "@/bookmarks/types";
+import BookmarkMenu from "./bookmark-menu.vue";
 
 const props = defineProps<{
 	folder: TradeBookmarkTreeNode & { displayDepth: number };
@@ -14,24 +14,24 @@ const props = defineProps<{
 	menuStyle?: Record<string, string>;
 }>();
 
-const renameTitle = defineModel<string>('renameTitle', { required: true });
+const renameTitle = defineModel<string>("renameTitle", { required: true });
 
 const emit = defineEmits<{
-	'toggle-expanded': [];
-	'folder-double-click': [];
-	'add-bookmark': [];
-	'create-folder': [];
-	'start-rename': [];
-	'delete-folder': [];
-	'toggle-menu': [];
-	'context-menu': [event: MouseEvent];
-	'drag-start': [event: DragEvent];
-	'drag-over': [event: DragEvent];
+	"toggle-expanded": [];
+	"folder-double-click": [];
+	"add-bookmark": [];
+	"create-folder": [];
+	"start-rename": [];
+	"delete-folder": [];
+	"toggle-menu": [];
+	"context-menu": [event: MouseEvent];
+	"drag-start": [event: DragEvent];
+	"drag-over": [event: DragEvent];
 	drop: [event: DragEvent];
-	'drag-end': [];
-	'confirm-rename': [];
-	'cancel-rename': [];
-	'rename-blur': [];
+	"drag-end": [];
+	"confirm-rename": [];
+	"cancel-rename": [];
+	"rename-blur": [];
 }>();
 
 const vFocus: Directive<HTMLInputElement> = {
@@ -42,55 +42,51 @@ const vFocus: Directive<HTMLInputElement> = {
 };
 
 function onMenuAction(actionId: string): void {
-	if (actionId === 'add-bookmark') {
-		emit('add-bookmark');
+	if (actionId === "add-bookmark") {
+		emit("add-bookmark");
 		return;
 	}
 
-	if (actionId === 'create') {
-		emit('create-folder');
+	if (actionId === "create") {
+		emit("create-folder");
 		return;
 	}
 
-	if (actionId === 'rename') {
-		emit('start-rename');
+	if (actionId === "rename") {
+		emit("start-rename");
 		return;
 	}
 
-	emit('delete-folder');
+	emit("delete-folder");
 }
 </script>
 
 <template>
 	<div
 		class="folder-row"
-		:class="[
-			{ 'top-level': folder.displayDepth === 0 },
-			dropClass,
-		]"
+		:class="[{ 'top-level': folder.displayDepth === 0 }, dropClass]"
 		:draggable="folder.canModify && !renaming && !busy"
 		@dragstart="emit('drag-start', $event)"
 		@dragover="emit('drag-over', $event)"
 		@drop="emit('drop', $event)"
 		@dragend="emit('drag-end')"
-		@contextmenu="emit('context-menu', $event)"
-	>
+		@contextmenu="emit('context-menu', $event)">
 		<button
 			v-if="folder.displayDepth > 0"
 			class="tree-toggle"
 			type="button"
 			:disabled="!hasContent"
 			:title="expanded ? '折叠' : '展开'"
-			@click.stop="emit('toggle-expanded')"
-		>
+			@click.stop="emit('toggle-expanded')">
 			<img
 				class="tree-toggle-icon"
-				:src="hasContent && expanded
-					? '/sidepanel/filter-toggle-expanded.png'
-					: '/sidepanel/filter-toggle-collapsed.png'"
+				:src="
+					hasContent && expanded
+						? '/sidepanel/filter-toggle-expanded.png'
+						: '/sidepanel/filter-toggle-collapsed.png'
+				"
 				alt=""
-				aria-hidden="true"
-			>
+				aria-hidden="true" />
 		</button>
 		<input
 			v-if="renaming"
@@ -103,13 +99,8 @@ function onMenuAction(actionId: string): void {
 			@dblclick.stop
 			@keydown.enter.prevent="emit('confirm-rename')"
 			@keydown.esc.prevent="emit('cancel-rename')"
-			@blur="emit('rename-blur')"
-		>
-		<span
-			v-else
-			class="folder-title"
-			@dblclick.stop="emit('folder-double-click')"
-		>
+			@blur="emit('rename-blur')" />
+		<span v-else class="folder-title" @dblclick.stop="emit('folder-double-click')">
 			{{ folder.title }}
 		</span>
 		<span class="folder-count">{{ folder.bookmarks.length }}</span>
@@ -118,8 +109,7 @@ function onMenuAction(actionId: string): void {
 			type="button"
 			:disabled="busy"
 			title="添加当前搜索到此文件夹"
-			@click.stop="emit('add-bookmark')"
-		>
+			@click.stop="emit('add-bookmark')">
 			添加书签
 		</button>
 		<button
@@ -128,8 +118,7 @@ function onMenuAction(actionId: string): void {
 			type="button"
 			:disabled="busy"
 			title="添加子文件夹"
-			@click.stop="emit('create-folder')"
-		>
+			@click.stop="emit('create-folder')">
 			添加文件夹
 		</button>
 		<button
@@ -138,8 +127,7 @@ function onMenuAction(actionId: string): void {
 			type="button"
 			:disabled="busy"
 			title="重命名文件夹"
-			@click.stop="emit('start-rename')"
-		>
+			@click.stop="emit('start-rename')">
 			重命名
 		</button>
 		<BookmarkMenu
@@ -154,8 +142,7 @@ function onMenuAction(actionId: string): void {
 				{ id: 'delete', label: '删除', disabled: !folder.canModify },
 			]"
 			@toggle="emit('toggle-menu')"
-			@select="onMenuAction"
-		/>
+			@select="onMenuAction" />
 	</div>
 </template>
 
@@ -201,7 +188,7 @@ function onMenuAction(actionId: string): void {
 	background: #181818;
 }
 
-.folder-row[draggable='true'] {
+.folder-row[draggable="true"] {
 	cursor: grab;
 }
 

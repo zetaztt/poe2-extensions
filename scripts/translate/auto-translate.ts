@@ -1,11 +1,27 @@
 import type { Response as PlaywrightResponse } from "playwright";
 import type { Awaitable } from "@crawlee/types";
-import { CheerioCrawler, PlaywrightCrawler, ProxyConfiguration, type RequestOptions, type CheerioCrawlingContext } from "crawlee";
-import { readManualTranslateTexts, readTexts, type TextData, writeAutoTranslateTexts, writeManualTranslateTexts } from "./utils";
+import {
+	CheerioCrawler,
+	PlaywrightCrawler,
+	ProxyConfiguration,
+	type RequestOptions,
+	type CheerioCrawlingContext,
+} from "crawlee";
+import {
+	readManualTranslateTexts,
+	readTexts,
+	type TextData,
+	writeAutoTranslateTexts,
+	writeManualTranslateTexts,
+} from "./utils";
 
 const texts = readTexts();
 const autoTranslateTexts: Record<string, string> = {};
-const translatedOriginals = new Set(Object.values(texts).filter(text => text.translate).map(text => text.original));
+const translatedOriginals = new Set(
+	Object.values(texts)
+		.filter((text) => text.translate)
+		.map((text) => text.original),
+);
 
 interface PoeDbSearchTranslateHandler {
 	isMatch(text: TextData): boolean;
@@ -38,7 +54,7 @@ function setAutoTranslate(text: TextData, translate: string): void {
 
 function buildManualTranslateTexts(): Record<string, string> {
 	const existingManualTranslateTexts = readManualTranslateTexts();
-	const originalTexts = new Set(Object.values(texts).map(text => text.original));
+	const originalTexts = new Set(Object.values(texts).map((text) => text.original));
 	const manualTranslateTexts: Record<string, string> = {};
 
 	for (const [original, translate] of Object.entries(existingManualTranslateTexts)) {
@@ -94,11 +110,19 @@ async function translateByPoeDbAutoComplete() {
 								continue;
 							}
 
-							const searchText = text.original.replace(replaceCharRegex, (c) => (poeDbReplaceCharMap.get(c) ?? c));
+							const searchText = text.original.replace(
+								replaceCharRegex,
+								(c) => poeDbReplaceCharMap.get(c) ?? c,
+							);
 							const autoCompleteText = autoCompleteMap.get(searchText);
 							if (autoCompleteText) {
 								setAutoTranslate(text, autoCompleteText);
-								console.log("translate by auto complete", text.original, "=>", autoTranslateTexts[text.original]);
+								console.log(
+									"translate by auto complete",
+									text.original,
+									"=>",
+									autoTranslateTexts[text.original],
+								);
 							}
 						}
 
@@ -106,8 +130,7 @@ async function translateByPoeDbAutoComplete() {
 						clearTimeout(timeout);
 						page.off("response", onResponse);
 						resolve();
-					}
-					catch (error) {
+					} catch (error) {
 						clearTimeout(timeout);
 						page.off("response", onResponse);
 						reject(error);
@@ -138,7 +161,7 @@ const boeDbSearchTranslateHandlers: PoeDbSearchTranslateHandler[] = [
 			if (tabName) {
 				return tabName.replace(/\s*<small>.*<\/small>\s*/i, "").trim();
 			}
-		}
+		},
 	},
 	{
 		isMatch(text: TextData): boolean {
@@ -152,17 +175,16 @@ const boeDbSearchTranslateHandlers: PoeDbSearchTranslateHandler[] = [
 			if (name) {
 				return "配置" + name;
 			}
-		}
-	}
+		},
+	},
 ];
 
 function getPoeDbSearchTranslateHandler(text: TextData): PoeDbSearchTranslateHandler | undefined {
-	return boeDbSearchTranslateHandlers.find(h => h.isMatch(text));
+	return boeDbSearchTranslateHandlers.find((h) => h.isMatch(text));
 }
 
 async function translateByPoeDbSearch() {
 	const requests: RequestOptions[] = [];
-
 
 	for (const text of Object.values(texts)) {
 		if (hasTranslate(text)) {
@@ -177,14 +199,13 @@ async function translateByPoeDbSearch() {
 		let searchText = handler.getSearchText(text);
 
 		if (searchText) {
-			searchText = searchText.replace(replaceCharRegex, (c) => (poeDbReplaceCharMap.get(c) ?? c));
+			searchText = searchText.replace(replaceCharRegex, (c) => poeDbReplaceCharMap.get(c) ?? c);
 
 			requests.push({
 				url: `https://poe2db.tw/tw/${searchText}`,
-				userData: { key: text.key }
+				userData: { key: text.key },
 			});
 		}
-
 	}
 
 	if (!requests.length) {
@@ -209,7 +230,7 @@ async function translateByPoeDbSearch() {
 					console.log("translate by search", text.original, "=>", autoTranslateTexts[text.original]);
 				}
 			}
-		}
+		},
 	});
 
 	await crawler.run(requests);
@@ -223,7 +244,7 @@ const translates = new Map<string, Set<string>>();
 for (const [original, translate] of Object.entries(autoTranslateTexts)) {
 	let translateList = translates.get(original);
 	if (!translateList) {
-		translates.set(original, translateList = new Set());
+		translates.set(original, (translateList = new Set()));
 	}
 	translateList.add(translate);
 }
@@ -234,9 +255,15 @@ for (const text of Object.values(texts)) {
 		if (translateList && translateList.size > 0) {
 			if (translateList.size === 1) {
 				setAutoTranslate(text, translateList.values().next().value!);
-			}
-			else {
-				console.warn(`Multiple translates for original ${text.key}:`, text.original, "=>", Array.from(translateList.values()).map(str => `"${str}"`).join(" "));
+			} else {
+				console.warn(
+					`Multiple translates for original ${text.key}:`,
+					text.original,
+					"=>",
+					Array.from(translateList.values())
+						.map((str) => `"${str}"`)
+						.join(" "),
+				);
 			}
 		}
 	}

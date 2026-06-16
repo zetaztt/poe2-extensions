@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from "vue";
 import {
 	getTradeItemCopyEnabled,
 	getTradeStatPresetEnabled,
@@ -7,20 +7,20 @@ import {
 	setTradeItemCopyEnabled,
 	setTradeStatPresetEnabled,
 	setTradeTranslateEnabled,
-} from '@/settings/settings';
-import { createTradeFeaturesUpdateMessage } from '@/trade/messages';
+} from "@/settings/settings";
+import { createTradeFeaturesUpdateMessage } from "@/trade/messages";
 
 const tradeTranslateEnabled = ref(false);
 const tradeItemCopyEnabled = ref(false);
 const tradeStatPresetEnabled = ref(false);
 const isLoadingSettings = ref(true);
 const isSavingSettings = ref(false);
-const settingsStatusText = ref('');
+const settingsStatusText = ref("");
 
 const statusLabel = computed(() => {
-	const translate = tradeTranslateEnabled.value ? '翻译已开启' : '翻译已关闭';
-	const itemCopy = tradeItemCopyEnabled.value ? '复制已开启' : '复制已关闭';
-	const statPreset = tradeStatPresetEnabled.value ? '预设已开启' : '预设已关闭';
+	const translate = tradeTranslateEnabled.value ? "翻译已开启" : "翻译已关闭";
+	const itemCopy = tradeItemCopyEnabled.value ? "复制已开启" : "复制已关闭";
+	const statPreset = tradeStatPresetEnabled.value ? "预设已开启" : "预设已关闭";
 	return `${translate}，${itemCopy}，${statPreset}`;
 });
 
@@ -43,14 +43,14 @@ async function loadSettings(): Promise<void> {
 	isLoadingSettings.value = false;
 }
 
-function onCheckboxChange(event: Event, type: 'translate' | 'itemCopy' | 'statPreset'): void {
+function onCheckboxChange(event: Event, type: "translate" | "itemCopy" | "statPreset"): void {
 	const input = event.target as HTMLInputElement;
-	if (type === 'translate') {
+	if (type === "translate") {
 		void onTranslateToggle(input.checked);
 		return;
 	}
 
-	if (type === 'itemCopy') {
+	if (type === "itemCopy") {
 		void onItemCopyToggle(input.checked);
 		return;
 	}
@@ -62,16 +62,18 @@ async function onTranslateToggle(nextValue: boolean): Promise<void> {
 	const previousValue = tradeTranslateEnabled.value;
 	tradeTranslateEnabled.value = nextValue;
 	isSavingSettings.value = true;
-	settingsStatusText.value = '';
+	settingsStatusText.value = "";
 
 	try {
 		await setTradeTranslateEnabled(nextValue);
 		const reloaded = await reloadActiveTradeTab();
-		settingsStatusText.value = reloaded ? '设置已保存，trade2 页面已刷新。' : '设置已保存，打开或刷新 trade2 页面后生效。';
+		settingsStatusText.value = reloaded
+			? "设置已保存，trade2 页面已刷新。"
+			: "设置已保存，打开或刷新 trade2 页面后生效。";
 	} catch (error) {
 		tradeTranslateEnabled.value = previousValue;
-		settingsStatusText.value = '设置保存失败，请稍后重试。';
-		console.error('[poe2-extensions] 中文翻译设置保存失败', error);
+		settingsStatusText.value = "设置保存失败，请稍后重试。";
+		console.error("[poe2-extensions] 中文翻译设置保存失败", error);
 	} finally {
 		isSavingSettings.value = false;
 	}
@@ -81,16 +83,18 @@ async function onItemCopyToggle(nextValue: boolean): Promise<void> {
 	const previousValue = tradeItemCopyEnabled.value;
 	tradeItemCopyEnabled.value = nextValue;
 	isSavingSettings.value = true;
-	settingsStatusText.value = '';
+	settingsStatusText.value = "";
 
 	try {
 		await setTradeItemCopyEnabled(nextValue);
 		const updated = await updateActiveTradeTabFeatures();
-		settingsStatusText.value = updated ? '设置已保存，trade2 页面已更新。' : '设置已保存，打开或刷新 trade2 页面后生效。';
+		settingsStatusText.value = updated
+			? "设置已保存，trade2 页面已更新。"
+			: "设置已保存，打开或刷新 trade2 页面后生效。";
 	} catch (error) {
 		tradeItemCopyEnabled.value = previousValue;
-		settingsStatusText.value = '设置保存失败，请稍后重试。';
-		console.error('[poe2-extensions] 复制物品文本设置保存失败', error);
+		settingsStatusText.value = "设置保存失败，请稍后重试。";
+		console.error("[poe2-extensions] 复制物品文本设置保存失败", error);
 	} finally {
 		isSavingSettings.value = false;
 	}
@@ -100,16 +104,18 @@ async function onStatPresetToggle(nextValue: boolean): Promise<void> {
 	const previousValue = tradeStatPresetEnabled.value;
 	tradeStatPresetEnabled.value = nextValue;
 	isSavingSettings.value = true;
-	settingsStatusText.value = '';
+	settingsStatusText.value = "";
 
 	try {
 		await setTradeStatPresetEnabled(nextValue);
 		const updated = await updateActiveTradeTabFeatures();
-		settingsStatusText.value = updated ? '设置已保存，trade2 页面已更新。' : '设置已保存，打开或刷新 trade2 页面后生效。';
+		settingsStatusText.value = updated
+			? "设置已保存，trade2 页面已更新。"
+			: "设置已保存，打开或刷新 trade2 页面后生效。";
 	} catch (error) {
 		tradeStatPresetEnabled.value = previousValue;
-		settingsStatusText.value = '设置保存失败，请稍后重试。';
-		console.error('[poe2-extensions] 筛选预设保存设置保存失败', error);
+		settingsStatusText.value = "设置保存失败，请稍后重试。";
+		console.error("[poe2-extensions] 筛选预设保存设置保存失败", error);
 	} finally {
 		isSavingSettings.value = false;
 	}
@@ -136,14 +142,17 @@ async function updateActiveTradeTabFeatures(): Promise<boolean> {
 	if (!tab?.id || !isTrade2Url(tab.url)) return false;
 
 	try {
-		await browser.tabs.sendMessage(tab.id, createTradeFeaturesUpdateMessage({
-			translate: tradeTranslateEnabled.value,
-			itemCopy: tradeItemCopyEnabled.value,
-			statPreset: tradeStatPresetEnabled.value,
-		}));
+		await browser.tabs.sendMessage(
+			tab.id,
+			createTradeFeaturesUpdateMessage({
+				translate: tradeTranslateEnabled.value,
+				itemCopy: tradeItemCopyEnabled.value,
+				statPreset: tradeStatPresetEnabled.value,
+			}),
+		);
 		return true;
 	} catch (error) {
-		console.warn('[poe2-extensions] trade2 页面设置同步失败', error);
+		console.warn("[poe2-extensions] trade2 页面设置同步失败", error);
 		return false;
 	}
 }
@@ -153,7 +162,7 @@ function isTrade2Url(url: string | undefined): boolean {
 
 	try {
 		const parsedUrl = new URL(url);
-		return parsedUrl.origin === 'https://www.pathofexile.com' && parsedUrl.pathname.startsWith('/trade2');
+		return parsedUrl.origin === "https://www.pathofexile.com" && parsedUrl.pathname.startsWith("/trade2");
 	} catch {
 		return false;
 	}
@@ -174,8 +183,7 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeTranslateEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, 'translate')"
-				>
+					@change="onCheckboxChange($event, 'translate')" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
@@ -190,8 +198,7 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeItemCopyEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, 'itemCopy')"
-				>
+					@change="onCheckboxChange($event, 'itemCopy')" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
@@ -206,14 +213,15 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeStatPresetEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, 'statPreset')"
-				>
+					@change="onCheckboxChange($event, 'statPreset')" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
 			<div class="status">
-				<span class="status-dot" :class="{ active: tradeTranslateEnabled || tradeItemCopyEnabled || tradeStatPresetEnabled }"></span>
-				<span>{{ isLoadingSettings ? '读取设置中' : statusLabel }}</span>
+				<span
+					class="status-dot"
+					:class="{ active: tradeTranslateEnabled || tradeItemCopyEnabled || tradeStatPresetEnabled }"></span>
+				<span>{{ isLoadingSettings ? "读取设置中" : statusLabel }}</span>
 			</div>
 
 			<p v-if="settingsStatusText" class="message">{{ settingsStatusText }}</p>
@@ -221,9 +229,7 @@ function isTrade2Url(url: string | undefined): boolean {
 
 		<section class="panel muted">
 			<h2>字典来源</h2>
-			<a href="https://zetaztt.github.io/poe2/translate.json" target="_blank">
-				translate.json
-			</a>
+			<a href="https://zetaztt.github.io/poe2/translate.json" target="_blank"> translate.json </a>
 		</section>
 	</section>
 </template>
@@ -325,7 +331,7 @@ h2 {
 	height: 100%;
 	place-items: center;
 	color: #9d9d9d;
-	content: '关闭';
+	content: "关闭";
 	font-size: 13px;
 }
 
@@ -336,7 +342,7 @@ h2 {
 
 .switch-input:checked + .switch::after {
 	color: #fff;
-	content: '开启';
+	content: "开启";
 }
 
 .switch-input:disabled + .switch {

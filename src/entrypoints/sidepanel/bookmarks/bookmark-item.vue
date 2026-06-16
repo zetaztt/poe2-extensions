@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import type { Directive } from 'vue';
-import type { TradeBookmarkItem } from '@/bookmarks/types';
-import BookmarkMenu from './bookmark-menu.vue';
+import type { Directive } from "vue";
+import type { TradeBookmarkItem } from "@/bookmarks/types";
+import BookmarkMenu from "./bookmark-menu.vue";
 
 defineProps<{
 	bookmark: TradeBookmarkItem;
@@ -12,22 +12,22 @@ defineProps<{
 	menuStyle?: Record<string, string>;
 }>();
 
-const renameTitle = defineModel<string>('renameTitle', { required: true });
+const renameTitle = defineModel<string>("renameTitle", { required: true });
 
 const emit = defineEmits<{
 	open: [];
-	'start-rename': [];
+	"start-rename": [];
 	replace: [];
 	delete: [];
-	'toggle-menu': [];
-	'context-menu': [event: MouseEvent];
-	'drag-start': [event: DragEvent];
-	'drag-over': [event: DragEvent];
+	"toggle-menu": [];
+	"context-menu": [event: MouseEvent];
+	"drag-start": [event: DragEvent];
+	"drag-over": [event: DragEvent];
 	drop: [event: DragEvent];
-	'drag-end': [];
-	'confirm-rename': [];
-	'cancel-rename': [];
-	'rename-blur': [];
+	"drag-end": [];
+	"confirm-rename": [];
+	"cancel-rename": [];
+	"rename-blur": [];
 }>();
 
 const vFocus: Directive<HTMLInputElement> = {
@@ -38,17 +38,17 @@ const vFocus: Directive<HTMLInputElement> = {
 };
 
 function onMenuAction(actionId: string): void {
-	if (actionId === 'rename') {
-		emit('start-rename');
+	if (actionId === "rename") {
+		emit("start-rename");
 		return;
 	}
 
-	if (actionId === 'replace') {
-		emit('replace');
+	if (actionId === "replace") {
+		emit("replace");
 		return;
 	}
 
-	emit('delete');
+	emit("delete");
 }
 </script>
 
@@ -61,15 +61,8 @@ function onMenuAction(actionId: string): void {
 		@dragover="emit('drag-over', $event)"
 		@drop="emit('drop', $event)"
 		@dragend="emit('drag-end')"
-		@contextmenu="emit('context-menu', $event)"
-	>
-		<button
-			v-if="!renaming"
-			class="bookmark-open"
-			type="button"
-			:title="bookmark.url"
-			@click="emit('open')"
-		>
+		@contextmenu="emit('context-menu', $event)">
+		<button v-if="!renaming" class="bookmark-open" type="button" :title="bookmark.url" @click="emit('open')">
 			<span class="bookmark-title">{{ bookmark.title }}</span>
 		</button>
 		<div v-else class="bookmark-rename">
@@ -81,16 +74,9 @@ function onMenuAction(actionId: string): void {
 				:disabled="busy"
 				@keydown.enter.prevent="emit('confirm-rename')"
 				@keydown.esc.prevent="emit('cancel-rename')"
-				@blur="emit('rename-blur')"
-			>
+				@blur="emit('rename-blur')" />
 		</div>
-		<button
-			class="row-action"
-			type="button"
-			:disabled="busy"
-			title="重命名书签"
-			@click.stop="emit('start-rename')"
-		>
+		<button class="row-action" type="button" :disabled="busy" title="重命名书签" @click.stop="emit('start-rename')">
 			重命名
 		</button>
 		<BookmarkMenu
@@ -103,8 +89,7 @@ function onMenuAction(actionId: string): void {
 				{ id: 'delete', label: '删除' },
 			]"
 			@toggle="emit('toggle-menu')"
-			@select="onMenuAction"
-		/>
+			@select="onMenuAction" />
 	</div>
 </template>
 
@@ -130,7 +115,7 @@ function onMenuAction(actionId: string): void {
 	background: #181818;
 }
 
-.bookmark-item[draggable='true'] {
+.bookmark-item[draggable="true"] {
 	cursor: grab;
 }
 

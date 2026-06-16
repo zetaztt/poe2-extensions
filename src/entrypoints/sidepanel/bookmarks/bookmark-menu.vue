@@ -18,28 +18,16 @@ const emit = defineEmits<{
 
 <template>
 	<div class="more-wrap">
-		<button
-			class="more-button"
-			type="button"
-			:disabled="disabled"
-			title="更多"
-			@click.stop="emit('toggle')"
-		>
+		<button class="more-button" type="button" :disabled="disabled" title="更多" @click.stop="emit('toggle')">
 			⋯
 		</button>
-		<div
-			v-if="open"
-			class="more-menu"
-			:style="menuStyle"
-			@click.stop
-		>
+		<div v-if="open" class="more-menu" :style="menuStyle" @click.stop>
 			<button
 				v-for="action in actions"
 				:key="action.id"
 				type="button"
 				:disabled="action.disabled"
-				@click="emit('select', action.id)"
-			>
+				@click="emit('select', action.id)">
 				{{ action.label }}
 			</button>
 		</div>

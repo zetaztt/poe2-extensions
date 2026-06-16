@@ -1,13 +1,13 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
-import ArbitrageTab from './arbitrage/arbitrage-tab.vue';
-import BookmarkTab from './bookmarks/bookmark-tab.vue';
-import DictionaryTab from './dictionary/dictionary-tab.vue';
-import SettingsTab from './settings/settings-tab.vue';
+import { ref } from "vue";
+import ArbitrageTab from "./arbitrage/arbitrage-tab.vue";
+import BookmarkTab from "./bookmarks/bookmark-tab.vue";
+import DictionaryTab from "./dictionary/dictionary-tab.vue";
+import SettingsTab from "./settings/settings-tab.vue";
 
-type ActiveTab = 'bookmarks' | 'arbitrage' | 'dictionary' | 'settings';
+type ActiveTab = "bookmarks" | "arbitrage" | "dictionary" | "settings";
 
-const activeTab = ref<ActiveTab>('settings');
+const activeTab = ref<ActiveTab>("settings");
 const didInitializeBookmarks = ref(false);
 
 function setActiveTab(tab: ActiveTab): void {
@@ -18,7 +18,7 @@ function onBookmarksInitialized(success: boolean): void {
 	if (didInitializeBookmarks.value) return;
 
 	didInitializeBookmarks.value = true;
-	activeTab.value = success ? 'bookmarks' : 'settings';
+	activeTab.value = success ? "bookmarks" : "settings";
 }
 </script>
 
@@ -34,32 +34,28 @@ function onBookmarksInitialized(success: boolean): void {
 				class="tab-button"
 				:class="{ active: activeTab === 'bookmarks' }"
 				type="button"
-				@click="setActiveTab('bookmarks')"
-			>
+				@click="setActiveTab('bookmarks')">
 				书签
 			</button>
 			<button
 				class="tab-button"
 				:class="{ active: activeTab === 'arbitrage' }"
 				type="button"
-				@click="setActiveTab('arbitrage')"
-			>
+				@click="setActiveTab('arbitrage')">
 				差价
 			</button>
 			<button
 				class="tab-button"
 				:class="{ active: activeTab === 'dictionary' }"
 				type="button"
-				@click="setActiveTab('dictionary')"
-			>
+				@click="setActiveTab('dictionary')">
 				词典
 			</button>
 			<button
 				class="tab-button"
 				:class="{ active: activeTab === 'settings' }"
 				type="button"
-				@click="setActiveTab('settings')"
-			>
+				@click="setActiveTab('settings')">
 				设置
 			</button>
 		</nav>
@@ -67,15 +63,11 @@ function onBookmarksInitialized(success: boolean): void {
 		<BookmarkTab
 			v-show="activeTab === 'bookmarks'"
 			:active="activeTab === 'bookmarks'"
-			@initialized="onBookmarksInitialized"
-		/>
+			@initialized="onBookmarksInitialized" />
 
 		<ArbitrageTab v-show="activeTab === 'arbitrage'" />
 
-		<DictionaryTab
-			v-show="activeTab === 'dictionary'"
-			:active="activeTab === 'dictionary'"
-		/>
+		<DictionaryTab v-show="activeTab === 'dictionary'" :active="activeTab === 'dictionary'" />
 
 		<SettingsTab v-show="activeTab === 'settings'" />
 	</main>

@@ -1,8 +1,6 @@
 {
 	"extends": "./.wxt/tsconfig.json",
 	"compilerOptions": {
-		"types": [
-			"@types/jquery"
-		]
+		"types": ["@types/jquery"]
 	}
 }

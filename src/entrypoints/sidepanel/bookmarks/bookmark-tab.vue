@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
 	addCurrentTradeSearchBookmark,
 	createBookmarkFolder,
@@ -12,26 +12,24 @@ import {
 	renameBookmarkFolder,
 	renameTradeBookmark,
 	replaceTradeBookmarkWithCurrentSearch,
-} from '@/bookmarks/bookmarks';
-import type { TradeBookmarkItem, TradeBookmarkTreeNode } from '@/bookmarks/types';
-import BookmarkFolder from './bookmark-folder.vue';
-import BookmarkItem from './bookmark-item.vue';
+} from "@/bookmarks/bookmarks";
+import type { TradeBookmarkItem, TradeBookmarkTreeNode } from "@/bookmarks/types";
+import BookmarkFolder from "./bookmark-folder.vue";
+import BookmarkItem from "./bookmark-item.vue";
 
 type VisibleBookmarkFolder = TradeBookmarkTreeNode & {
 	displayDepth: number;
 };
 
 type OpenMenu =
-	| { type: 'folder'; id: string; x?: number; y?: number }
-	| { type: 'bookmark'; id: string; x?: number; y?: number };
+	| { type: "folder"; id: string; x?: number; y?: number }
+	| { type: "bookmark"; id: string; x?: number; y?: number };
 
-type DragItem =
-	| { type: 'folder'; id: string }
-	| { type: 'bookmark'; id: string };
+type DragItem = { type: "folder"; id: string } | { type: "bookmark"; id: string };
 
 type DropTarget =
-	| { type: 'folder'; id: string; position: 'before' | 'inside' | 'after' }
-	| { type: 'bookmark'; id: string; folderId: string; position: 'before' | 'after' };
+	| { type: "folder"; id: string; position: "before" | "inside" | "after" }
+	| { type: "bookmark"; id: string; folderId: string; position: "before" | "after" };
 
 const emit = defineEmits<{
 	initialized: [success: boolean];
@@ -45,52 +43,59 @@ const bookmarkTree = ref<TradeBookmarkTreeNode | null>(null);
 const isLoadingBookmarks = ref(true);
 const expandedFolderIds = ref<Set<string>>(new Set());
 const openMenu = ref<OpenMenu | null>(null);
-const renamingFolderId = ref('');
-const renamingFolderTitle = ref('');
-const renamingBookmarkId = ref('');
-const renamingBookmarkTitle = ref('');
-const creatingFolderId = ref('');
-const creatingBookmarkId = ref('');
-const statusText = ref('');
+const renamingFolderId = ref("");
+const renamingFolderTitle = ref("");
+const renamingBookmarkId = ref("");
+const renamingBookmarkTitle = ref("");
+const creatingFolderId = ref("");
+const creatingBookmarkId = ref("");
+const statusText = ref("");
 const isBusy = ref(false);
 const skipNextFolderRenameBlur = ref(false);
 const skipNextBookmarkRenameBlur = ref(false);
 const dragItem = ref<DragItem | null>(null);
 const dropTarget = ref<DropTarget | null>(null);
 
-const visibleBookmarkFolders = computed<VisibleBookmarkFolder[]>(() => (
-	bookmarkTree.value ? flattenVisibleBookmarkFolders([bookmarkTree.value]) : []
-));
+const visibleBookmarkFolders = computed<VisibleBookmarkFolder[]>(() =>
+	bookmarkTree.value ? flattenVisibleBookmarkFolders([bookmarkTree.value]) : [],
+);
 
-watch(bookmarkTree, (tree) => {
-	const previousExpandedIds = expandedFolderIds.value;
-	const nextFolderIds = new Set(tree ? getAllFolderIds(tree) : []);
-	const nextExpandedIds = new Set<string>();
+watch(
+	bookmarkTree,
+	(tree) => {
+		const previousExpandedIds = expandedFolderIds.value;
+		const nextFolderIds = new Set(tree ? getAllFolderIds(tree) : []);
+		const nextExpandedIds = new Set<string>();
 
-	for (const folderId of previousExpandedIds) {
-		if (nextFolderIds.has(folderId)) nextExpandedIds.add(folderId);
-	}
+		for (const folderId of previousExpandedIds) {
+			if (nextFolderIds.has(folderId)) nextExpandedIds.add(folderId);
+		}
 
-	if (tree && previousExpandedIds.size === 0) {
-		for (const folderId of nextFolderIds) nextExpandedIds.add(folderId);
-	}
+		if (tree && previousExpandedIds.size === 0) {
+			for (const folderId of nextFolderIds) nextExpandedIds.add(folderId);
+		}
 
-	expandedFolderIds.value = nextExpandedIds;
-}, { immediate: true });
+		expandedFolderIds.value = nextExpandedIds;
+	},
+	{ immediate: true },
+);
 
-watch(() => props.active, (active) => {
-	if (active) void loadBookmarks();
-});
+watch(
+	() => props.active,
+	(active) => {
+		if (active) void loadBookmarks();
+	},
+);
 
 onMounted(() => {
-	document.addEventListener('click', closeMoreMenuOnOutsidePointer);
-	document.addEventListener('contextmenu', closeMoreMenuOnOutsidePointer);
+	document.addEventListener("click", closeMoreMenuOnOutsidePointer);
+	document.addEventListener("contextmenu", closeMoreMenuOnOutsidePointer);
 	void loadBookmarks();
 });
 
 onBeforeUnmount(() => {
-	document.removeEventListener('click', closeMoreMenuOnOutsidePointer);
-	document.removeEventListener('contextmenu', closeMoreMenuOnOutsidePointer);
+	document.removeEventListener("click", closeMoreMenuOnOutsidePointer);
+	document.removeEventListener("contextmenu", closeMoreMenuOnOutsidePointer);
 });
 
 async function loadBookmarks(): Promise<void> {
@@ -98,12 +103,12 @@ async function loadBookmarks(): Promise<void> {
 
 	try {
 		bookmarkTree.value = await getTradeBookmarkRootTree();
-		emit('initialized', true);
+		emit("initialized", true);
 	} catch (error) {
 		bookmarkTree.value = null;
-		statusText.value = '本地书签读取失败，请稍后重试。';
-		emit('initialized', false);
-		console.error('[poe2-extensions] trade 书签读取失败', error);
+		statusText.value = "本地书签读取失败，请稍后重试。";
+		emit("initialized", false);
+		console.error("[poe2-extensions] trade 书签读取失败", error);
 	} finally {
 		isLoadingBookmarks.value = false;
 	}
@@ -136,7 +141,7 @@ function onFolderDoubleClick(folder: VisibleBookmarkFolder): void {
 }
 
 function toggleMoreMenu(menu: OpenMenu): void {
-	statusText.value = '';
+	statusText.value = "";
 	if (openMenu.value?.type === menu.type && openMenu.value.id === menu.id && menu.x === undefined) {
 		openMenu.value = null;
 		return;
@@ -153,7 +158,7 @@ function closeMoreMenuOnOutsidePointer(event: MouseEvent): void {
 	if (!openMenu.value) return;
 
 	const target = event.target;
-	if (target instanceof HTMLElement && target.closest('.more-menu')) return;
+	if (target instanceof HTMLElement && target.closest(".more-menu")) return;
 
 	closeMoreMenu();
 }
@@ -163,7 +168,7 @@ function openContextMenu(event: MouseEvent, menu: OpenMenu): void {
 
 	event.preventDefault();
 	event.stopPropagation();
-	statusText.value = '';
+	statusText.value = "";
 	openMenu.value = {
 		...menu,
 		x: event.clientX,
@@ -175,14 +180,14 @@ function getMoreMenuStyle(menu: OpenMenu): Record<string, string> | undefined {
 	if (menu.x === undefined || menu.y === undefined) return undefined;
 
 	return {
-		position: 'fixed',
+		position: "fixed",
 		left: `${menu.x}px`,
 		top: `${menu.y}px`,
-		right: 'auto',
+		right: "auto",
 	};
 }
 
-function isMenuOpen(type: OpenMenu['type'], id: string): boolean {
+function isMenuOpen(type: OpenMenu["type"], id: string): boolean {
 	return openMenu.value?.type === type && openMenu.value.id === id;
 }
 
@@ -190,7 +195,7 @@ async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 	if (isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 	closeMoreMenu();
 
 	try {
@@ -201,8 +206,8 @@ async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 		renamingBookmarkTitle.value = bookmark.title;
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = error instanceof Error ? error.message : '添加书签失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 搜索书签添加失败', error);
+		statusText.value = error instanceof Error ? error.message : "添加书签失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 搜索书签添加失败", error);
 	} finally {
 		isBusy.value = false;
 	}
@@ -212,19 +217,19 @@ async function onCreateFolder(parentId: string): Promise<void> {
 	if (isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 	closeMoreMenu();
 
 	try {
-		const folder = await createBookmarkFolder(parentId, 'New Folder');
+		const folder = await createBookmarkFolder(parentId, "New Folder");
 		expandFolder(parentId);
 		creatingFolderId.value = folder.id;
 		renamingFolderId.value = folder.id;
 		renamingFolderTitle.value = folder.title;
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = '新建文件夹失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签目录创建失败', error);
+		statusText.value = "新建文件夹失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签目录创建失败", error);
 	} finally {
 		isBusy.value = false;
 	}
@@ -243,16 +248,16 @@ async function confirmRenameFolder(): Promise<void> {
 	if (!folderId || isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 
 	try {
 		await renameBookmarkFolder(folderId, renamingFolderTitle.value);
-		creatingFolderId.value = '';
+		creatingFolderId.value = "";
 		clearFolderRename();
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = '重命名文件夹失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签目录重命名失败', error);
+		statusText.value = "重命名文件夹失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签目录重命名失败", error);
 	} finally {
 		isBusy.value = false;
 	}
@@ -271,16 +276,16 @@ async function cancelFolderRename(): Promise<void> {
 async function cancelCreatedFolder(folderId: string): Promise<void> {
 	skipNextFolderRenameBlur.value = true;
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 
 	try {
 		await deleteBookmarkFolder(folderId);
-		creatingFolderId.value = '';
+		creatingFolderId.value = "";
 		clearFolderRename();
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = '取消新建文件夹失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签目录取消创建失败', error);
+		statusText.value = "取消新建文件夹失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签目录取消创建失败", error);
 	} finally {
 		isBusy.value = false;
 	}
@@ -300,7 +305,7 @@ async function onDeleteFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 	if (!window.confirm(`确定删除“${folder.title}”及其所有内容吗？`)) return;
 
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 	closeMoreMenu();
 
 	try {
@@ -308,8 +313,8 @@ async function onDeleteFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 		removeExpandedFolder(folder.id);
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = '删除文件夹失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签目录删除失败', error);
+		statusText.value = "删除文件夹失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签目录删除失败", error);
 	} finally {
 		isBusy.value = false;
 	}
@@ -327,16 +332,16 @@ async function confirmRenameBookmark(): Promise<void> {
 	if (!bookmarkId || isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 
 	try {
 		await renameTradeBookmark(bookmarkId, renamingBookmarkTitle.value);
-		creatingBookmarkId.value = '';
+		creatingBookmarkId.value = "";
 		clearBookmarkRename();
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = '重命名书签失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签重命名失败', error);
+		statusText.value = "重命名书签失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签重命名失败", error);
 	} finally {
 		isBusy.value = false;
 	}
@@ -355,16 +360,16 @@ async function cancelBookmarkRename(): Promise<void> {
 async function cancelCreatedBookmark(bookmarkId: string): Promise<void> {
 	skipNextBookmarkRenameBlur.value = true;
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 
 	try {
 		await deleteTradeBookmark(bookmarkId);
-		creatingBookmarkId.value = '';
+		creatingBookmarkId.value = "";
 		clearBookmarkRename();
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = '取消新建书签失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签取消创建失败', error);
+		statusText.value = "取消新建书签失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签取消创建失败", error);
 	} finally {
 		isBusy.value = false;
 	}
@@ -383,8 +388,8 @@ async function onOpenBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	try {
 		await openTradeBookmark(bookmark.url);
 	} catch (error) {
-		statusText.value = '打开书签失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签打开失败', error);
+		statusText.value = "打开书签失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签打开失败", error);
 	}
 }
 
@@ -392,16 +397,16 @@ async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	if (isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 	closeMoreMenu();
 
 	try {
 		await replaceTradeBookmarkWithCurrentSearch(bookmark.id);
-		statusText.value = '书签链接已替换为当前搜索。';
+		statusText.value = "书签链接已替换为当前搜索。";
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = error instanceof Error ? error.message : '替换书签失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签替换失败', error);
+		statusText.value = error instanceof Error ? error.message : "替换书签失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签替换失败", error);
 	} finally {
 		isBusy.value = false;
 	}
@@ -412,15 +417,15 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	if (!window.confirm(`确定删除“${bookmark.title}”吗？`)) return;
 
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 	closeMoreMenu();
 
 	try {
 		await deleteTradeBookmark(bookmark.id);
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = '删除书签失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签删除失败', error);
+		statusText.value = "删除书签失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签删除失败", error);
 	} finally {
 		isBusy.value = false;
 	}
@@ -432,7 +437,7 @@ function onFolderDragStart(event: DragEvent, folder: VisibleBookmarkFolder): voi
 		return;
 	}
 
-	dragItem.value = { type: 'folder', id: folder.id };
+	dragItem.value = { type: "folder", id: folder.id };
 	prepareDragEvent(event);
 	closeMoreMenu();
 }
@@ -443,7 +448,7 @@ function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): voi
 		return;
 	}
 
-	dragItem.value = { type: 'bookmark', id: bookmark.id };
+	dragItem.value = { type: "bookmark", id: bookmark.id };
 	prepareDragEvent(event);
 	closeMoreMenu();
 }
@@ -458,7 +463,7 @@ function onFolderDragOver(event: DragEvent, folder: VisibleBookmarkFolder): void
 	event.preventDefault();
 	event.stopPropagation();
 	dropTarget.value = target;
-	if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+	if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
 }
 
 function onBookmarkDragOver(event: DragEvent, bookmark: TradeBookmarkItem): void {
@@ -471,7 +476,7 @@ function onBookmarkDragOver(event: DragEvent, bookmark: TradeBookmarkItem): void
 	event.preventDefault();
 	event.stopPropagation();
 	dropTarget.value = target;
-	if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+	if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
 }
 
 async function onDrop(event: DragEvent): Promise<void> {
@@ -486,15 +491,15 @@ async function onDrop(event: DragEvent): Promise<void> {
 	}
 
 	isBusy.value = true;
-	statusText.value = '';
+	statusText.value = "";
 
 	try {
-		if (item.type === 'folder') {
+		if (item.type === "folder") {
 			const moveTarget = getFolderMoveTarget(item.id, target);
 			if (!moveTarget) return;
 
 			await moveBookmarkFolder(item.id, moveTarget.parentId, moveTarget.index);
-			if (target.type === 'folder' && target.position === 'inside') expandFolder(target.id);
+			if (target.type === "folder" && target.position === "inside") expandFolder(target.id);
 		} else {
 			const moveTarget = getBookmarkMoveTarget(item.id, target);
 			if (!moveTarget) return;
@@ -505,8 +510,8 @@ async function onDrop(event: DragEvent): Promise<void> {
 
 		await loadBookmarks();
 	} catch (error) {
-		statusText.value = error instanceof Error ? error.message : '移动失败，请稍后重试。';
-		console.error('[poe2-extensions] trade 书签拖拽移动失败', error);
+		statusText.value = error instanceof Error ? error.message : "移动失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签拖拽移动失败", error);
 	} finally {
 		isBusy.value = false;
 		clearDragState();
@@ -525,18 +530,18 @@ function onPanelDrop(event: DragEvent): void {
 
 function getFolderDropClass(folder: VisibleBookmarkFolder): Record<string, boolean> {
 	return {
-		'dragging-source': dragItem.value?.type === 'folder' && dragItem.value.id === folder.id,
-		'drop-before': isFolderDropTarget(folder, 'before'),
-		'drop-inside': isFolderDropTarget(folder, 'inside'),
-		'drop-after': isFolderDropTarget(folder, 'after'),
+		"dragging-source": dragItem.value?.type === "folder" && dragItem.value.id === folder.id,
+		"drop-before": isFolderDropTarget(folder, "before"),
+		"drop-inside": isFolderDropTarget(folder, "inside"),
+		"drop-after": isFolderDropTarget(folder, "after"),
 	};
 }
 
 function getBookmarkDropClass(bookmark: TradeBookmarkItem): Record<string, boolean> {
 	return {
-		'dragging-source': dragItem.value?.type === 'bookmark' && dragItem.value.id === bookmark.id,
-		'drop-before': isBookmarkDropTarget(bookmark, 'before'),
-		'drop-after': isBookmarkDropTarget(bookmark, 'after'),
+		"dragging-source": dragItem.value?.type === "bookmark" && dragItem.value.id === bookmark.id,
+		"drop-before": isBookmarkDropTarget(bookmark, "before"),
+		"drop-after": isBookmarkDropTarget(bookmark, "after"),
 	};
 }
 
@@ -544,26 +549,26 @@ function getFolderDropTarget(event: DragEvent, folder: VisibleBookmarkFolder): D
 	const item = dragItem.value;
 	if (!item) return null;
 
-	if (item.type === 'bookmark') {
-		return { type: 'folder', id: folder.id, position: 'inside' };
+	if (item.type === "bookmark") {
+		return { type: "folder", id: folder.id, position: "inside" };
 	}
 
 	if (item.id === folder.id || isFolderDescendant(item.id, folder.id)) return null;
 
 	const position = getRowDropPosition(event);
 	if (folder.displayDepth === 0) {
-		return { type: 'folder', id: folder.id, position: 'inside' };
+		return { type: "folder", id: folder.id, position: "inside" };
 	}
 
-	return { type: 'folder', id: folder.id, position };
+	return { type: "folder", id: folder.id, position };
 }
 
 function getBookmarkDropTarget(event: DragEvent, bookmark: TradeBookmarkItem): DropTarget | null {
 	const item = dragItem.value;
-	if (!item || item.type !== 'bookmark' || item.id === bookmark.id || !bookmark.parentId) return null;
+	if (!item || item.type !== "bookmark" || item.id === bookmark.id || !bookmark.parentId) return null;
 
 	return {
-		type: 'bookmark',
+		type: "bookmark",
 		id: bookmark.id,
 		folderId: bookmark.parentId,
 		position: getHalfDropPosition(event),
@@ -571,9 +576,9 @@ function getBookmarkDropTarget(event: DragEvent, bookmark: TradeBookmarkItem): D
 }
 
 function getFolderMoveTarget(folderId: string, target: DropTarget): { parentId: string; index: number } | null {
-	if (target.type === 'bookmark' || !bookmarkTree.value) return null;
+	if (target.type === "bookmark" || !bookmarkTree.value) return null;
 
-	if (target.position === 'inside') {
+	if (target.position === "inside") {
 		const targetFolder = findFolderInTree(bookmarkTree.value, target.id);
 		if (!targetFolder) return null;
 		return {
@@ -590,7 +595,7 @@ function getFolderMoveTarget(folderId: string, target: DropTarget): { parentId: 
 	const targetIndex = parent.children.findIndex((folder) => folder.id === target.id);
 	if (targetIndex < 0) return null;
 
-	const index = target.position === 'after' ? targetIndex + 1 : targetIndex;
+	const index = target.position === "after" ? targetIndex + 1 : targetIndex;
 	const currentIndex = parent.children.findIndex((folder) => folder.id === folderId);
 	if (currentIndex === index || currentIndex + 1 === index) return null;
 
@@ -603,7 +608,7 @@ function getFolderMoveTarget(folderId: string, target: DropTarget): { parentId: 
 function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folderId: string; index: number } | null {
 	if (!bookmarkTree.value) return null;
 
-	if (target.type === 'folder') {
+	if (target.type === "folder") {
 		const folder = findFolderInTree(bookmarkTree.value, target.id);
 		if (!folder) return null;
 		return {
@@ -617,7 +622,7 @@ function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folder
 	const targetIndex = folder.bookmarks.findIndex((bookmark) => bookmark.id === target.id);
 	if (targetIndex < 0) return null;
 
-	const index = target.position === 'after' ? targetIndex + 1 : targetIndex;
+	const index = target.position === "after" ? targetIndex + 1 : targetIndex;
 	const currentIndex = folder.bookmarks.findIndex((bookmark) => bookmark.id === bookmarkId);
 	if (currentIndex === index || currentIndex + 1 === index) return null;
 
@@ -628,13 +633,13 @@ function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folder
 }
 
 function clearFolderRename(): void {
-	renamingFolderId.value = '';
-	renamingFolderTitle.value = '';
+	renamingFolderId.value = "";
+	renamingFolderTitle.value = "";
 }
 
 function clearBookmarkRename(): void {
-	renamingBookmarkId.value = '';
-	renamingBookmarkTitle.value = '';
+	renamingBookmarkId.value = "";
+	renamingBookmarkTitle.value = "";
 }
 
 function removeExpandedFolder(folderId: string): void {
@@ -667,10 +672,7 @@ function flattenVisibleBookmarkFolders(nodes: TradeBookmarkTreeNode[], depth = 0
 }
 
 function getAllFolderIds(node: TradeBookmarkTreeNode): string[] {
-	return [
-		node.id,
-		...node.children.flatMap(getAllFolderIds),
-	];
+	return [node.id, ...node.children.flatMap(getAllFolderIds)];
 }
 
 function findFolderInTree(node: TradeBookmarkTreeNode, folderId: string): TradeBookmarkTreeNode | null {
@@ -689,45 +691,45 @@ function isFolderDescendant(parentFolderId: string, possibleDescendantId: string
 	return Boolean(parent && parent.id !== possibleDescendantId && findFolderInTree(parent, possibleDescendantId));
 }
 
-function getRowDropPosition(event: DragEvent): 'before' | 'inside' | 'after' {
+function getRowDropPosition(event: DragEvent): "before" | "inside" | "after" {
 	const element = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-	if (!element) return 'inside';
+	if (!element) return "inside";
 
 	const rect = element.getBoundingClientRect();
 	const offset = event.clientY - rect.top;
-	if (offset < rect.height / 3) return 'before';
-	if (offset > rect.height * 2 / 3) return 'after';
-	return 'inside';
+	if (offset < rect.height / 3) return "before";
+	if (offset > (rect.height * 2) / 3) return "after";
+	return "inside";
 }
 
-function getHalfDropPosition(event: DragEvent): 'before' | 'after' {
+function getHalfDropPosition(event: DragEvent): "before" | "after" {
 	const element = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-	if (!element) return 'after';
+	if (!element) return "after";
 
 	const rect = element.getBoundingClientRect();
-	return event.clientY - rect.top < rect.height / 2 ? 'before' : 'after';
+	return event.clientY - rect.top < rect.height / 2 ? "before" : "after";
 }
 
-function isFolderDropTarget(folder: VisibleBookmarkFolder, position: 'before' | 'inside' | 'after'): boolean {
+function isFolderDropTarget(folder: VisibleBookmarkFolder, position: "before" | "inside" | "after"): boolean {
 	const target = dropTarget.value;
-	return target?.type === 'folder' && target.id === folder.id && target.position === position;
+	return target?.type === "folder" && target.id === folder.id && target.position === position;
 }
 
-function isBookmarkDropTarget(bookmark: TradeBookmarkItem, position: 'before' | 'after'): boolean {
+function isBookmarkDropTarget(bookmark: TradeBookmarkItem, position: "before" | "after"): boolean {
 	const target = dropTarget.value;
-	return target?.type === 'bookmark' && target.id === bookmark.id && target.position === position;
+	return target?.type === "bookmark" && target.id === bookmark.id && target.position === position;
 }
 
 function isInteractiveDragSource(event: DragEvent): boolean {
 	const target = event.target;
-	return target instanceof HTMLElement && Boolean(target.closest('button, input, textarea, select, .more-menu'));
+	return target instanceof HTMLElement && Boolean(target.closest("button, input, textarea, select, .more-menu"));
 }
 
 function prepareDragEvent(event: DragEvent): void {
 	if (!event.dataTransfer) return;
 
-	event.dataTransfer.effectAllowed = 'move';
-	event.dataTransfer.setData('text/plain', 'poe2-trade-bookmark');
+	event.dataTransfer.effectAllowed = "move";
+	event.dataTransfer.setData("text/plain", "poe2-trade-bookmark");
 }
 
 function clearDragState(): void {
@@ -743,18 +745,12 @@ function clearDragState(): void {
 			<div v-if="isLoadingBookmarks" class="panel muted">读取书签中</div>
 			<div v-else-if="!bookmarkTree" class="panel muted">这个目录下还没有可用的书签目录。</div>
 
-			<section
-				v-else
-				class="panel bookmark-tree"
-				@dragover="onPanelDragOver"
-				@drop="onPanelDrop"
-			>
+			<section v-else class="panel bookmark-tree" @dragover="onPanelDragOver" @drop="onPanelDrop">
 				<div
 					v-for="folder in visibleBookmarkFolders"
 					:key="folder.id"
 					class="bookmark-folder"
-					:style="{ marginLeft: `${Math.max(0, folder.displayDepth - 1) * 8}px` }"
-				>
+					:style="{ marginLeft: `${Math.max(0, folder.displayDepth - 1) * 8}px` }">
 					<BookmarkFolder
 						v-model:rename-title="renamingFolderTitle"
 						:folder="folder"
@@ -764,7 +760,9 @@ function clearDragState(): void {
 						:renaming="renamingFolderId === folder.id"
 						:drop-class="getFolderDropClass(folder)"
 						:menu-open="isMenuOpen('folder', folder.id)"
-						:menu-style="isMenuOpen('folder', folder.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined"
+						:menu-style="
+							isMenuOpen('folder', folder.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined
+						"
 						@toggle-expanded="toggleFolderExpanded(folder)"
 						@folder-double-click="onFolderDoubleClick(folder)"
 						@add-bookmark="addCurrentSearchToFolder(folder.id)"
@@ -779,8 +777,7 @@ function clearDragState(): void {
 						@drag-end="clearDragState"
 						@confirm-rename="confirmRenameFolder"
 						@cancel-rename="cancelFolderRename"
-						@rename-blur="onFolderRenameBlur"
-					/>
+						@rename-blur="onFolderRenameBlur" />
 
 					<BookmarkItem
 						v-for="bookmark in folder.bookmarks"
@@ -792,7 +789,9 @@ function clearDragState(): void {
 						:renaming="renamingBookmarkId === bookmark.id"
 						:drop-class="getBookmarkDropClass(bookmark)"
 						:menu-open="isMenuOpen('bookmark', bookmark.id)"
-						:menu-style="isMenuOpen('bookmark', bookmark.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined"
+						:menu-style="
+							isMenuOpen('bookmark', bookmark.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined
+						"
 						@open="onOpenBookmark(bookmark)"
 						@start-rename="startRenameBookmark(bookmark)"
 						@replace="onReplaceBookmark(bookmark)"
@@ -805,8 +804,7 @@ function clearDragState(): void {
 						@drag-end="clearDragState"
 						@confirm-rename="confirmRenameBookmark"
 						@cancel-rename="cancelBookmarkRename"
-						@rename-blur="onBookmarkRenameBlur"
-					/>
+						@rename-blur="onBookmarkRenameBlur" />
 				</div>
 			</section>
 		</section>
@@ -860,5 +858,4 @@ p {
 	display: grid;
 	gap: 1px;
 }
-
 </style>

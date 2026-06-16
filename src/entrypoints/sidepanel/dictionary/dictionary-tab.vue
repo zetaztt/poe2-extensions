@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import { onBeforeUnmount, ref, watch } from 'vue';
-import type { TranslateDictionary } from '@/translate-dictionary';
+import { onBeforeUnmount, ref, watch } from "vue";
+import type { TranslateDictionary } from "@/translate-dictionary";
 import {
 	createPoeTranslationFetchMessage,
 	isPoeTranslationMessage,
 	PoeTranslationMessageType,
-} from '@/trade/translate/messages';
+} from "@/trade/translate/messages";
 
 interface Props {
 	active: boolean;
@@ -29,24 +29,28 @@ const props = defineProps<Props>();
 const maxResults = 20;
 const searchDebounceMs = 300;
 
-const query = ref('');
+const query = ref("");
 const results = ref<DictionarySearchResult[]>([]);
 const isLoading = ref(false);
 const isSearching = ref(false);
-const loadError = ref('');
-const copiedOriginal = ref('');
-const copyError = ref('');
+const loadError = ref("");
+const copiedOriginal = ref("");
+const copyError = ref("");
 
 let hasLoaded = false;
 let searchIndex: DictionarySearchEntry[] = [];
 let searchTimer: number | null = null;
 let copyTimer: number | null = null;
 
-watch(() => props.active, (active) => {
-	if (active && !hasLoaded && !isLoading.value) {
-		void loadDictionary();
-	}
-}, { immediate: true });
+watch(
+	() => props.active,
+	(active) => {
+		if (active && !hasLoaded && !isLoading.value) {
+			void loadDictionary();
+		}
+	},
+	{ immediate: true },
+);
 
 watch(query, (value) => {
 	if (searchTimer !== null) {
@@ -74,7 +78,7 @@ onBeforeUnmount(() => {
 
 async function loadDictionary(): Promise<void> {
 	isLoading.value = true;
-	loadError.value = '';
+	loadError.value = "";
 
 	try {
 		const dictionary = await requestDictionary();
@@ -83,7 +87,7 @@ async function loadDictionary(): Promise<void> {
 
 		if (query.value.trim()) searchDictionary(query.value);
 	} catch (error) {
-		loadError.value = error instanceof Error ? error.message : '翻译字典加载失败';
+		loadError.value = error instanceof Error ? error.message : "翻译字典加载失败";
 	} finally {
 		isLoading.value = false;
 	}
@@ -91,12 +95,10 @@ async function loadDictionary(): Promise<void> {
 
 async function requestDictionary(): Promise<TranslateDictionary> {
 	const requestId = createRequestId();
-	const response: unknown = await browser.runtime.sendMessage(
-		createPoeTranslationFetchMessage(requestId),
-	);
+	const response: unknown = await browser.runtime.sendMessage(createPoeTranslationFetchMessage(requestId));
 
 	if (!isPoeTranslationMessage(response) || response.requestId !== requestId) {
-		throw new Error('翻译字典响应无效');
+		throw new Error("翻译字典响应无效");
 	}
 
 	if (response.type === PoeTranslationMessageType.error) {
@@ -104,7 +106,7 @@ async function requestDictionary(): Promise<TranslateDictionary> {
 	}
 
 	if (response.type !== PoeTranslationMessageType.result) {
-		throw new Error('翻译字典响应类型无效');
+		throw new Error("翻译字典响应类型无效");
 	}
 
 	return response.dictionary;
@@ -158,16 +160,16 @@ function normalizeSearchText(value: string): string {
 }
 
 async function copyOriginal(original: string): Promise<void> {
-	copyError.value = '';
+	copyError.value = "";
 
 	try {
 		await navigator.clipboard.writeText(original);
 		copiedOriginal.value = original;
 		resetCopyStatusLater();
 	} catch (error) {
-		copiedOriginal.value = '';
-		copyError.value = '复制失败，请检查浏览器剪贴板权限。';
-		console.warn('[poe2-extensions] 词典英文原文复制失败', error);
+		copiedOriginal.value = "";
+		copyError.value = "复制失败，请检查浏览器剪贴板权限。";
+		console.warn("[poe2-extensions] 词典英文原文复制失败", error);
 	}
 }
 
@@ -175,7 +177,7 @@ function resetCopyStatusLater(): void {
 	if (copyTimer !== null) window.clearTimeout(copyTimer);
 
 	copyTimer = window.setTimeout(() => {
-		copiedOriginal.value = '';
+		copiedOriginal.value = "";
 		copyTimer = null;
 	}, 1_500);
 }
@@ -204,14 +206,11 @@ function createRequestId(): string {
 				type="search"
 				placeholder="输入中文或英文"
 				autocomplete="off"
-				:disabled="isLoading || Boolean(loadError)"
-			>
+				:disabled="isLoading || Boolean(loadError)" />
 			<p class="search-description">搜索翻译字典中的中英文词条，最多显示 20 条结果。</p>
 		</section>
 
-		<section v-if="isLoading" class="panel state-panel" aria-live="polite">
-			正在加载翻译字典...
-		</section>
+		<section v-if="isLoading" class="panel state-panel" aria-live="polite">正在加载翻译字典...</section>
 
 		<section v-else-if="loadError" class="panel state-panel error" aria-live="polite">
 			<p>{{ loadError }}</p>
@@ -221,9 +220,7 @@ function createRequestId(): string {
 		<template v-else>
 			<p v-if="copyError" class="copy-error" aria-live="polite">{{ copyError }}</p>
 
-			<section v-if="isSearching" class="panel state-panel" aria-live="polite">
-				正在搜索...
-			</section>
+			<section v-if="isSearching" class="panel state-panel" aria-live="polite">正在搜索...</section>
 
 			<section v-else-if="query.trim() && results.length === 0" class="panel state-panel" aria-live="polite">
 				没有找到匹配词条。
@@ -235,12 +232,8 @@ function createRequestId(): string {
 						<strong class="translated">{{ result.translated }}</strong>
 						<span class="original">{{ result.original }}</span>
 					</div>
-					<button
-						class="copy-button"
-						type="button"
-						@click="copyOriginal(result.original)"
-					>
-						{{ copiedOriginal === result.original ? '已复制' : '复制英文' }}
+					<button class="copy-button" type="button" @click="copyOriginal(result.original)">
+						{{ copiedOriginal === result.original ? "已复制" : "复制英文" }}
 					</button>
 				</li>
 			</ul>

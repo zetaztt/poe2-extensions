@@ -1,14 +1,14 @@
-import type { TradeStatPreset, TradeStatPresetQuery } from '../types';
+import type { TradeStatPreset, TradeStatPresetQuery } from "../types";
 
-const poeStatPresetMessageSource = 'poe2-extensions:trade-stat-preset';
+const poeStatPresetMessageSource = "poe2-extensions:trade-stat-preset";
 
 export const PoeStatPresetMessageType = {
-	list: 'STAT_PRESET_LIST',
-	save: 'STAT_PRESET_SAVE',
-	rename: 'STAT_PRESET_RENAME',
-	delete: 'STAT_PRESET_DELETE',
-	result: 'STAT_PRESET_RESULT',
-	error: 'STAT_PRESET_ERROR',
+	list: "STAT_PRESET_LIST",
+	save: "STAT_PRESET_SAVE",
+	rename: "STAT_PRESET_RENAME",
+	delete: "STAT_PRESET_DELETE",
+	result: "STAT_PRESET_RESULT",
+	error: "STAT_PRESET_ERROR",
 } as const;
 
 interface PoeStatPresetBaseMessage {
@@ -55,9 +55,7 @@ export type PoeStatPresetRequestMessage =
 	| PoeStatPresetRenameMessage
 	| PoeStatPresetDeleteMessage;
 
-export type PoeStatPresetResponseMessage =
-	| PoeStatPresetResultMessage
-	| PoeStatPresetErrorMessage;
+export type PoeStatPresetResponseMessage = PoeStatPresetResultMessage | PoeStatPresetErrorMessage;
 
 export function createStatPresetListMessage(requestId: string): PoeStatPresetListMessage {
 	return {
@@ -136,9 +134,9 @@ export function isPoeStatPresetRequestMessage(value: unknown): value is PoeStatP
 	if (message.type === PoeStatPresetMessageType.list) return true;
 	if (message.type === PoeStatPresetMessageType.save) return isTradeStatPreset(message.preset);
 	if (message.type === PoeStatPresetMessageType.rename) {
-		return typeof message.oldName === 'string' && typeof message.newName === 'string';
+		return typeof message.oldName === "string" && typeof message.newName === "string";
 	}
-	if (message.type === PoeStatPresetMessageType.delete) return typeof message.name === 'string';
+	if (message.type === PoeStatPresetMessageType.delete) return typeof message.name === "string";
 
 	return false;
 }
@@ -163,28 +161,28 @@ export function isTradeStatPresetArray(value: unknown): value is TradeStatPreset
 }
 
 function isPoeStatPresetMessageBase(value: unknown): value is PoeStatPresetBaseMessage {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
 
 	const message = value as PoeStatPresetBaseMessage;
 	return (
 		message.source === poeStatPresetMessageSource &&
-		typeof message.type === 'string' &&
-		typeof message.requestId === 'string'
+		typeof message.type === "string" &&
+		typeof message.requestId === "string"
 	);
 }
 
 function isTradeStatPreset(value: unknown): value is TradeStatPreset {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
 
 	const preset = value as TradeStatPreset;
-	return typeof preset.name === 'string' && isTradeStatPresetQuery(preset.query);
+	return typeof preset.name === "string" && isTradeStatPresetQuery(preset.query);
 }
 
 function isTradeStatPresetQuery(value: unknown): value is TradeStatPresetQuery {
-	return typeof value === 'object' && value !== null && !Array.isArray(value);
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isStatPresetError(value: unknown): value is PoeStatPresetErrorMessage['error'] {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-	return typeof (value as PoeStatPresetErrorMessage['error']).message === 'string';
+function isStatPresetError(value: unknown): value is PoeStatPresetErrorMessage["error"] {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+	return typeof (value as PoeStatPresetErrorMessage["error"]).message === "string";
 }

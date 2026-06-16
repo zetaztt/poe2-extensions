@@ -1,11 +1,11 @@
-import { logPrefix } from './trade/utils';
+import { logPrefix } from "./trade/utils";
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
 	PoeTranslationMessageType,
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationFetchResultMessage,
-} from './trade/translate/messages';
+} from "./trade/translate/messages";
 
 export type TranslateDictionary = Record<string, string>;
 
@@ -36,8 +36,8 @@ function requestTranslateDictionaryFromBackground(): Promise<TranslateDictionary
 
 	return new Promise((resolve, reject) => {
 		const timeoutId = window.setTimeout(() => {
-			window.removeEventListener('message', handleMessage);
-			reject(new Error('background 无响应'));
+			window.removeEventListener("message", handleMessage);
+			reject(new Error("background 无响应"));
 		}, dictionaryRequestTimeoutMs);
 
 		function handleMessage(event: MessageEvent<unknown>) {
@@ -53,21 +53,28 @@ function requestTranslateDictionaryFromBackground(): Promise<TranslateDictionary
 			if (event.data.type === PoeTranslationMessageType.error) {
 				cleanup();
 				const { error } = event.data as PoeTranslationFetchErrorMessage;
-				reject(new Error(error.status ? `${error.message}: ${error.status} ${error.statusText ?? ''}` : error.message));
+				reject(
+					new Error(
+						error.status ? `${error.message}: ${error.status} ${error.statusText ?? ""}` : error.message,
+					),
+				);
 			}
 		}
 
 		function cleanup() {
 			window.clearTimeout(timeoutId);
-			window.removeEventListener('message', handleMessage);
+			window.removeEventListener("message", handleMessage);
 		}
 
-		window.addEventListener('message', handleMessage);
-		window.postMessage({
-			source: poeTranslationMessageSource,
-			type: PoeTranslationMessageType.fetch,
-			requestId,
-		}, window.location.origin);
+		window.addEventListener("message", handleMessage);
+		window.postMessage(
+			{
+				source: poeTranslationMessageSource,
+				type: PoeTranslationMessageType.fetch,
+				requestId,
+			},
+			window.location.origin,
+		);
 	});
 }
 

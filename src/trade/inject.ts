@@ -1,7 +1,7 @@
-import { isPoeTradeMessage, type TradeFeatures } from './messages';
-import { setTradeItemCopyEnabled } from './item-copy/inject';
-import { setTradeStatPresetEnabled } from './stat-preset/inject';
-import { installTradeTranslate } from './translate/inject';
+import { isPoeTradeMessage, type TradeFeatures } from "./messages";
+import { setTradeItemCopyEnabled } from "./item-copy/inject";
+import { setTradeStatPresetEnabled } from "./stat-preset/inject";
+import { installTradeTranslate } from "./translate/inject";
 
 let currentFeatures: TradeFeatures = {
 	translate: false,
@@ -10,7 +10,7 @@ let currentFeatures: TradeFeatures = {
 };
 
 export function injectTrade(): void {
-	if (window.location.hostname !== 'www.pathofexile.com' || !window.location.pathname.startsWith('/trade2')) {
+	if (window.location.hostname !== "www.pathofexile.com" || !window.location.pathname.startsWith("/trade2")) {
 		return;
 	}
 
@@ -18,7 +18,7 @@ export function injectTrade(): void {
 		return;
 	}
 
-	window.addEventListener('message', (event: MessageEvent<unknown>) => {
+	window.addEventListener("message", (event: MessageEvent<unknown>) => {
 		if (event.source !== window || !isPoeTradeMessage(event.data)) return;
 		applyTradeFeatures(event.data.features);
 	});

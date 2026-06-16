@@ -1,7 +1,7 @@
-export const poeTradeMessageSource = 'poe2-extensions:trade';
+export const poeTradeMessageSource = "poe2-extensions:trade";
 
 export const PoeTradeMessageType = {
-	featuresUpdate: 'POE_TRADE_FEATURES_UPDATE',
+	featuresUpdate: "POE_TRADE_FEATURES_UPDATE",
 } as const;
 
 export interface TradeFeatures {
@@ -27,7 +27,7 @@ export function createTradeFeaturesUpdateMessage(features: TradeFeatures): PoeTr
 }
 
 export function isPoeTradeMessage(value: unknown): value is PoeTradeMessage {
-	if (typeof value !== 'object' || value === null) return false;
+	if (typeof value !== "object" || value === null) return false;
 
 	const message = value as { source?: unknown; type?: unknown; features?: unknown };
 
@@ -39,12 +39,12 @@ export function isPoeTradeMessage(value: unknown): value is PoeTradeMessage {
 }
 
 function isTradeFeatures(value: unknown): value is TradeFeatures {
-	if (typeof value !== 'object' || value === null) return false;
+	if (typeof value !== "object" || value === null) return false;
 
 	const features = value as { translate?: unknown; itemCopy?: unknown; statPreset?: unknown };
 	return (
-		typeof features.translate === 'boolean' &&
-		typeof features.itemCopy === 'boolean' &&
-		typeof features.statPreset === 'boolean'
+		typeof features.translate === "boolean" &&
+		typeof features.itemCopy === "boolean" &&
+		typeof features.statPreset === "boolean"
 	);
 }

@@ -25,8 +25,7 @@ function readTranslateMeta(): TranslateMeta | undefined {
 			md5: translateMeta.md5,
 			version: translateMeta.version,
 		};
-	}
-	catch {
+	} catch {
 		return undefined;
 	}
 }
@@ -35,11 +34,11 @@ function writeTranslateMeta(meta: TranslateMeta) {
 	fs.writeFileSync(translateMetaPath, JSON.stringify(meta, undefined, 2));
 }
 
-const texts = await readTexts()!
+const texts = await readTexts()!;
 const autoTranslateTexts = readAutoTranslateTexts();
 const manualTranslateTexts = readManualTranslateTexts();
 
-const translateMap: Record<string, string> = {}
+const translateMap: Record<string, string> = {};
 
 for (const text of Object.values(texts)) {
 	const translate = text.translate || autoTranslateTexts[text.original] || manualTranslateTexts[text.original];
@@ -47,14 +46,14 @@ for (const text of Object.values(texts)) {
 		continue;
 	}
 
-	translateMap[text.original] = translate
+	translateMap[text.original] = translate;
 }
 
 const translateJson = JSON.stringify(translateMap, null, "\t");
-const translateSortedJson = JSON.stringify(Object.entries(translateMap).sort((a, b) => a[0].localeCompare(b[0])))
+const translateSortedJson = JSON.stringify(Object.entries(translateMap).sort((a, b) => a[0].localeCompare(b[0])));
 const md5 = crypto.createHash("md5").update(translateSortedJson).digest("hex");
 const previousTranslateMeta = readTranslateMeta();
 const version = previousTranslateMeta?.md5 === md5 ? previousTranslateMeta.version : Date.now();
 
-fs.writeFileSync(translateJsonPath, translateJson)
+fs.writeFileSync(translateJsonPath, translateJson);
 writeTranslateMeta({ md5, version });

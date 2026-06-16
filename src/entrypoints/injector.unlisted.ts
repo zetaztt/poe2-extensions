@@ -1,3 +1,3 @@
-import { injectTrade } from '@/trade/inject';
+import { injectTrade } from "@/trade/inject";
 
 export default defineUnlistedScript(injectTrade);

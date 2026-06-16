@@ -1,4 +1,4 @@
-import { type TranslateDictionary } from '@/translate-dictionary';
+import { type TranslateDictionary } from "@/translate-dictionary";
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
@@ -6,14 +6,14 @@ import {
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationFetchMessage,
 	type PoeTranslationFetchResultMessage,
-} from '@/trade/translate/messages';
+} from "@/trade/translate/messages";
 
-export const translateDictionaryUrl = 'https://zetaztt.github.io/poe2/translate.json';
-export const translateDictionaryMetaUrl = 'https://zetaztt.github.io/poe2/translate-meta.json';
+export const translateDictionaryUrl = "https://zetaztt.github.io/poe2/translate.json";
+export const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2/translate-meta.json";
 
-const translateDictionaryCacheKey = 'translateDictionaryCache';
-const localTranslateDictionaryPath = '/translate.json' as Parameters<typeof browser.runtime.getURL>[0];
-const localTranslateMetaPath = '/translate-meta.json' as Parameters<typeof browser.runtime.getURL>[0];
+const translateDictionaryCacheKey = "translateDictionaryCache";
+const localTranslateDictionaryPath = "/translate.json" as Parameters<typeof browser.runtime.getURL>[0];
+const localTranslateMetaPath = "/translate-meta.json" as Parameters<typeof browser.runtime.getURL>[0];
 
 interface TranslateMeta {
 	version: number;
@@ -28,7 +28,7 @@ let localTranslateDictionaryPromise: Promise<TranslateDictionary | null> | null 
 let localTranslateMetaPromise: Promise<TranslateMeta | null> | null = null;
 
 export default defineBackground(() => {
-	console.debug('[poe2-extensions] background loaded.', { id: browser.runtime.id });
+	console.debug("[poe2-extensions] background loaded.", { id: browser.runtime.id });
 	void enableSidePanelOnActionClick();
 
 	browser.runtime.onMessage.addListener((message: unknown) => {
@@ -61,12 +61,12 @@ async function enableSidePanelOnActionClick(): Promise<void> {
 	try {
 		await chromeApi?.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: true });
 	} catch (error) {
-		console.warn('[poe2-extensions] 侧边栏点击行为设置失败', error);
+		console.warn("[poe2-extensions] 侧边栏点击行为设置失败", error);
 	}
 
 	chromeApi?.action?.onClicked?.addListener((tab) => {
 		void Promise.resolve(chromeApi.sidePanel?.open?.({ windowId: tab.windowId })).catch((error) => {
-			console.warn('[poe2-extensions] 侧边栏打开失败', error);
+			console.warn("[poe2-extensions] 侧边栏打开失败", error);
 		});
 	});
 }
@@ -85,7 +85,7 @@ async function fetchTranslateDictionary(
 		}
 	}
 
-	if (!current) return createFetchErrorMessage(message.requestId, '本地翻译字典格式无效');
+	if (!current) return createFetchErrorMessage(message.requestId, "本地翻译字典格式无效");
 
 	const remoteMeta = await fetchTranslateMeta();
 	if (remoteMeta && remoteMeta.version > current.version) {
@@ -147,7 +147,7 @@ function loadLocalTranslateMeta(): Promise<TranslateMeta | null> {
 }
 
 async function fetchLocalTranslateMeta(): Promise<TranslateMeta | null> {
-	const meta = await fetchLocalJson(localTranslateMetaPath, '本地翻译字典版本读取失败');
+	const meta = await fetchLocalJson(localTranslateMetaPath, "本地翻译字典版本读取失败");
 	return isTranslateMeta(meta) ? meta : null;
 }
 
@@ -157,14 +157,14 @@ function loadLocalTranslateDictionary(): Promise<TranslateDictionary | null> {
 }
 
 async function fetchLocalTranslateDictionary(): Promise<TranslateDictionary | null> {
-	const dictionary = await fetchLocalJson(localTranslateDictionaryPath, '本地翻译字典读取失败');
+	const dictionary = await fetchLocalJson(localTranslateDictionaryPath, "本地翻译字典读取失败");
 	return isTranslateDictionary(dictionary) ? dictionary : null;
 }
 
 async function fetchLocalJson(path: Parameters<typeof browser.runtime.getURL>[0], message: string): Promise<unknown> {
 	try {
 		const response = await fetch(browser.runtime.getURL(path), {
-			cache: 'no-store',
+			cache: "no-store",
 		});
 
 		if (!response.ok) return null;
@@ -185,7 +185,7 @@ async function getCachedTranslateDictionary(): Promise<CachedTranslateDictionary
 		if (cached !== undefined) await clearCachedTranslateDictionary();
 		return null;
 	} catch (error) {
-		console.warn('[poe2-extensions] 翻译字典缓存读取失败', error);
+		console.warn("[poe2-extensions] 翻译字典缓存读取失败", error);
 		return null;
 	}
 }
@@ -194,7 +194,7 @@ async function cacheTranslateDictionary(cache: CachedTranslateDictionary): Promi
 	try {
 		await browser.storage.local.set({ [translateDictionaryCacheKey]: cache });
 	} catch (error) {
-		console.warn('[poe2-extensions] 翻译字典缓存写入失败', error);
+		console.warn("[poe2-extensions] 翻译字典缓存写入失败", error);
 	}
 }
 
@@ -202,7 +202,7 @@ async function clearCachedTranslateDictionary(): Promise<void> {
 	try {
 		await browser.storage.local.remove(translateDictionaryCacheKey);
 	} catch (error) {
-		console.warn('[poe2-extensions] 翻译字典缓存清理失败', error);
+		console.warn("[poe2-extensions] 翻译字典缓存清理失败", error);
 	}
 }
 
@@ -219,36 +219,36 @@ async function fetchRemoteTranslateDictionary(): Promise<TranslateDictionary | n
 async function fetchJson(url: string): Promise<unknown> {
 	try {
 		const response = await fetch(url, {
-			cache: 'no-store',
+			cache: "no-store",
 			headers: {
-				'Cache-Control': 'no-cache, no-store, must-revalidate',
-				Pragma: 'no-cache',
-				Expires: '0',
+				"Cache-Control": "no-cache, no-store, must-revalidate",
+				Pragma: "no-cache",
+				Expires: "0",
 			},
 		});
 
 		if (!response.ok) return null;
 		return await response.json();
 	} catch (error) {
-		console.warn('[poe2-extensions] 翻译字典远端请求失败', error);
+		console.warn("[poe2-extensions] 翻译字典远端请求失败", error);
 		return null;
 	}
 }
 
 function isTranslateMeta(value: unknown): value is TranslateMeta {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-	return typeof (value as TranslateMeta).version === 'number';
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+	return typeof (value as TranslateMeta).version === "number";
 }
 
 function isCachedTranslateDictionary(value: unknown): value is CachedTranslateDictionary {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
 
 	const cache = value as CachedTranslateDictionary;
-	return typeof cache.version === 'number' && isTranslateDictionary(cache.dictionary);
+	return typeof cache.version === "number" && isTranslateDictionary(cache.dictionary);
 }
 
 function isTranslateDictionary(value: unknown): value is TranslateDictionary {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
 
-	return Object.values(value).every((entry) => typeof entry === 'string');
+	return Object.values(value).every((entry) => typeof entry === "string");
 }

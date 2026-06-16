@@ -22,17 +22,19 @@ export function readTexts() {
 		columns: true,
 		skip_empty_lines: true,
 		objname: "key",
-		bom: true
+		bom: true,
 	}) as unknown as Record<string, TextData>;
 }
 
-
 export function writeTexts(texts: TextData[]) {
 	texts.sort((a, b) => a.key.localeCompare(b.key));
-	fs.writeFileSync(textsPath, csv.stringify(texts, {
-		bom: true,
-		header: true,
-	}),);
+	fs.writeFileSync(
+		textsPath,
+		csv.stringify(texts, {
+			bom: true,
+			header: true,
+		}),
+	);
 }
 
 export function readAutoTranslateTexts() {
@@ -43,16 +45,19 @@ export function readAutoTranslateTexts() {
 	const backendTextsCsv = fs.readFileSync(autoTranslateTextsPath, { encoding: "utf8" });
 	const data = csv.parse(backendTextsCsv, {
 		skip_empty_lines: true,
-		bom: true
+		bom: true,
 	}) as unknown as [[string, string]];
 	return Object.fromEntries(data);
 }
 
 export function writeAutoTranslateTexts(texts: [string, string][]) {
 	texts.sort((a, b) => a[0].localeCompare(b[0]));
-	fs.writeFileSync(autoTranslateTextsPath, csv.stringify(texts, {
-		bom: true,
-	}),);
+	fs.writeFileSync(
+		autoTranslateTextsPath,
+		csv.stringify(texts, {
+			bom: true,
+		}),
+	);
 }
 
 export function readManualTranslateTexts() {
@@ -63,14 +68,17 @@ export function readManualTranslateTexts() {
 	const manualTextsCsv = fs.readFileSync(manualTranslateTextsPath, { encoding: "utf8" });
 	const data = csv.parse(manualTextsCsv, {
 		skip_empty_lines: true,
-		bom: true
+		bom: true,
 	}) as unknown as [[string, string]];
 	return Object.fromEntries(data);
 }
 
 export function writeManualTranslateTexts(texts: [string, string][]) {
 	texts.sort((a, b) => a[0].localeCompare(b[0]));
-	fs.writeFileSync(manualTranslateTextsPath, csv.stringify(texts, {
-		bom: true,
-	}),);
+	fs.writeFileSync(
+		manualTranslateTextsPath,
+		csv.stringify(texts, {
+			bom: true,
+		}),
+	);
 }

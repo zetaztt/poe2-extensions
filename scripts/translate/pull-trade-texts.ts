@@ -1,4 +1,11 @@
-import { TradeFiltersDataResponse, TradeItemsDataResponse, TradeStatConfig, TradeStaticConfig, TradeStaticsDataResponse, TradeStatsResponse } from "@/trade/types";
+import {
+	TradeFiltersDataResponse,
+	TradeItemsDataResponse,
+	TradeStatConfig,
+	TradeStaticConfig,
+	TradeStaticsDataResponse,
+	TradeStatsResponse,
+} from "@/trade/types";
 import { readTexts, type TextData, writeTexts } from "./utils";
 import { isUniqueItem } from "@/trade/utils";
 
@@ -8,10 +15,15 @@ const poe2Href = "www.pathofexile.com";
 const texts = new Map<string, TextData>();
 const words = new Map<string, string>();
 
-function setText(key: string, original: string, translate?: string, options?: {
-	needCheck?: boolean,
-	muteMultiWarn?: boolean
-}) {
+function setText(
+	key: string,
+	original: string,
+	translate?: string,
+	options?: {
+		needCheck?: boolean;
+		muteMultiWarn?: boolean;
+	},
+) {
 	if (!original) {
 		return;
 	}
@@ -37,7 +49,7 @@ function setText(key: string, original: string, translate?: string, options?: {
 		key,
 		original,
 		translate,
-		needCheck
+		needCheck,
 	});
 
 	if (translate) {
@@ -48,8 +60,9 @@ function setText(key: string, original: string, translate?: string, options?: {
 async function fetchPoe2TradeData<T>(href: string, type: string): Promise<T> {
 	const response = await fetch(`https://${href}/api/trade2/data/${type}`, {
 		headers: {
-			"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0"
-		}
+			"user-agent":
+				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0",
+		},
 	});
 	return response.json();
 }
@@ -57,40 +70,39 @@ async function fetchPoe2TradeData<T>(href: string, type: string): Promise<T> {
 async function pullItemTexts() {
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeItemsDataResponse>(poe2Href, "items"),
-		fetchPoe2TradeData<TradeItemsDataResponse>(poe2TwHref, "items")
+		fetchPoe2TradeData<TradeItemsDataResponse>(poe2TwHref, "items"),
 	]);
 	for (const group of data.result) {
 		const groupTextKey = `items/${group.id}`;
 
-		const twGroup = twData.result.find(g => g.id === group.id);
+		const twGroup = twData.result.find((g) => g.id === group.id);
 
 		setText(groupTextKey, group.label, twGroup?.label);
 
 		for (const entry of group.entries) {
 			if (isUniqueItem(entry)) {
 				setText(`${groupTextKey}/${entry.name}`, entry.name, "", {
-					muteMultiWarn: true
+					muteMultiWarn: true,
 				});
 			}
 
 			setText(`${groupTextKey}/${entry.type}`, entry.type, "", {
-				muteMultiWarn: true
+				muteMultiWarn: true,
 			});
 		}
 	}
-
 }
 
 async function pullStatsTexts() {
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeStatsResponse>(poe2Href, "stats"),
-		fetchPoe2TradeData<TradeStatsResponse>(poe2TwHref, "stats")
+		fetchPoe2TradeData<TradeStatsResponse>(poe2TwHref, "stats"),
 	]);
 
 	for (const group of data.result) {
 		const groupTextKey = `stats/${group.id}`;
 
-		const twGroup = twData.result.find(g => g.id === group.id);
+		const twGroup = twData.result.find((g) => g.id === group.id);
 
 		setText(groupTextKey, group.label, twGroup?.label);
 
@@ -100,7 +112,7 @@ async function pullStatsTexts() {
 		for (const entry of group.entries) {
 			let stats = statsMap.get(entry.id);
 			if (!stats) {
-				statsMap.set(entry.id, stats = []);
+				statsMap.set(entry.id, (stats = []));
 			}
 			stats.push(entry);
 		}
@@ -109,7 +121,7 @@ async function pullStatsTexts() {
 			for (const group of twGroup.entries) {
 				let stats = twStatsMap.get(group.id);
 				if (!stats) {
-					twStatsMap.set(group.id, stats = []);
+					twStatsMap.set(group.id, (stats = []));
 				}
 				stats.push(group);
 			}
@@ -122,9 +134,8 @@ async function pullStatsTexts() {
 
 				const translateText = twStats?.[i]?.text;
 				setText(entryTextKey, stat.text, translateText, {
-					needCheck: stats.length !== twStats?.length && stats.length > 1
+					needCheck: stats.length !== twStats?.length && stats.length > 1,
 				});
-
 			}
 		}
 	}
@@ -139,7 +150,7 @@ async function pullStaticTexts() {
 	for (const group of data.result) {
 		const groupTextKey = `static/${group.id}`;
 
-		const twGroup = twData.result.find(g => g.id === group.id);
+		const twGroup = twData.result.find((g) => g.id === group.id);
 
 		setText(groupTextKey, group.label, twGroup?.label);
 
@@ -149,7 +160,7 @@ async function pullStaticTexts() {
 		for (const entry of group.entries) {
 			let staticConfig = staticsMap.get(entry.id);
 			if (!staticConfig) {
-				staticsMap.set(entry.id, staticConfig = []);
+				staticsMap.set(entry.id, (staticConfig = []));
 			}
 			staticConfig.push(entry);
 		}
@@ -158,7 +169,7 @@ async function pullStaticTexts() {
 			for (const group of twGroup.entries) {
 				let staticConfig = twStaticsMap.get(group.id);
 				if (!staticConfig) {
-					twStaticsMap.set(group.id, staticConfig = []);
+					twStaticsMap.set(group.id, (staticConfig = []));
 				}
 				staticConfig.push(group);
 			}
@@ -174,9 +185,8 @@ async function pullStaticTexts() {
 
 				const translateText = twStaticConfigs?.[i]?.text;
 				setText(entryTextKey, staticConfig.text, translateText, {
-					needCheck: staticConfigs.length !== twStaticConfigs?.length && staticConfigs.length > 1
+					needCheck: staticConfigs.length !== twStaticConfigs?.length && staticConfigs.length > 1,
 				});
-
 			}
 		}
 	}
@@ -185,18 +195,18 @@ async function pullStaticTexts() {
 async function pullFilterTexts() {
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeFiltersDataResponse>(poe2Href, "filters"),
-		fetchPoe2TradeData<TradeFiltersDataResponse>(poe2TwHref, "filters")
+		fetchPoe2TradeData<TradeFiltersDataResponse>(poe2TwHref, "filters"),
 	]);
 
 	for (const group of data.result) {
 		const groupTextKey = `filters/${group.id}`;
-		const twGroup = twData.result.find(g => g.id === group.id);
+		const twGroup = twData.result.find((g) => g.id === group.id);
 		if (group.title) {
 			setText(groupTextKey, group.title, twGroup?.title);
 		}
 		for (const entry of group.filters) {
 			const entryTextKey = `${groupTextKey}/${entry.id}`;
-			const twEntry = twGroup?.filters.find(e => e.id === entry.id);
+			const twEntry = twGroup?.filters.find((e) => e.id === entry.id);
 			if (entry.text) {
 				setText(entryTextKey, entry.text, twEntry?.text);
 			}
@@ -208,7 +218,7 @@ async function pullFilterTexts() {
 			if (entry.option) {
 				for (const option of entry.option.options) {
 					const optionTextKey = `${entryTextKey}/${option.id}`;
-					const twOption = twEntry?.option?.options.find(o => o.id === option.id);
+					const twOption = twEntry?.option?.options.find((o) => o.id === option.id);
 					setText(optionTextKey, option.text, twOption?.text);
 				}
 			}
@@ -224,13 +234,7 @@ function mergeTexts() {
 	}
 }
 
-await Promise.all([
-	pullItemTexts(),
-	pullStatsTexts(),
-	pullStaticTexts(),
-	pullFilterTexts(),
-]);
+await Promise.all([pullItemTexts(), pullStatsTexts(), pullStaticTexts(), pullFilterTexts()]);
 
 mergeTexts();
 writeTexts(Array.from(texts.values()));
-

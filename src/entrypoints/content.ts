@@ -1,17 +1,13 @@
-import { injectScript } from 'wxt/utils/inject-script';
-import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from '@/settings/settings';
-import {
-	createTradeFeaturesUpdateMessage,
-	isPoeTradeMessage,
-	type TradeFeatures,
-} from '@/trade/messages';
+import { injectScript } from "wxt/utils/inject-script";
+import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from "@/settings/settings";
+import { createTradeFeaturesUpdateMessage, isPoeTradeMessage, type TradeFeatures } from "@/trade/messages";
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
 	PoeTranslationMessageType,
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationMessage,
-} from '@/trade/translate/messages';
+} from "@/trade/translate/messages";
 import {
 	createStatPresetErrorMessage,
 	createStatPresetResultMessage,
@@ -19,11 +15,11 @@ import {
 	isTradeStatPresetArray,
 	PoeStatPresetMessageType,
 	type PoeStatPresetRequestMessage,
-} from '@/trade/stat-preset/messages';
-import type { TradeStatPreset } from '@/trade/types';
+} from "@/trade/stat-preset/messages";
+import type { TradeStatPreset } from "@/trade/types";
 
 const backgroundResponseTimeoutMs = 15_000;
-const tradeStatPresetStorageKey = 'tradeStatPresets';
+const tradeStatPresetStorageKey = "tradeStatPresets";
 
 let currentFeatures: TradeFeatures = {
 	translate: false,
@@ -32,8 +28,8 @@ let currentFeatures: TradeFeatures = {
 };
 
 export default defineContentScript({
-	matches: ['https://www.pathofexile.com/trade2*'],
-	runAt: 'document_start',
+	matches: ["https://www.pathofexile.com/trade2*"],
+	runAt: "document_start",
 	main() {
 		void installTrade();
 	},
@@ -50,17 +46,17 @@ async function installTrade(): Promise<void> {
 	installStatPresetStorageBridge();
 	installTradeFeaturesBridge();
 
-	await injectScript('/injector.js', {
+	await injectScript("/injector.js", {
 		keepInDom: false,
 	}).catch((error) => {
-		console.error('[poe2-extensions][trade] 主世界脚本注入失败', error);
+		console.error("[poe2-extensions][trade] 主世界脚本注入失败", error);
 	});
 
 	postTradeFeaturesUpdate();
 }
 
 function installStatPresetStorageBridge(): void {
-	window.addEventListener('message', async (event: MessageEvent<unknown>) => {
+	window.addEventListener("message", async (event: MessageEvent<unknown>) => {
 		if (event.source !== window || !isPoeStatPresetRequestMessage(event.data)) return;
 		if (!currentFeatures.statPreset) return;
 
@@ -74,7 +70,7 @@ function installStatPresetStorageBridge(): void {
 }
 
 function installTranslationDictionaryBridge(): void {
-	window.addEventListener('message', async (event: MessageEvent<unknown>) => {
+	window.addEventListener("message", async (event: MessageEvent<unknown>) => {
 		if (event.source !== window || !isPoeTranslationMessage(event.data)) return;
 		if (event.data.type !== PoeTranslationMessageType.fetch) return;
 		if (!currentFeatures.translate) return;
@@ -99,7 +95,7 @@ async function handleStatPresetRequest(message: PoeStatPresetRequestMessage): Pr
 			name: message.preset.name.trim(),
 			query: message.preset.query,
 		};
-		if (!nextPreset.name) throw new Error('预设名称不能为空');
+		if (!nextPreset.name) throw new Error("预设名称不能为空");
 
 		const existingIndex = presets.findIndex((preset) => preset.name === nextPreset.name);
 		if (existingIndex >= 0) {
@@ -116,13 +112,13 @@ async function handleStatPresetRequest(message: PoeStatPresetRequestMessage): Pr
 		const presets = await getStoredTradeStatPresets();
 		const oldName = message.oldName.trim();
 		const newName = message.newName.trim();
-		if (!newName) throw new Error('预设名称不能为空');
+		if (!newName) throw new Error("预设名称不能为空");
 
 		const existingIndex = presets.findIndex((preset) => preset.name === oldName);
-		if (existingIndex < 0) throw new Error('未找到要重命名的预设');
+		if (existingIndex < 0) throw new Error("未找到要重命名的预设");
 		if (oldName === newName) return presets;
 		if (presets.some((preset) => preset.name === newName)) {
-			throw new Error('预设名称已存在');
+			throw new Error("预设名称已存在");
 		}
 
 		presets[existingIndex] = {
@@ -174,22 +170,25 @@ function postTradeFeaturesUpdate(): void {
 function sendRuntimeMessageWithTimeout(message: PoeTranslationMessage): Promise<PoeTranslationMessage> {
 	return new Promise((resolve, reject) => {
 		const timeoutId = window.setTimeout(() => {
-			reject(new Error('background 无响应'));
+			reject(new Error("background 无响应"));
 		}, backgroundResponseTimeoutMs);
 
-		browser.runtime.sendMessage(message).then((response: PoeTranslationMessage | undefined) => {
-			window.clearTimeout(timeoutId);
+		browser.runtime
+			.sendMessage(message)
+			.then((response: PoeTranslationMessage | undefined) => {
+				window.clearTimeout(timeoutId);
 
-			if (!response) {
-				reject(new Error('background 无响应'));
-				return;
-			}
+				if (!response) {
+					reject(new Error("background 无响应"));
+					return;
+				}
 
-			resolve(response);
-		}).catch((error) => {
-			window.clearTimeout(timeoutId);
-			reject(error);
-		});
+				resolve(response);
+			})
+			.catch((error) => {
+				window.clearTimeout(timeoutId);
+				reject(error);
+			});
 	});
 }
 

@@ -12,6 +12,8 @@
 		"zip": "wxt zip",
 		"zip:firefox": "wxt zip -b firefox",
 		"compile": "vue-tsc --noEmit",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
 		"postinstall": "wxt prepare && npx crawlee install-playwright-browsers",
 		"pull-translate": "tsx ./scripts/translate/pull-trade-texts.ts",
 		"auto-translate": "tsx ./scripts/translate/auto-translate.ts",
@@ -29,6 +31,7 @@
 		"crawlee": "^3.17.0",
 		"csv": "^6.5.1",
 		"playwright": "^1.60.0",
+		"prettier": "^3.8.4",
 		"typescript": "^5.9.3",
 		"vue-tsc": "^3.2.5",
 		"wxt": "^0.20.26"

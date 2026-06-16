@@ -1,19 +1,24 @@
-import { proxy, XhrResponse } from 'ajax-hook';
-import { type TradeFiltersDataResponse, type TradeItemsDataResponse, type TradeStaticsDataResponse, type TradeStatsResponse, type Translated } from '../types';
-import { loadTranslateDictionary, preloadTranslateDictionary, TranslateDictionary } from '../../translate-dictionary';
-import { isUniqueItem } from '../utils';
+import { proxy, XhrResponse } from "ajax-hook";
+import {
+	type TradeFiltersDataResponse,
+	type TradeItemsDataResponse,
+	type TradeStaticsDataResponse,
+	type TradeStatsResponse,
+	type Translated,
+} from "../types";
+import { loadTranslateDictionary, preloadTranslateDictionary, TranslateDictionary } from "../../translate-dictionary";
+import { isUniqueItem } from "../utils";
 
 export const tradeDataPaths = {
-	items: '/api/trade2/data/items',
-	stats: '/api/trade2/data/stats',
-	static: '/api/trade2/data/static',
-	filters: '/api/trade2/data/filters',
+	items: "/api/trade2/data/items",
+	stats: "/api/trade2/data/stats",
+	static: "/api/trade2/data/static",
+	filters: "/api/trade2/data/filters",
 } as const;
 
 export type TradeDataKind = keyof typeof tradeDataPaths;
 
 const tradeDataEntries = Object.entries(tradeDataPaths) as [TradeDataKind, string][];
-
 
 export function getTradeDataKind(url: string): TradeDataKind | undefined {
 	return tradeDataEntries.find(([, path]) => url.endsWith(path))?.[0];
@@ -24,22 +29,22 @@ export function isTradeDataUrl(url: string): boolean {
 }
 
 export async function processTradeData(response: XhrResponse) {
-	const dictionary = await loadTranslateDictionary()
+	const dictionary = await loadTranslateDictionary();
 	const data = JSON.parse(response.response);
 
 	if (!dictionary || !isObject(data)) return data;
 
 	switch (getTradeDataKind(response.config.url)) {
-		case 'items':
+		case "items":
 			processItemsData(data as TradeItemsDataResponse, dictionary);
 			break;
-		case 'stats':
+		case "stats":
 			processStatsData(data as TradeStatsResponse, dictionary);
 			break;
-		case 'static':
+		case "static":
 			processStaticData(data as TradeStaticsDataResponse, dictionary);
 			break;
-		case 'filters':
+		case "filters":
 			processFilterData(data as TradeFiltersDataResponse, dictionary);
 			break;
 	}
@@ -64,7 +69,7 @@ export function processItemsData(data: TradeItemsDataResponse, dictionary: Trans
 				const type = dictionary[entry.type];
 
 				if (name || type) {
-					const discText = entry.disc === 'legacy' ? ' (舊版)' : '';
+					const discText = entry.disc === "legacy" ? " (舊版)" : "";
 					translateText = `${name ?? entry.name} ${type ?? entry.type}${discText}`;
 				}
 
@@ -151,7 +156,7 @@ export function processFilterData(data: TradeFiltersDataResponse, dictionary: Tr
 }
 
 function isObject(value: unknown): value is object {
-	return typeof value === 'object' && value !== null;
+	return typeof value === "object" && value !== null;
 }
 
 export function installTranslateDataHook() {
@@ -159,7 +164,7 @@ export function installTranslateDataHook() {
 		//请求发起前进入
 		onRequest: (config, handler) => {
 			if (isTradeDataUrl(config.url)) {
-				preloadTranslateDictionary()
+				preloadTranslateDictionary();
 			}
 
 			handler.next(config);
@@ -170,7 +175,7 @@ export function installTranslateDataHook() {
 				console.log("处理中文数据", response);
 				await processTradeData(response);
 			}
-			handler.next(response)
-		}
-	})
+			handler.next(response);
+		},
+	});
 }

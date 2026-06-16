@@ -25,7 +25,7 @@ export interface ProductPriceQuote {
 	sellPrice: number | null;
 }
 
-export type OpportunitySort = 'order' | 'profit' | 'return';
+export type OpportunitySort = "order" | "profit" | "return";
 
 export interface ArbitrageState {
 	currencies: ArbitrageCurrency[];
@@ -40,7 +40,7 @@ export interface ArbitrageState {
 
 export interface ArbitrageOpportunity {
 	id: string;
-	type: 'currency' | 'product';
+	type: "currency" | "product";
 	title: string;
 	description: string;
 	buyCurrencyId: string;

@@ -3,7 +3,7 @@ import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./tr
 import { observeItemElement } from "./item-element";
 import { installLocalStorageHook } from "./storage";
 
-export const traditionalChineseScriptUrl = 'https://web.poecdn.com/js/translate.zh_TW.js';
+export const traditionalChineseScriptUrl = "https://web.poecdn.com/js/translate.zh_TW.js";
 
 const scriptSelector = `script[src="${traditionalChineseScriptUrl}"]`;
 
@@ -15,8 +15,8 @@ export function installTradeTranslate() {
 
 	injectTraditionalChineseScript();
 	installTranslateDataHook();
-	observeItemElement()
-	installLocalStorageHook()
+	observeItemElement();
+	installLocalStorageHook();
 
 	// installPoePluginsHook();
 }
@@ -24,18 +24,21 @@ export function installTradeTranslate() {
 export function injectTraditionalChineseScript(): void {
 	if (document.querySelector(scriptSelector)) return;
 
-	const script = document.createElement('script');
+	const script = document.createElement("script");
 	script.src = traditionalChineseScriptUrl;
 	script.async = false;
 
-	script.addEventListener('error', () => {
-		console.error(`${logPrefix} 官方繁中脚本加载失败`);
-	}, { once: true });
+	script.addEventListener(
+		"error",
+		() => {
+			console.error(`${logPrefix} 官方繁中脚本加载失败`);
+		},
+		{ once: true },
+	);
 
 	const target = document.head || document.documentElement;
 	target.appendChild(script);
 }
-
 
 // function installPoePluginsHook() {
 // 	let poePlugins: PoePlugins
@@ -53,8 +56,6 @@ export function injectTraditionalChineseScript(): void {
 // 						installApiPluginHook(plugin)
 // 					}
 // 				}
-
-
 
 // 				return plugin;
 // 			}

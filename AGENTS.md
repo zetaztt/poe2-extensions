@@ -2,34 +2,44 @@
 
 ## 项目概览
 
-这是一个面向 Path of Exile 2 trade2 页面的浏览器扩展，用于在 `https://www.pathofexile.com/trade2` 上启用中文化体验。项目基于 WXT、Vue 3 和 TypeScript 构建，核心能力包括：
+这是一个面向 Path of Exile 2 trade2 页面的浏览器扩展，用于在 `https://www.pathofexile.com/trade2` 上提供中文化和交易辅助工具。项目基于 WXT、Vue 3 和 TypeScript 构建，核心能力包括：
 
 - 在 trade2 页面加载早期注入主世界脚本。
 - 拦截物品、词缀、静态数据和筛选器相关数据。
 - 使用本地、缓存或远端翻译字典将命中文本显示为中文。
 - 在关键条目后保留英文原文，避免丢失原始语义。
 - 将 trade2 本地缓存重定向到 `_zh` 后缀，避免污染官方英文缓存。
+- 在侧边栏维护 trade2 搜索书签、搜索翻译词典和计算货币或商品差价。
+- 将 trade2 搜索结果中的物品复制为 PoB 可识别文本。
+- 保存、应用、重命名和删除 trade2 高级筛选 stat group 预设。
 
 ## 技术栈
 
 - WXT：浏览器扩展工程、entrypoint 管理和构建。
 - Vue 3：侧边栏页面。
 - TypeScript：扩展逻辑、注入脚本和翻译数据脚本。
-- Browser Extension APIs：`browser.runtime`、`browser.storage.local`、`browser.storage.sync`、`browser.tabs`、Chrome Side Panel API、content script 通信。
+- Browser Extension APIs：`browser.runtime`、`browser.storage.local`、`browser.storage.sync`、`browser.tabs`、`navigator.clipboard`、Chrome Side Panel API、content script 通信。
 - Crawlee / Playwright：抓取或辅助生成翻译数据。
 - `csv`：读写翻译源数据。
 
 ## 目录说明
 
 - `src/entrypoints/`：WXT entrypoints。
-  - `background.ts`：background 逻辑，负责侧边栏点击行为、翻译字典的本地 fallback、缓存、远端版本检查和消息响应。
-  - `content.ts`：content script，运行在 trade2 页面，负责读取中文翻译开关、注入 `/injector.js` 并桥接页面消息与 background。
-  - `injector.unlisted.ts`：生成主世界注入脚本，实际调用 `src/trade/inject.ts`。
-  - `sidepanel/`：扩展侧边栏的 Vue 页面和样式，提供中文翻译开关。
-- `src/settings/settings.ts`：全项目云同步用户设置入口，目前包含默认关闭的 trade 功能开关。
-- `src/bookmarks/`：trade2 书签的数据类型、存储校验和增删改查业务逻辑。
-- `src/entrypoints/sidepanel/bookmarks/`、`src/entrypoints/sidepanel/settings/`：侧边栏对应功能的 Vue 页面和页面交互逻辑。
-- `src/trade/`：trade 页面主世界逻辑、通用类型和工具；`src/trade/translate/` 包含中文化核心逻辑。
+    - `background.ts`：background 逻辑，负责侧边栏点击行为、翻译字典的本地 fallback、缓存、远端版本检查和消息响应。
+    - `content.ts`：content script，运行在 trade2 页面，负责读取三个 trade 功能开关、注入 `/injector.js`，同步功能状态，并桥接翻译字典和筛选预设存储消息。
+    - `injector.unlisted.ts`：生成主世界注入脚本，实际调用 `src/trade/inject.ts`。
+    - `sidepanel/`：扩展侧边栏的 Vue 页面和全局样式，包含书签、差价、词典和设置四个标签页。
+- `src/settings/settings.ts`：全项目云同步用户设置入口，包含默认关闭的中文翻译、物品文本复制和筛选预设三个 trade 功能开关。
+- `src/bookmarks/`：扩展自有的 trade2 书签树类型、`browser.storage.local` 存储校验和增删改查业务逻辑；不依赖浏览器书签 API。
+- `src/arbitrage/`：差价工具的数据类型、本地状态校验、货币循环和商品买卖机会计算逻辑。
+- `src/entrypoints/sidepanel/bookmarks/`：书签树、文件夹、条目、菜单、拖拽和当前 trade2 搜索保存交互。
+- `src/entrypoints/sidepanel/arbitrage/`：货币、商品、兑换报价、利润门槛和差价机会管理页面。
+- `src/entrypoints/sidepanel/dictionary/`：翻译字典中英文搜索和英文原文复制页面。
+- `src/entrypoints/sidepanel/settings/`：三个 trade 功能开关及当前活动 trade2 标签页同步逻辑。
+- `src/trade/`：trade 页面主世界逻辑、功能状态消息、通用类型和工具。
+    - `translate/`：中文化数据 hook、DOM 翻译、翻译消息和 `_zh` 本地缓存隔离。
+    - `item-copy/`：接管搜索结果复制按钮，并将 trade 物品数据格式化为 PoB 文本。
+    - `stat-preset/`：在高级筛选界面安装预设 UI，并通过受控消息桥接完成预设存储操作。
 - `src/translate-dictionary.ts`：主世界脚本侧加载翻译字典的入口，通过 `window.postMessage` 请求 content/background。
 - `scripts/translate/`：翻译数据拉取、自动翻译和字典生成脚本。
 - `data/`：翻译源 CSV 数据。
@@ -45,6 +55,8 @@
 - `npm run zip`：打包 Chromium 扩展。
 - `npm run zip:firefox`：打包 Firefox 扩展。
 - `npm run compile`：运行 `vue-tsc --noEmit` 做类型检查。
+- `npm run format`：使用 Prettier 格式化纳管文件。
+- `npm run format:check`：检查纳管文件是否符合 Prettier 格式。
 - `npm run pull-translate`：从 POE2 官方英文/繁中 trade 数据接口拉取文本到 `data/trade-texts.csv`。
 - `npm run auto-translate`：通过 poe2db 等来源辅助生成自动翻译数据。
 - `npm run build-translate`：根据 `data/*.csv` 生成 `assets/translate.json` 和 `assets/translate-meta.json`。
@@ -52,15 +64,27 @@
 ## 扩展运行链路
 
 1. `src/entrypoints/background.ts` 设置点击扩展图标打开侧边栏。
-2. `src/entrypoints/sidepanel/` 读取并写入 `src/settings/settings.ts` 中的云同步用户设置，开关默认关闭；切换后会刷新当前活动的 trade2 标签页。
-3. `src/entrypoints/content.ts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 运行，并先读取 `tradeTranslateEnabled`。
-4. 如果中文翻译关闭，content script 不安装消息桥接，也不注入主世界脚本。
-5. 如果中文翻译开启，content script 安装 `window.postMessage` 桥接逻辑，并通过 WXT 的 `injectScript('/injector.js')` 注入主世界脚本。
-6. `src/entrypoints/injector.unlisted.ts` 调用 `injectTrade()`，在页面主世界按开关安装 trade 功能。
-7. 主世界脚本通过 `src/translate-dictionary.ts` 发出翻译字典请求。
-8. content script 将请求转发给 background。
-9. `src/entrypoints/background.ts` 在本地内置字典、`browser.storage.local` 缓存和远端 `https://zetaztt.github.io/poe2/` 字典之间选择可用的最新版本。
-10. 字典返回主世界脚本后，trade 数据和页面文本按命中字典进行中文化处理。
+2. 侧边栏包含书签、差价、词典和设置四个标签页；书签初始化成功时默认进入书签页，否则停留在设置页。
+3. 设置页通过 `src/settings/settings.ts` 读写 `browser.storage.sync` 中三个默认关闭的功能开关。
+4. `src/entrypoints/content.ts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 读取全部功能状态，并始终安装受控消息桥接。
+5. content script 始终通过 WXT 的 `injectScript('/injector.js')` 注入主世界入口，随后使用 trade 功能消息下发当前开关状态。
+6. `src/entrypoints/injector.unlisted.ts` 调用 `injectTrade()`；主世界脚本验证域名、路径和站点标识后监听功能状态，只安装已启用功能对应的 hook 或 UI。
+7. 中文翻译启用时，主世界脚本注入官方繁中脚本、安装 trade 数据和 DOM 翻译逻辑，并将指定 localStorage key 重定向到 `_zh` 后缀。
+8. 主世界脚本通过 `src/translate-dictionary.ts` 发出翻译字典请求，content script 仅在翻译开启时将请求转发给 background。
+9. background 在扩展内置字典、`browser.storage.local` 缓存和远端 `https://zetaztt.github.io/poe2/` 字典之间选择可用的最新版本，并在返回前校验结构。
+10. 物品复制启用时，主世界脚本监听搜索结果 DOM，将原复制按钮绑定为 PoB 文本复制；关闭时移除绑定并恢复按钮原状态。
+11. 筛选预设启用时，主世界脚本在高级筛选界面安装保存和选择 UI，通过 `window.postMessage` 向 content script 请求本地预设的读取、保存、重命名和删除。
+12. 翻译开关切换后刷新当前活动 trade2 标签页，以便完整安装或停止不可卸载的翻译 hook；物品复制和筛选预设通过运行时消息即时更新。
+13. 三个功能全部关闭时，入口脚本和桥接仍存在，但不会安装翻译 hook、物品复制绑定或筛选预设 UI。
+
+## 侧边栏与存储
+
+- `browser.storage.sync` 只存放三个体积较小、需要云同步的功能开关。
+- `browser.storage.local` 存放扩展自有书签树、差价工具状态、筛选预设和远端翻译字典缓存。
+- 书签功能只接受 `https://www.pathofexile.com/trade2` 下的 URL；打开书签时优先复用当前活动的 trade2 标签页。
+- 差价工具由用户维护货币、商品和报价，支持货币双向循环及商品跨货币买卖计算；跨货币商品机会只使用直接兑换报价。
+- 词典页直接通过 `browser.runtime.sendMessage` 向 background 请求与页面翻译相同的最新可用字典，不经过 trade2 页面桥接。
+- 筛选预设保存在 `tradeStatPresets` 本地存储项中，content script 必须对消息和存储结构进行校验。
 
 ## 翻译数据流程
 
@@ -76,23 +100,34 @@
 
 - 保持 WXT entrypoint 约定，不要绕过 `src/entrypoints/` 直接引入浏览器运行入口。
 - 新增功能设置应优先集中在 `src/settings/settings.ts`，保持默认值、storage key 和读写函数可复用。
-- sidepanel 的 Vue、DOM、拖拽、菜单和提示状态保留在对应页面目录；存储、校验和可复用业务操作放在 `src/bookmarks/`、`src/settings/` 等功能模块。
-- 用户开关设置使用 `browser.storage.sync` 云同步；翻译字典缓存等大体积或临时数据继续使用 `browser.storage.local`。
+- sidepanel 的 Vue、DOM、拖拽、菜单和提示状态保留在对应页面目录；存储、校验、计算和可复用业务操作放在 `src/bookmarks/`、`src/arbitrage/`、`src/settings/` 等功能模块。
+- 用户开关设置使用 `browser.storage.sync` 云同步；书签、差价状态、筛选预设、翻译字典缓存等业务或大体积数据继续使用 `browser.storage.local`。
 - content script 与主世界脚本之间只能通过受控消息桥接；新增消息时同步更新类型守卫和消息类型定义。
 - background 返回的翻译字典必须经过结构校验，避免把无效远端或缓存数据传入页面。
 - 主世界 hook 会影响 trade2 页面运行时行为，修改 `src/trade/` 时要尽量收窄影响范围。
-- 中文翻译开关默认关闭；修改注入链路时确认关闭状态不会注入官方繁中脚本、数据 hook 或 DOM 翻译逻辑。
+- 三个 trade 功能开关默认关闭；修改注入链路时确认关闭状态不会安装对应 hook、按钮绑定或页面 UI。
+- 翻译 hook 当前只安装一次且不支持运行时卸载，因此翻译设置继续通过刷新 trade2 页面生效；不要直接改成即时切换，除非同时实现完整卸载。
+- 物品复制和筛选预设支持即时启停；关闭时必须清理事件、观察器、样式和扩展插入的 DOM，并保留官方页面原行为。
+- 筛选预设消息只能在功能开启时处理，写入前继续校验名称和预设数组结构。
+- 书签和差价数据读取时应继续校验持久化结构，无效数据使用安全默认值或重建默认树。
 - 避免污染官方 trade2 本地缓存；涉及缓存 key 或 storage 改动时确认 `_zh` 隔离策略仍然有效。
 - 修改翻译数据时，优先改 CSV，再运行生成脚本更新 `assets/translate.json` 和 `assets/translate-meta.json`。
 - 项目当前没有专门测试框架；较大逻辑变更至少运行类型检查和构建。
-- 代码风格以现有文件为准：TypeScript 模块化、小范围类型守卫、中文日志和用户可见说明可以保留中文。
+- 代码格式由 Prettier 统一，配置见 `.prettierrc.json`：Tab 缩进宽度 4、双引号、分号、`bracketSameLine: true`。
+- TypeScript 保持模块化、小范围类型守卫，中文日志和用户可见说明可以保留中文。
 - 新增源码文件默认使用 `kebab-case` 命名，Vue 单文件组件也使用 `kebab-case.vue`；保留 WXT 约定文件名如 `injector.unlisted.ts`，历史文件除非本次改动涉及不强制批量重命名。
 - Git 提交日志使用中文，保持简短并说明核心变更。
 
 ## 验证建议
 
 - 文档或注释变更通常不需要运行测试。
+- 修改纳管文件后运行 `npm run format`，或至少运行 `npm run format:check` 确认格式。
 - TypeScript 或 Vue 逻辑变更后运行 `npm run compile`。
 - entrypoint、manifest、侧边栏、注入链路或构建相关改动后运行 `npm run build`，确认 manifest 包含 `side_panel`、`sidePanel` 权限和 `action`，且没有 `action.default_popup`。
 - 翻译数据变更后运行 `npm run build-translate`，确认 `assets/translate.json` 与 `assets/translate-meta.json` 更新符合预期。
-- 涉及页面注入、hook、storage、侧边栏或消息桥接的改动，建议在开发模式下手动打开 `https://www.pathofexile.com/trade2`，确认默认关闭、侧边栏开关、自动刷新、翻译效果、缓存隔离和控制台日志。
+- 书签改动应手动验证目录增删改、跨目录拖拽、保存当前搜索、替换搜索、复用当前 trade2 标签页和本地持久化。
+- 差价工具改动应验证状态恢复、货币循环、商品同币种与跨币种计算、缺失直接兑换提示、利润门槛和排序。
+- 词典页改动应验证中英文搜索、结果上限、失败重试和英文复制。
+- 涉及页面注入、hook、storage 或消息桥接的改动，建议在开发模式下手动打开 `https://www.pathofexile.com/trade2`，确认三个功能默认关闭且互不影响。
+- 分别验证翻译开启后的页面刷新、字典加载、繁中脚本、数据与 DOM 中文化和 `_zh` 缓存隔离。
+- 分别验证物品复制与筛选预设的即时启停、页面动态内容、PoB 文本复制、预设增删改用，以及关闭后的 UI 和事件清理。

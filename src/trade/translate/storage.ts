@@ -1,14 +1,14 @@
 import { logPrefix } from "../utils";
 
 export const redirectLocalStorageKeys = [
-	'lscache-trade2data',
-	'lscache-trade2data-cacheexpiration',
-	'lscache-trade2filters',
-	'lscache-trade2filters-cacheexpiration',
-	'lscache-trade2items',
-	'lscache-trade2items-cacheexpiration',
-	'lscache-trade2stats',
-	'lscache-trade2stats-cacheexpiration',
+	"lscache-trade2data",
+	"lscache-trade2data-cacheexpiration",
+	"lscache-trade2filters",
+	"lscache-trade2filters-cacheexpiration",
+	"lscache-trade2items",
+	"lscache-trade2items-cacheexpiration",
+	"lscache-trade2stats",
+	"lscache-trade2stats-cacheexpiration",
 ] as const;
 
 export function redirectLocalStorageKey(key: string): string {

@@ -1,6 +1,6 @@
-import { logPrefix } from '../utils';
-import type { TradeStatPreset, TradeStatPresetQuery } from '../types';
-import statPresetStyle from './style.css?raw';
+import { logPrefix } from "../utils";
+import type { TradeStatPreset, TradeStatPresetQuery } from "../types";
+import statPresetStyle from "./style.css?raw";
 import {
 	createStatPresetDeleteMessage,
 	createStatPresetListMessage,
@@ -9,14 +9,14 @@ import {
 	isPoeStatPresetResponseMessage,
 	PoeStatPresetMessageType,
 	type PoeStatPresetResponseMessage,
-} from './messages';
+} from "./messages";
 
-const styleId = 'poe2-extensions-stat-preset-style';
-const modalId = 'poe2-extensions-stat-preset-modal';
-const pickerId = 'poe2-extensions-stat-preset-picker';
-const saveButtonClass = 'poe2-extensions-stat-preset-save';
-const hostSelector = '.multiselect.filter-select.filter-group-select';
-const statBodySelector = '.search-advanced-pane.brown .filter-group-header .filter-body';
+const styleId = "poe2-extensions-stat-preset-style";
+const modalId = "poe2-extensions-stat-preset-modal";
+const pickerId = "poe2-extensions-stat-preset-picker";
+const saveButtonClass = "poe2-extensions-stat-preset-save";
+const hostSelector = ".multiselect.filter-select.filter-group-select";
+const statBodySelector = ".search-advanced-pane.brown .filter-group-header .filter-body";
 const requestTimeoutMs = 5_000;
 
 let enabled = false;
@@ -32,11 +32,14 @@ let modalMessage: HTMLElement | null = null;
 let presets: TradeStatPreset[] = [];
 let modalRenameName: string | null = null;
 
-const pendingRequests = new Map<string, {
-	resolve: (message: PoeStatPresetResponseMessage) => void;
-	reject: (error: Error) => void;
-	timeoutId: number;
-}>();
+const pendingRequests = new Map<
+	string,
+	{
+		resolve: (message: PoeStatPresetResponseMessage) => void;
+		reject: (error: Error) => void;
+		timeoutId: number;
+	}
+>();
 
 export function setTradeStatPresetEnabled(nextEnabled: boolean): void {
 	if (enabled === nextEnabled) {
@@ -56,7 +59,7 @@ export function setTradeStatPresetEnabled(nextEnabled: boolean): void {
 
 function installStatPreset(): void {
 	abortController = new AbortController();
-	window.addEventListener('message', handleStorageResponse, { signal: abortController.signal });
+	window.addEventListener("message", handleStorageResponse, { signal: abortController.signal });
 	ensureBodyReady(() => {
 		if (!enabled) return;
 		installStyle();
@@ -80,7 +83,7 @@ function uninstallStatPreset(): void {
 
 	for (const request of pendingRequests.values()) {
 		window.clearTimeout(request.timeoutId);
-		request.reject(new Error('筛选预设保存已关闭'));
+		request.reject(new Error("筛选预设保存已关闭"));
 	}
 	pendingRequests.clear();
 
@@ -101,7 +104,7 @@ function ensureBodyReady(callback: () => void): void {
 		return;
 	}
 
-	document.addEventListener('DOMContentLoaded', callback, {
+	document.addEventListener("DOMContentLoaded", callback, {
 		once: true,
 		signal: abortController?.signal,
 	});
@@ -142,20 +145,20 @@ function installSaveButtons(): void {
 			return;
 		}
 
-		const wrapper = document.createElement('span');
+		const wrapper = document.createElement("span");
 		wrapper.className = `input-group-btn ${saveButtonClass}`;
 		wrapper.dataset.statPresetIndex = String(index);
 
-		const button = document.createElement('button');
-		button.className = 'btn';
-		button.type = 'button';
-		button.textContent = '保存预设';
-		button.addEventListener('click', handleSaveButtonClick, {
+		const button = document.createElement("button");
+		button.className = "btn";
+		button.type = "button";
+		button.textContent = "保存预设";
+		button.addEventListener("click", handleSaveButtonClick, {
 			signal: abortController?.signal,
 		});
 
 		wrapper.appendChild(button);
-		body.insertAdjacentElement('afterend', wrapper);
+		body.insertAdjacentElement("afterend", wrapper);
 	});
 }
 
@@ -163,84 +166,100 @@ function installPresetPicker(): void {
 	if (document.getElementById(pickerId)) return;
 
 	const host = document.querySelector<HTMLElement>(hostSelector);
-	const statsContainer = host?.closest('span')?.closest('div');
+	const statsContainer = host?.closest("span")?.closest("div");
 	if (!statsContainer) return;
 
-	const container = document.createElement('span');
+	const container = document.createElement("span");
 	container.id = pickerId;
-	container.className = 'filter-body poe2-extensions-stat-preset-picker';
-	container.style.width = '50%';
-	container.style.marginLeft = '50%';
+	container.className = "filter-body poe2-extensions-stat-preset-picker";
+	container.style.width = "50%";
+	container.style.marginLeft = "50%";
 
-	const multiselect = document.createElement('div');
+	const multiselect = document.createElement("div");
 	multiselect.tabIndex = -1;
-	multiselect.className = 'multiselect filter-select filter-group-select';
+	multiselect.className = "multiselect filter-select filter-group-select";
 
-	const select = document.createElement('div');
-	select.className = 'multiselect__select';
+	const select = document.createElement("div");
+	select.className = "multiselect__select";
 
-	const tags = document.createElement('div');
-	tags.className = 'multiselect__tags';
+	const tags = document.createElement("div");
+	tags.className = "multiselect__tags";
 
-	const tagsWrap = document.createElement('div');
-	tagsWrap.className = 'multiselect__tags-wrap';
-	tagsWrap.style.display = 'none';
+	const tagsWrap = document.createElement("div");
+	tagsWrap.className = "multiselect__tags-wrap";
+	tagsWrap.style.display = "none";
 
-	const spinner = document.createElement('div');
-	spinner.className = 'multiselect__spinner';
-	spinner.style.display = 'none';
+	const spinner = document.createElement("div");
+	spinner.className = "multiselect__spinner";
+	spinner.style.display = "none";
 
-	const input = document.createElement('input');
-	input.name = '';
-	input.type = 'text';
-	input.className = 'multiselect__input';
-	input.placeholder = '+ 已保存的组合';
-	input.autocomplete = 'off';
+	const input = document.createElement("input");
+	input.name = "";
+	input.type = "text";
+	input.className = "multiselect__input";
+	input.placeholder = "+ 已保存的组合";
+	input.autocomplete = "off";
 
-	const contentWrapper = document.createElement('div');
-	contentWrapper.className = 'multiselect__content-wrapper';
-	contentWrapper.style.maxHeight = '300px';
-	contentWrapper.style.display = 'none';
+	const contentWrapper = document.createElement("div");
+	contentWrapper.className = "multiselect__content-wrapper";
+	contentWrapper.style.maxHeight = "300px";
+	contentWrapper.style.display = "none";
 
-	const content = document.createElement('ul');
-	content.className = 'multiselect__content';
-	content.style.display = 'inline-block';
+	const content = document.createElement("ul");
+	content.className = "multiselect__content";
+	content.style.display = "inline-block";
 
-	input.addEventListener('input', () => {
-		renderPresetDropdown(input.value);
-		showPresetDropdown();
-	}, { signal: abortController?.signal });
-	input.addEventListener('focus', () => {
-		renderPresetDropdown(input.value);
-		showPresetDropdown();
-	}, { signal: abortController?.signal });
+	input.addEventListener(
+		"input",
+		() => {
+			renderPresetDropdown(input.value);
+			showPresetDropdown();
+		},
+		{ signal: abortController?.signal },
+	);
+	input.addEventListener(
+		"focus",
+		() => {
+			renderPresetDropdown(input.value);
+			showPresetDropdown();
+		},
+		{ signal: abortController?.signal },
+	);
 
-	multiselect.addEventListener('mousedown', (event) => {
-		const target = event.target;
-		if (!(target instanceof Node)) return;
-		if (contentWrapper.contains(target)) return;
-		if (target !== input) event.preventDefault();
+	multiselect.addEventListener(
+		"mousedown",
+		(event) => {
+			const target = event.target;
+			if (!(target instanceof Node)) return;
+			if (contentWrapper.contains(target)) return;
+			if (target !== input) event.preventDefault();
 
-		input.focus();
-		renderPresetDropdown(input.value);
-		showPresetDropdown();
-	}, { signal: abortController?.signal });
+			input.focus();
+			renderPresetDropdown(input.value);
+			showPresetDropdown();
+		},
+		{ signal: abortController?.signal },
+	);
 
-	document.addEventListener('click', (event) => {
-		const target = event.target;
-		if (!(target instanceof Node)) return;
+	document.addEventListener(
+		"click",
+		(event) => {
+			const target = event.target;
+			if (!(target instanceof Node)) return;
 
-		if (!container.contains(target)) {
-			hidePresetDropdown();
-			return;
-		}
+			if (!container.contains(target)) {
+				hidePresetDropdown();
+				return;
+			}
 
-		if (contentWrapper.contains(target)) return;
+			if (contentWrapper.contains(target)) return;
 
-		input.focus();
-		renderPresetDropdown(input.value);
-		showPresetDropdown();
-	}, { signal: abortController?.signal });
+			input.focus();
+			renderPresetDropdown(input.value);
+			showPresetDropdown();
+		},
+		{ signal: abortController?.signal },
+	);
 
 	tags.append(tagsWrap, spinner, input);
 	contentWrapper.appendChild(content);
@@ -255,47 +274,59 @@ function installPresetPicker(): void {
 function installModal(): void {
 	if (document.getElementById(modalId)) return;
 
-	const modal = document.createElement('div');
+	const modal = document.createElement("div");
 	modal.id = modalId;
-	modal.className = 'poe2-extensions-stat-preset-modal';
+	modal.className = "poe2-extensions-stat-preset-modal";
 	modal.hidden = true;
 
-	const dialog = document.createElement('div');
-	dialog.className = 'poe2-extensions-stat-preset-dialog';
+	const dialog = document.createElement("div");
+	dialog.className = "poe2-extensions-stat-preset-dialog";
 
-	const title = document.createElement('h2');
-	title.textContent = '保存筛选预设';
+	const title = document.createElement("h2");
+	title.textContent = "保存筛选预设";
 
-	const input = document.createElement('input');
-	input.type = 'text';
-	input.placeholder = '请输入预设名称';
-	input.autocomplete = 'off';
+	const input = document.createElement("input");
+	input.type = "text";
+	input.placeholder = "请输入预设名称";
+	input.autocomplete = "off";
 
-	const message = document.createElement('p');
-	message.className = 'poe2-extensions-stat-preset-message';
+	const message = document.createElement("p");
+	message.className = "poe2-extensions-stat-preset-message";
 
-	const actions = document.createElement('div');
-	actions.className = 'poe2-extensions-stat-preset-actions';
+	const actions = document.createElement("div");
+	actions.className = "poe2-extensions-stat-preset-actions";
 
-	const saveButton = document.createElement('button');
-	saveButton.type = 'button';
-	saveButton.textContent = '保存';
+	const saveButton = document.createElement("button");
+	saveButton.type = "button";
+	saveButton.textContent = "保存";
 
-	const cancelButton = document.createElement('button');
-	cancelButton.type = 'button';
-	cancelButton.textContent = '取消';
+	const cancelButton = document.createElement("button");
+	cancelButton.type = "button";
+	cancelButton.textContent = "取消";
 
-	saveButton.addEventListener('click', () => {
-		void submitStatPresetModal();
-	}, { signal: abortController?.signal });
-	cancelButton.addEventListener('click', cancelModal, { signal: abortController?.signal });
-	modal.addEventListener('click', (event) => {
-		if (event.target === modal) cancelModal();
-	}, { signal: abortController?.signal });
-	input.addEventListener('keydown', (event) => {
-		if (event.key === 'Enter') void submitStatPresetModal();
-		if (event.key === 'Escape') cancelModal();
-	}, { signal: abortController?.signal });
+	saveButton.addEventListener(
+		"click",
+		() => {
+			void submitStatPresetModal();
+		},
+		{ signal: abortController?.signal },
+	);
+	cancelButton.addEventListener("click", cancelModal, { signal: abortController?.signal });
+	modal.addEventListener(
+		"click",
+		(event) => {
+			if (event.target === modal) cancelModal();
+		},
+		{ signal: abortController?.signal },
+	);
+	input.addEventListener(
+		"keydown",
+		(event) => {
+			if (event.key === "Enter") void submitStatPresetModal();
+			if (event.key === "Escape") cancelModal();
+		},
+		{ signal: abortController?.signal },
+	);
 
 	actions.append(saveButton, cancelButton);
 	dialog.append(title, input, message, actions);
@@ -327,9 +358,9 @@ function openModal(statIndex: number): void {
 
 	modalStatIndex = statIndex;
 	modalRenameName = null;
-	if (modalTitle) modalTitle.textContent = '保存筛选预设';
-	modalInput.value = '';
-	setModalMessage('');
+	if (modalTitle) modalTitle.textContent = "保存筛选预设";
+	modalInput.value = "";
+	setModalMessage("");
 	modal.hidden = false;
 	window.setTimeout(() => modalInput?.focus(), 0);
 }
@@ -340,9 +371,9 @@ function openRenameModal(name: string): void {
 
 	modalStatIndex = -1;
 	modalRenameName = name;
-	if (modalTitle) modalTitle.textContent = '重命名筛选预设';
+	if (modalTitle) modalTitle.textContent = "重命名筛选预设";
 	modalInput.value = name;
-	setModalMessage('');
+	setModalMessage("");
 	modal.hidden = false;
 	window.setTimeout(() => {
 		modalInput?.focus();
@@ -375,7 +406,7 @@ async function submitStatPresetModal(): Promise<void> {
 
 	const name = modalInput.value.trim();
 	if (!name) {
-		setModalMessage('请输入预设名称');
+		setModalMessage("请输入预设名称");
 		return;
 	}
 
@@ -392,10 +423,10 @@ async function submitStatPresetModal(): Promise<void> {
 			name,
 			query: cloneStatPresetQuery(query),
 		});
-		renderPresetDropdown(presetInput?.value ?? '');
+		renderPresetDropdown(presetInput?.value ?? "");
 		closeModal();
 	} catch (error) {
-		setModalMessage('保存失败，请稍后重试');
+		setModalMessage("保存失败，请稍后重试");
 		console.warn(`${logPrefix} 筛选预设保存失败`, error);
 	}
 }
@@ -412,7 +443,7 @@ function getCurrentStatGroupQuery(index: number): TradeStatPresetQuery | null {
 	return query;
 }
 
-function renderPresetDropdown(filter = ''): void {
+function renderPresetDropdown(filter = ""): void {
 	if (!presetDropdown) return;
 
 	const normalizedFilter = filter.trim().toLowerCase();
@@ -420,29 +451,29 @@ function renderPresetDropdown(filter = ''): void {
 		? presets.filter((preset) => preset.name.toLowerCase().includes(normalizedFilter))
 		: presets;
 
-	presetDropdown.textContent = '';
+	presetDropdown.textContent = "";
 
-	const group = document.createElement('li');
-	group.className = 'multiselect__element';
+	const group = document.createElement("li");
+	group.className = "multiselect__element";
 
-	const groupOption = document.createElement('span');
-	groupOption.className = 'multiselect__option multiselect__option--disabled multiselect__option--highlight';
+	const groupOption = document.createElement("span");
+	groupOption.className = "multiselect__option multiselect__option--disabled multiselect__option--highlight";
 
-	const groupText = document.createElement('span');
-	groupText.textContent = '已保存預設';
+	const groupText = document.createElement("span");
+	groupText.textContent = "已保存預設";
 
 	groupOption.appendChild(groupText);
 	group.appendChild(groupOption);
 	presetDropdown.appendChild(group);
 
 	if (filteredPresets.length === 0) {
-		const empty = document.createElement('li');
+		const empty = document.createElement("li");
 
-		const emptyOption = document.createElement('span');
-		emptyOption.className = 'multiselect__option';
+		const emptyOption = document.createElement("span");
+		emptyOption.className = "multiselect__option";
 
-		const emptyText = document.createElement('span');
-		emptyText.textContent = '無符合道具.';
+		const emptyText = document.createElement("span");
+		emptyText.textContent = "無符合道具.";
 
 		emptyOption.appendChild(emptyText);
 		empty.appendChild(emptyOption);
@@ -451,45 +482,53 @@ function renderPresetDropdown(filter = ''): void {
 	}
 
 	for (const preset of filteredPresets) {
-		const item = document.createElement('li');
-		item.className = 'multiselect__element';
+		const item = document.createElement("li");
+		item.className = "multiselect__element";
 
-		const option = document.createElement('span');
-		option.className = 'multiselect__option';
-		option.dataset.select = '';
-		option.dataset.selected = '';
-		option.dataset.deselect = '';
-		option.addEventListener('click', () => applyPreset(preset), {
+		const option = document.createElement("span");
+		option.className = "multiselect__option";
+		option.dataset.select = "";
+		option.dataset.selected = "";
+		option.dataset.deselect = "";
+		option.addEventListener("click", () => applyPreset(preset), {
 			signal: abortController?.signal,
 		});
 
-		const label = document.createElement('span');
-		label.className = 'poe2-extensions-stat-preset-item-label';
+		const label = document.createElement("span");
+		label.className = "poe2-extensions-stat-preset-item-label";
 		label.textContent = preset.name;
 
-		const renameButton = document.createElement('button');
-		renameButton.type = 'button';
-		renameButton.className = 'poe2-extensions-stat-preset-rename';
-		renameButton.title = '重命名预设';
-		renameButton.addEventListener('mousedown', stopPresetActionEvent, {
+		const renameButton = document.createElement("button");
+		renameButton.type = "button";
+		renameButton.className = "poe2-extensions-stat-preset-rename";
+		renameButton.title = "重命名预设";
+		renameButton.addEventListener("mousedown", stopPresetActionEvent, {
 			signal: abortController?.signal,
 		});
-		renameButton.addEventListener('click', (event) => {
-			event.stopPropagation();
-			openRenameModal(preset.name);
-		}, { signal: abortController?.signal });
+		renameButton.addEventListener(
+			"click",
+			(event) => {
+				event.stopPropagation();
+				openRenameModal(preset.name);
+			},
+			{ signal: abortController?.signal },
+		);
 
-		const deleteButton = document.createElement('button');
-		deleteButton.type = 'button';
-		deleteButton.className = 'poe2-extensions-stat-preset-delete';
-		deleteButton.title = '删除预设';
-		deleteButton.addEventListener('mousedown', stopPresetActionEvent, {
+		const deleteButton = document.createElement("button");
+		deleteButton.type = "button";
+		deleteButton.className = "poe2-extensions-stat-preset-delete";
+		deleteButton.title = "删除预设";
+		deleteButton.addEventListener("mousedown", stopPresetActionEvent, {
 			signal: abortController?.signal,
 		});
-		deleteButton.addEventListener('click', (event) => {
-			event.stopPropagation();
-			void deletePreset(preset.name);
-		}, { signal: abortController?.signal });
+		deleteButton.addEventListener(
+			"click",
+			(event) => {
+				event.stopPropagation();
+				void deletePreset(preset.name);
+			},
+			{ signal: abortController?.signal },
+		);
 
 		option.append(label, renameButton, deleteButton);
 		item.appendChild(option);
@@ -503,24 +542,24 @@ function stopPresetActionEvent(event: Event): void {
 }
 
 function showPresetDropdown(): void {
-	const dropdown = presetDropdown?.closest<HTMLElement>('.multiselect__content-wrapper');
-	if (dropdown) dropdown.style.display = 'block';
+	const dropdown = presetDropdown?.closest<HTMLElement>(".multiselect__content-wrapper");
+	if (dropdown) dropdown.style.display = "block";
 
-	const multiselect = presetDropdown?.closest<HTMLElement>('.multiselect.filter-select.filter-group-select');
-	multiselect?.classList.add('multiselect--active');
+	const multiselect = presetDropdown?.closest<HTMLElement>(".multiselect.filter-select.filter-group-select");
+	multiselect?.classList.add("multiselect--active");
 }
 
 function hidePresetDropdown(): void {
-	const dropdown = presetDropdown?.closest<HTMLElement>('.multiselect__content-wrapper');
-	if (dropdown) dropdown.style.display = 'none';
+	const dropdown = presetDropdown?.closest<HTMLElement>(".multiselect__content-wrapper");
+	if (dropdown) dropdown.style.display = "none";
 
-	const multiselect = presetDropdown?.closest<HTMLElement>('.multiselect.filter-select.filter-group-select');
-	multiselect?.classList.remove('multiselect--active');
+	const multiselect = presetDropdown?.closest<HTMLElement>(".multiselect.filter-select.filter-group-select");
+	multiselect?.classList.remove("multiselect--active");
 }
 
 function applyPreset(preset: TradeStatPreset): void {
 	try {
-		window.app?.$store.commit('pushStatGroup', cloneStatPresetQuery(preset.query));
+		window.app?.$store.commit("pushStatGroup", cloneStatPresetQuery(preset.query));
 		hidePresetDropdown();
 	} catch (error) {
 		console.warn(`${logPrefix} 筛选预设应用失败`, error);
@@ -530,7 +569,7 @@ function applyPreset(preset: TradeStatPreset): void {
 async function deletePreset(name: string): Promise<void> {
 	try {
 		presets = await requestDeletePreset(name);
-		renderPresetDropdown(presetInput?.value ?? '');
+		renderPresetDropdown(presetInput?.value ?? "");
 		presetInput?.focus();
 		showPresetDropdown();
 	} catch (error) {
@@ -546,10 +585,10 @@ async function renamePreset(oldName: string, newName: string): Promise<void> {
 
 	try {
 		presets = await requestRenamePreset(oldName, newName);
-		renderPresetDropdown(presetInput?.value ?? '');
+		renderPresetDropdown(presetInput?.value ?? "");
 		closeModal();
 	} catch (error) {
-		setModalMessage(error instanceof Error ? error.message : '重命名失败，请稍后重试');
+		setModalMessage(error instanceof Error ? error.message : "重命名失败，请稍后重试");
 		console.warn(`${logPrefix} 筛选预设重命名失败`, error);
 	}
 }
@@ -557,7 +596,7 @@ async function renamePreset(oldName: string, newName: string): Promise<void> {
 async function reloadPresets(): Promise<void> {
 	try {
 		presets = await requestPresetList();
-		renderPresetDropdown(presetInput?.value ?? '');
+		renderPresetDropdown(presetInput?.value ?? "");
 	} catch (error) {
 		console.warn(`${logPrefix} 筛选预设读取失败`, error);
 	}
@@ -590,7 +629,7 @@ function sendStorageRequest(
 	return new Promise((resolve, reject) => {
 		const timeoutId = window.setTimeout(() => {
 			pendingRequests.delete(message.requestId);
-			reject(new Error('筛选预设存储无响应'));
+			reject(new Error("筛选预设存储无响应"));
 		}, requestTimeoutMs);
 
 		pendingRequests.set(message.requestId, {
@@ -622,7 +661,9 @@ function handleStorageResponse(event: MessageEvent<unknown>): void {
 }
 
 function removeStatPresetUi(): void {
-	for (const element of document.querySelectorAll<HTMLElement>(`.${saveButtonClass}, #${pickerId}, #${modalId}, #${styleId}`)) {
+	for (const element of document.querySelectorAll<HTMLElement>(
+		`.${saveButtonClass}, #${pickerId}, #${modalId}, #${styleId}`,
+	)) {
 		element.remove();
 	}
 }
@@ -630,7 +671,7 @@ function removeStatPresetUi(): void {
 function installStyle(): void {
 	if (document.getElementById(styleId)) return;
 
-	const style = document.createElement('style');
+	const style = document.createElement("style");
 	style.id = styleId;
 	style.textContent = statPresetStyle;
 
