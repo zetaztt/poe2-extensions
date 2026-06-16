@@ -6,11 +6,11 @@ const statBodySelector = ".search-advanced-pane.brown .filter-group-header .filt
 export function installSaveButtons(onSave: (statIndex: number) => void, signal?: AbortSignal): void {
 	const bodies = Array.from(document.querySelectorAll<HTMLElement>(statBodySelector));
 
-	bodies.forEach((body, index) => {
+	for (const [index, body] of bodies.entries()) {
 		const nextElement = body.nextElementSibling;
 		if (nextElement instanceof HTMLElement && nextElement.classList.contains(saveButtonClass)) {
 			nextElement.dataset.statPresetIndex = String(index);
-			return;
+			continue;
 		}
 
 		const wrapper = document.createElement("span");
@@ -31,7 +31,7 @@ export function installSaveButtons(onSave: (statIndex: number) => void, signal?:
 
 		wrapper.appendChild(button);
 		body.insertAdjacentElement("afterend", wrapper);
-	});
+	}
 }
 
 export function removeSaveButtons(): void {
