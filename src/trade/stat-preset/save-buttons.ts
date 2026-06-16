@@ -1,13 +1,14 @@
 import { logPrefix } from "../utils";
+import { openSavePresetModal } from "./modal";
 
 const saveButtonClass = "poe2-extensions-stat-preset-save";
-const statBodySelector = ".search-advanced-pane.brown .filter-group-header .filter-body";
+const statGroupBodySelector = ".search-advanced-pane.brown .filter-group-header .filter-body";
 
-export function installSaveButtons(onSave: (statIndex: number) => void, signal?: AbortSignal): void {
-	const bodies = Array.from(document.querySelectorAll<HTMLElement>(statBodySelector));
+export function installSaveButtons(signal?: AbortSignal): void {
+	const groupBodies = Array.from(document.querySelectorAll<HTMLElement>(statGroupBodySelector));
 
-	for (const [index, body] of bodies.entries()) {
-		const nextElement = body.nextElementSibling;
+	for (const [index, groupBody] of groupBodies.entries()) {
+		const nextElement = groupBody.nextElementSibling;
 		if (nextElement instanceof HTMLElement && nextElement.classList.contains(saveButtonClass)) {
 			nextElement.dataset.statPresetIndex = String(index);
 			continue;
@@ -24,13 +25,13 @@ export function installSaveButtons(onSave: (statIndex: number) => void, signal?:
 		button.addEventListener(
 			"click",
 			(event) => {
-				handleSaveButtonClick(event, onSave);
+				handleSaveButtonClick(event);
 			},
 			{ signal },
 		);
 
 		wrapper.appendChild(button);
-		body.insertAdjacentElement("afterend", wrapper);
+		groupBody.insertAdjacentElement("afterend", wrapper);
 	}
 }
 
@@ -40,7 +41,7 @@ export function removeSaveButtons(): void {
 	}
 }
 
-function handleSaveButtonClick(event: Event, onSave: (statIndex: number) => void): void {
+function handleSaveButtonClick(event: Event): void {
 	const button = event.currentTarget;
 	if (!(button instanceof HTMLElement)) return;
 
@@ -51,5 +52,5 @@ function handleSaveButtonClick(event: Event, onSave: (statIndex: number) => void
 		return;
 	}
 
-	onSave(statIndex);
+	openSavePresetModal(statIndex);
 }

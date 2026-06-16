@@ -4,7 +4,6 @@ import {
 	closeStatPresetModal,
 	installStatPresetModal,
 	openRenamePresetModal,
-	openSavePresetModal,
 	resetStatPresetModal,
 	setStatPresetModalMessage,
 } from "./modal";
@@ -105,7 +104,7 @@ function ensureObserver(): void {
 function refreshStatPresetUi(): void {
 	if (!enabled || !document.body) return;
 
-	installSaveButtons(openSavePresetModal, abortController?.signal);
+	installSaveButtons(abortController?.signal);
 	installPresetPicker({
 		presets,
 		onApply: applyPreset,
