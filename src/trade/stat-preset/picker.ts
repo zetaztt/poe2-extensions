@@ -1,5 +1,7 @@
 import type { TradeStatPreset } from "../types";
-import { hostSelector, pickerId } from "./constants";
+
+const pickerId = "poe2-extensions-stat-preset-picker";
+const hostSelector = ".multiselect.filter-select.filter-group-select";
 
 let presetInput: HTMLInputElement | null = null;
 let presetDropdown: HTMLElement | null = null;

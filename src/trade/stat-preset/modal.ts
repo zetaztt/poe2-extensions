@@ -1,7 +1,7 @@
-import { modalId } from "./constants";
-
 type SaveSubmitHandler = (statIndex: number, name: string) => Promise<void> | void;
 type RenameSubmitHandler = (oldName: string, newName: string) => Promise<void> | void;
+
+const modalId = "poe2-extensions-stat-preset-modal";
 
 let modalStatIndex = -1;
 let modalRenameName: string | null = null;

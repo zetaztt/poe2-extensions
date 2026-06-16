@@ -1,5 +1,6 @@
 import statPresetStyle from "./style.css?raw";
-import { styleId } from "./constants";
+
+const styleId = "poe2-extensions-stat-preset-style";
 
 export function installStatPresetStyle(): void {
 	if (document.getElementById(styleId)) return;

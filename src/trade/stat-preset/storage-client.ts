@@ -8,8 +8,9 @@ import {
 	PoeStatPresetMessageType,
 	type PoeStatPresetResponseMessage,
 } from "./messages";
-import { requestTimeoutMs } from "./constants";
 import { createRequestId } from "./utils";
+
+const requestTimeoutMs = 5_000;
 
 const pendingRequests = new Map<
 	string,

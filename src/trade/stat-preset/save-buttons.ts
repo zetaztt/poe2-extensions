@@ -1,5 +1,7 @@
 import { logPrefix } from "../utils";
-import { saveButtonClass, statBodySelector } from "./constants";
+
+const saveButtonClass = "poe2-extensions-stat-preset-save";
+const statBodySelector = ".search-advanced-pane.brown .filter-group-header .filter-body";
 
 export function installSaveButtons(onSave: (statIndex: number) => void, signal?: AbortSignal): void {
 	const bodies = Array.from(document.querySelectorAll<HTMLElement>(statBodySelector));
