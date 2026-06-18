@@ -1,5 +1,7 @@
-type SaveSubmitHandler = (statIndex: number, name: string) => Promise<void> | void;
-type RenameSubmitHandler = (oldName: string, newName: string) => Promise<void> | void;
+import { logPrefix } from "../utils";
+import { focusPresetPickerDropdown, getPresetPickerFilter, renderPresetDropdown } from "./picker";
+import { requestRenamePreset, requestSavePreset } from "./storage-client";
+import { cloneStatPresetQuery, getCurrentStatGroupQuery } from "./utils";
 
 const modalId = "poe2-extensions-stat-preset-modal";
 
@@ -8,21 +10,11 @@ let modalRenameName: string | null = null;
 let modalTitle: HTMLElement | null = null;
 let modalInput: HTMLInputElement | null = null;
 let modalMessage: HTMLElement | null = null;
-let onSaveSubmit: SaveSubmitHandler | null = null;
-let onRenameSubmit: RenameSubmitHandler | null = null;
-let onRenameCancel: (() => void) | null = null;
 
-export function installStatPresetModal(options: {
-	onSave: SaveSubmitHandler;
-	onRename: RenameSubmitHandler;
-	onRenameCancel: () => void;
-	signal?: AbortSignal;
-}): void {
-	onSaveSubmit = options.onSave;
-	onRenameSubmit = options.onRename;
-	onRenameCancel = options.onRenameCancel;
-
-	if (document.getElementById(modalId)) return;
+function ensureStatPresetModal(): HTMLElement | null {
+	const existingModal = document.getElementById(modalId);
+	if (existingModal && modalInput) return existingModal;
+	if (!document.body) return null;
 
 	const modal = document.createElement("div");
 	modal.id = modalId;
@@ -54,29 +46,17 @@ export function installStatPresetModal(options: {
 	cancelButton.type = "button";
 	cancelButton.textContent = "取消";
 
-	saveButton.addEventListener(
-		"click",
-		() => {
-			void submitStatPresetModal();
-		},
-		{ signal: options.signal },
-	);
-	cancelButton.addEventListener("click", cancelModal, { signal: options.signal });
-	modal.addEventListener(
-		"click",
-		(event) => {
-			if (event.target === modal) cancelModal();
-		},
-		{ signal: options.signal },
-	);
-	input.addEventListener(
-		"keydown",
-		(event) => {
-			if (event.key === "Enter") void submitStatPresetModal();
-			if (event.key === "Escape") cancelModal();
-		},
-		{ signal: options.signal },
-	);
+	saveButton.addEventListener("click", () => {
+		void submitStatPresetModal();
+	});
+	cancelButton.addEventListener("click", cancelModal);
+	modal.addEventListener("click", (event) => {
+		if (event.target === modal) cancelModal();
+	});
+	input.addEventListener("keydown", (event) => {
+		if (event.key === "Enter") void submitStatPresetModal();
+		if (event.key === "Escape") cancelModal();
+	});
 
 	actions.append(saveButton, cancelButton);
 	dialog.append(title, input, message, actions);
@@ -86,11 +66,13 @@ export function installStatPresetModal(options: {
 	modalTitle = title;
 	modalInput = input;
 	modalMessage = message;
+
+	return modal;
 }
 
 export function openSavePresetModal(statIndex: number): void {
-	const modal = document.getElementById(modalId);
-	if (!modal || !modalInput) return;
+	const modal = ensureStatPresetModal();
+	if (!modalInput || !modal) return;
 
 	modalStatIndex = statIndex;
 	modalRenameName = null;
@@ -102,8 +84,8 @@ export function openSavePresetModal(statIndex: number): void {
 }
 
 export function openRenamePresetModal(name: string): void {
-	const modal = document.getElementById(modalId);
-	if (!modal || !modalInput) return;
+	const modal = ensureStatPresetModal();
+	if (!modalInput || !modal) return;
 
 	modalStatIndex = -1;
 	modalRenameName = name;
@@ -117,15 +99,11 @@ export function openRenamePresetModal(name: string): void {
 	}, 0);
 }
 
-export function closeStatPresetModal(): void {
+function closeStatPresetModal(): void {
 	const modal = document.getElementById(modalId);
 	if (modal) modal.hidden = true;
 	modalStatIndex = -1;
 	modalRenameName = null;
-}
-
-export function setStatPresetModalMessage(message: string): void {
-	setModalMessage(message);
 }
 
 export function resetStatPresetModal(): void {
@@ -135,16 +113,13 @@ export function resetStatPresetModal(): void {
 	modalMessage = null;
 	modalStatIndex = -1;
 	modalRenameName = null;
-	onSaveSubmit = null;
-	onRenameSubmit = null;
-	onRenameCancel = null;
 }
 
 function cancelModal(): void {
 	const restorePresetPickerFocus = modalRenameName !== null;
 	closeStatPresetModal();
 
-	if (restorePresetPickerFocus) onRenameCancel?.();
+	if (restorePresetPickerFocus) focusPresetPickerDropdown();
 }
 
 async function submitStatPresetModal(): Promise<void> {
@@ -157,11 +132,44 @@ async function submitStatPresetModal(): Promise<void> {
 	}
 
 	if (modalRenameName !== null) {
-		await onRenameSubmit?.(modalRenameName, name);
+		await renamePreset(modalRenameName, name);
 		return;
 	}
 
-	await onSaveSubmit?.(modalStatIndex, name);
+	await savePreset(modalStatIndex, name);
+}
+
+async function savePreset(statIndex: number, name: string): Promise<void> {
+	const query = getCurrentStatGroupQuery(statIndex);
+	if (!query) return;
+
+	try {
+		const presets = await requestSavePreset({
+			name,
+			query: cloneStatPresetQuery(query),
+		});
+		renderPresetDropdown(getPresetPickerFilter(), presets);
+		closeStatPresetModal();
+	} catch (error) {
+		setModalMessage("保存失败，请稍后重试");
+		console.warn(`${logPrefix} 筛选预设保存失败`, error);
+	}
+}
+
+async function renamePreset(oldName: string, newName: string): Promise<void> {
+	if (oldName === newName) {
+		closeStatPresetModal();
+		return;
+	}
+
+	try {
+		const presets = await requestRenamePreset(oldName, newName);
+		renderPresetDropdown(getPresetPickerFilter(), presets);
+		closeStatPresetModal();
+	} catch (error) {
+		setModalMessage(error instanceof Error ? error.message : "重命名失败，请稍后重试");
+		console.warn(`${logPrefix} 筛选预设重命名失败`, error);
+	}
 }
 
 function setModalMessage(message: string): void {

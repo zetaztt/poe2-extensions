@@ -1,4 +1,8 @@
+import { logPrefix } from "../utils";
 import type { TradeStatPreset } from "../types";
+import { openRenamePresetModal } from "./modal";
+import { requestDeletePreset } from "./storage-client";
+import { applyStatPreset } from "./utils";
 
 const pickerId = "poe2-extensions-stat-preset-picker";
 const hostSelector = ".multiselect.filter-select.filter-group-select";
@@ -6,131 +10,12 @@ const hostSelector = ".multiselect.filter-select.filter-group-select";
 let presetInput: HTMLInputElement | null = null;
 let presetDropdown: HTMLElement | null = null;
 let currentPresets: TradeStatPreset[] = [];
-let onApplyPreset: ((preset: TradeStatPreset) => void) | null = null;
-let onRenamePreset: ((name: string) => void) | null = null;
-let onDeletePreset: ((name: string) => void) | null = null;
+let observer: MutationObserver | null = null;
+let refreshTimer: number | null = null;
 
-export function installPresetPicker(options: {
-	presets: TradeStatPreset[];
-	onApply: (preset: TradeStatPreset) => void;
-	onRename: (name: string) => void;
-	onDelete: (name: string) => void;
-	signal?: AbortSignal;
-}): void {
-	currentPresets = options.presets;
-	onApplyPreset = options.onApply;
-	onRenamePreset = options.onRename;
-	onDeletePreset = options.onDelete;
-
-	if (document.getElementById(pickerId)) {
-		renderPresetDropdown(presetInput?.value ?? "");
-		return;
-	}
-
-	const host = document.querySelector<HTMLElement>(hostSelector);
-	const statsContainer = host?.closest("span")?.closest("div");
-	if (!statsContainer) return;
-
-	const container = document.createElement("span");
-	container.id = pickerId;
-	container.className = "filter-body poe2-extensions-stat-preset-picker";
-	container.style.width = "50%";
-	container.style.marginLeft = "50%";
-
-	const multiselect = document.createElement("div");
-	multiselect.tabIndex = -1;
-	multiselect.className = "multiselect filter-select filter-group-select";
-
-	const select = document.createElement("div");
-	select.className = "multiselect__select";
-
-	const tags = document.createElement("div");
-	tags.className = "multiselect__tags";
-
-	const tagsWrap = document.createElement("div");
-	tagsWrap.className = "multiselect__tags-wrap";
-	tagsWrap.style.display = "none";
-
-	const spinner = document.createElement("div");
-	spinner.className = "multiselect__spinner";
-	spinner.style.display = "none";
-
-	const input = document.createElement("input");
-	input.name = "";
-	input.type = "text";
-	input.className = "multiselect__input";
-	input.placeholder = "+ 已保存的组合";
-	input.autocomplete = "off";
-
-	const contentWrapper = document.createElement("div");
-	contentWrapper.className = "multiselect__content-wrapper";
-	contentWrapper.style.maxHeight = "300px";
-	contentWrapper.style.display = "none";
-
-	const content = document.createElement("ul");
-	content.className = "multiselect__content";
-	content.style.display = "inline-block";
-
-	input.addEventListener(
-		"input",
-		() => {
-			renderPresetDropdown(input.value);
-			showPresetDropdown();
-		},
-		{ signal: options.signal },
-	);
-	input.addEventListener(
-		"focus",
-		() => {
-			renderPresetDropdown(input.value);
-			showPresetDropdown();
-		},
-		{ signal: options.signal },
-	);
-
-	multiselect.addEventListener(
-		"mousedown",
-		(event) => {
-			const target = event.target;
-			if (!(target instanceof Node)) return;
-			if (contentWrapper.contains(target)) return;
-			if (target !== input) event.preventDefault();
-
-			input.focus();
-			renderPresetDropdown(input.value);
-			showPresetDropdown();
-		},
-		{ signal: options.signal },
-	);
-
-	document.addEventListener(
-		"click",
-		(event) => {
-			const target = event.target;
-			if (!(target instanceof Node)) return;
-
-			if (!container.contains(target)) {
-				hidePresetDropdown();
-				return;
-			}
-
-			if (contentWrapper.contains(target)) return;
-
-			input.focus();
-			renderPresetDropdown(input.value);
-			showPresetDropdown();
-		},
-		{ signal: options.signal },
-	);
-
-	tags.append(tagsWrap, spinner, input);
-	contentWrapper.appendChild(content);
-	multiselect.append(select, tags, contentWrapper);
-	container.appendChild(multiselect);
-	statsContainer.appendChild(container);
-	presetInput = input;
-	presetDropdown = content;
-	renderPresetDropdown();
+export function installPresetPicker(): void {
+	renderPresetPicker();
+	ensurePresetPickerObserver();
 }
 
 export function renderPresetDropdown(filter = "", presets = currentPresets): void {
@@ -181,7 +66,11 @@ export function renderPresetDropdown(filter = "", presets = currentPresets): voi
 		option.dataset.select = "";
 		option.dataset.selected = "";
 		option.dataset.deselect = "";
-		option.addEventListener("click", () => onApplyPreset?.(preset));
+		option.addEventListener("mousedown", (event) => {
+			event.preventDefault();
+			applyStatPreset(preset);
+			hidePresetDropdown();
+		});
 
 		const label = document.createElement("span");
 		label.className = "poe2-extensions-stat-preset-item-label";
@@ -194,7 +83,7 @@ export function renderPresetDropdown(filter = "", presets = currentPresets): voi
 		renameButton.addEventListener("mousedown", stopPresetActionEvent);
 		renameButton.addEventListener("click", (event) => {
 			event.stopPropagation();
-			onRenamePreset?.(preset.name);
+			openRenamePresetModal(preset.name);
 		});
 
 		const deleteButton = document.createElement("button");
@@ -204,7 +93,7 @@ export function renderPresetDropdown(filter = "", presets = currentPresets): voi
 		deleteButton.addEventListener("mousedown", stopPresetActionEvent);
 		deleteButton.addEventListener("click", (event) => {
 			event.stopPropagation();
-			onDeletePreset?.(preset.name);
+			void deletePreset(preset.name);
 		});
 
 		option.append(label, renameButton, deleteButton);
@@ -243,13 +132,127 @@ export function getPresetPickerFilter(): string {
 }
 
 export function removePresetPicker(): void {
+	observer?.disconnect();
+	observer = null;
+
+	if (refreshTimer !== null) {
+		window.clearTimeout(refreshTimer);
+		refreshTimer = null;
+	}
+
 	document.getElementById(pickerId)?.remove();
 	presetInput = null;
 	presetDropdown = null;
 	currentPresets = [];
-	onApplyPreset = null;
-	onRenamePreset = null;
-	onDeletePreset = null;
+}
+
+function ensurePresetPickerObserver(): void {
+	if (observer || !document.body) return;
+
+	observer = new MutationObserver(() => {
+		if (refreshTimer !== null) return;
+
+		refreshTimer = window.setTimeout(() => {
+			refreshTimer = null;
+			renderPresetPicker(false);
+		}, 100);
+	});
+
+	observer.observe(document.body, {
+		childList: true,
+		subtree: true,
+	});
+}
+
+function renderPresetPicker(refreshExisting = true): void {
+	if (document.getElementById(pickerId)) {
+		if (refreshExisting) renderPresetDropdown(presetInput?.value ?? "");
+		return;
+	}
+
+	const host = document.querySelector<HTMLElement>(hostSelector);
+	const statsContainer = host?.closest("span")?.closest("div");
+	if (!statsContainer) return;
+
+	const container = document.createElement("span");
+	container.id = pickerId;
+	container.className = "filter-body poe2-extensions-stat-preset-picker";
+	container.style.width = "50%";
+	container.style.marginLeft = "50%";
+
+	const multiselect = document.createElement("div");
+	multiselect.tabIndex = -1;
+	multiselect.className = "multiselect filter-select filter-group-select";
+
+	const select = document.createElement("div");
+	select.className = "multiselect__select";
+
+	const tags = document.createElement("div");
+	tags.className = "multiselect__tags";
+
+	const tagsWrap = document.createElement("div");
+	tagsWrap.className = "multiselect__tags-wrap";
+	tagsWrap.style.display = "none";
+
+	const spinner = document.createElement("div");
+	spinner.className = "multiselect__spinner";
+	spinner.style.display = "none";
+
+	const input = document.createElement("input");
+	input.name = "";
+	input.type = "text";
+	input.className = "multiselect__input";
+	input.placeholder = "+ 已保存的组合";
+	input.autocomplete = "off";
+
+	const contentWrapper = document.createElement("div");
+	contentWrapper.className = "multiselect__content-wrapper";
+	contentWrapper.style.maxHeight = "300px";
+	contentWrapper.style.display = "none";
+
+	const content = document.createElement("ul");
+	content.className = "multiselect__content";
+	content.style.display = "inline-block";
+
+	input.addEventListener("input", () => {
+		renderPresetDropdown(input.value);
+		showPresetDropdown();
+	});
+	input.addEventListener("focus", () => {
+		renderPresetDropdown(input.value);
+		showPresetDropdown();
+	});
+	input.addEventListener("blur", hidePresetDropdown);
+
+	multiselect.addEventListener("mousedown", (event) => {
+		const target = event.target;
+		if (!(target instanceof Node)) return;
+		if (contentWrapper.contains(target)) return;
+		if (target !== input) event.preventDefault();
+
+		input.focus();
+		renderPresetDropdown(input.value);
+		showPresetDropdown();
+	});
+
+	tags.append(tagsWrap, spinner, input);
+	contentWrapper.appendChild(content);
+	multiselect.append(select, tags, contentWrapper);
+	container.appendChild(multiselect);
+	statsContainer.appendChild(container);
+	presetInput = input;
+	presetDropdown = content;
+	renderPresetDropdown();
+}
+
+async function deletePreset(name: string): Promise<void> {
+	try {
+		const presets = await requestDeletePreset(name);
+		renderPresetDropdown(getPresetPickerFilter(), presets);
+		focusPresetPickerDropdown();
+	} catch (error) {
+		console.warn(`${logPrefix} 筛选预设删除失败`, error);
+	}
 }
 
 function stopPresetActionEvent(event: Event): void {

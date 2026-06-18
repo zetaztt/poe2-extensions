@@ -1,7 +1,7 @@
 import { logPrefix } from "../utils";
-import type { TradeStatPresetQuery } from "../types";
+import type { TradeStatPreset, TradeStatPresetQuery } from "../types";
 
-export function ensureBodyReady(callback: () => void, signal?: AbortSignal): void {
+export function ensureBodyReady(callback: () => void): void {
 	if (document.body) {
 		callback();
 		return;
@@ -9,7 +9,6 @@ export function ensureBodyReady(callback: () => void, signal?: AbortSignal): voi
 
 	document.addEventListener("DOMContentLoaded", callback, {
 		once: true,
-		signal,
 	});
 }
 
@@ -31,4 +30,12 @@ export function getCurrentStatGroupQuery(index: number): TradeStatPresetQuery | 
 	}
 
 	return query;
+}
+
+export function applyStatPreset(preset: TradeStatPreset): void {
+	try {
+		window.app?.$store.commit("pushStatGroup", cloneStatPresetQuery(preset.query));
+	} catch (error) {
+		console.warn(`${logPrefix} 筛选预设应用失败`, error);
+	}
 }
