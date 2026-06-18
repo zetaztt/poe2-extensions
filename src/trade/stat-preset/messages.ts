@@ -165,9 +165,9 @@ function isPoeStatPresetMessageBase(value: unknown): value is PoeStatPresetBaseM
 
 	const message = value as PoeStatPresetBaseMessage;
 	return (
-		message.source === poeStatPresetMessageSource &&
-		typeof message.type === "string" &&
-		typeof message.requestId === "string"
+		message.source === poeStatPresetMessageSource
+		&& typeof message.type === "string"
+		&& typeof message.requestId === "string"
 	);
 }
 

@@ -79,8 +79,8 @@ function updateCurrency(currency: ArbitrageCurrency, field: "name" | "symbol", e
 	const value = getInputValue(event).trim();
 	if (!value) return;
 	if (
-		field === "symbol" &&
-		state.currencies.some(
+		field === "symbol"
+		&& state.currencies.some(
 			(item) => item.id !== currency.id && item.symbol.toLocaleLowerCase() === value.toLocaleLowerCase(),
 		)
 	) {
@@ -123,11 +123,11 @@ function deleteProduct(product: ArbitrageProduct): void {
 
 function addExchangeQuote(): void {
 	if (
-		!exchangeSourceCurrencyId.value ||
-		!exchangeTargetCurrencyId.value ||
-		exchangeSourceCurrencyId.value === exchangeTargetCurrencyId.value ||
-		!isPositiveNumber(exchangeSourceAmount.value) ||
-		!isPositiveNumber(exchangeTargetAmount.value)
+		!exchangeSourceCurrencyId.value
+		|| !exchangeTargetCurrencyId.value
+		|| exchangeSourceCurrencyId.value === exchangeTargetCurrencyId.value
+		|| !isPositiveNumber(exchangeSourceAmount.value)
+		|| !isPositiveNumber(exchangeTargetAmount.value)
 	) {
 		showStatus("请选择两种不同货币，并填写有效的兑换数量。");
 		return;
@@ -301,8 +301,8 @@ function syncDraftSelections(): void {
 		exchangeSourceCurrencyId.value = firstCurrencyId;
 	}
 	if (
-		!state.currencies.some((currency) => currency.id === exchangeTargetCurrencyId.value) ||
-		exchangeTargetCurrencyId.value === exchangeSourceCurrencyId.value
+		!state.currencies.some((currency) => currency.id === exchangeTargetCurrencyId.value)
+		|| exchangeTargetCurrencyId.value === exchangeSourceCurrencyId.value
 	) {
 		exchangeTargetCurrencyId.value = secondCurrencyId;
 	}

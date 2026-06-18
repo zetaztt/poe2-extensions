@@ -49,9 +49,9 @@ function parseArbitrageState(value: unknown): ArbitrageState {
 	const exchangeQuotes = Array.isArray(value.exchangeQuotes)
 		? value.exchangeQuotes.filter(
 				(quote): quote is CurrencyExchangeQuote =>
-					isExchangeQuote(quote) &&
-					currencyIds.has(quote.sourceCurrencyId) &&
-					currencyIds.has(quote.targetCurrencyId),
+					isExchangeQuote(quote)
+					&& currencyIds.has(quote.sourceCurrencyId)
+					&& currencyIds.has(quote.targetCurrencyId),
 			)
 		: [];
 	const productQuotes = Array.isArray(value.productQuotes)
@@ -100,24 +100,24 @@ function isProduct(value: unknown): value is ArbitrageProduct {
 
 function isExchangeQuote(value: unknown): value is CurrencyExchangeQuote {
 	return (
-		isRecord(value) &&
-		isNonEmptyString(value.id) &&
-		isNonEmptyString(value.sourceCurrencyId) &&
-		isPositiveNumber(value.sourceAmount) &&
-		isNonEmptyString(value.targetCurrencyId) &&
-		isPositiveNumber(value.targetAmount) &&
-		value.sourceCurrencyId !== value.targetCurrencyId
+		isRecord(value)
+		&& isNonEmptyString(value.id)
+		&& isNonEmptyString(value.sourceCurrencyId)
+		&& isPositiveNumber(value.sourceAmount)
+		&& isNonEmptyString(value.targetCurrencyId)
+		&& isPositiveNumber(value.targetAmount)
+		&& value.sourceCurrencyId !== value.targetCurrencyId
 	);
 }
 
 function isProductQuote(value: unknown): value is ProductPriceQuote {
 	return (
-		isRecord(value) &&
-		isNonEmptyString(value.id) &&
-		isNonEmptyString(value.productId) &&
-		isNonEmptyString(value.currencyId) &&
-		isNullablePositiveNumber(value.buyPrice) &&
-		isNullablePositiveNumber(value.sellPrice)
+		isRecord(value)
+		&& isNonEmptyString(value.id)
+		&& isNonEmptyString(value.productId)
+		&& isNonEmptyString(value.currencyId)
+		&& isNullablePositiveNumber(value.buyPrice)
+		&& isNullablePositiveNumber(value.sellPrice)
 	);
 }
 

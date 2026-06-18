@@ -7,5 +7,6 @@
 	"printWidth": 120,
 	"bracketSameLine": true,
 	"endOfLine": "lf",
+	"experimentalOperatorPosition": "start",
 	"proseWrap": "preserve"
 }

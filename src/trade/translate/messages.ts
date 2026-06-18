@@ -49,11 +49,11 @@ export function isPoeTranslationMessage(value: unknown): value is PoeTranslation
 	const type = (value as { type?: unknown })?.type;
 
 	return (
-		typeof value === "object" &&
-		value !== null &&
-		(value as { source?: unknown }).source === poeTranslationMessageSource &&
-		(type === PoeTranslationMessageType.fetch ||
-			type === PoeTranslationMessageType.result ||
-			type === PoeTranslationMessageType.error)
+		typeof value === "object"
+		&& value !== null
+		&& (value as { source?: unknown }).source === poeTranslationMessageSource
+		&& (type === PoeTranslationMessageType.fetch
+			|| type === PoeTranslationMessageType.result
+			|| type === PoeTranslationMessageType.error)
 	);
 }

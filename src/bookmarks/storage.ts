@@ -58,12 +58,12 @@ function isStoredBookmark(value: unknown): value is StoredTradeBookmark {
 	if (!isRecord(value)) return false;
 
 	return (
-		typeof value.id === "string" &&
-		typeof value.title === "string" &&
-		typeof value.url === "string" &&
-		typeof value.parentId === "string" &&
-		typeof value.dateAdded === "number" &&
-		typeof value.updatedAt === "number"
+		typeof value.id === "string"
+		&& typeof value.title === "string"
+		&& typeof value.url === "string"
+		&& typeof value.parentId === "string"
+		&& typeof value.dateAdded === "number"
+		&& typeof value.updatedAt === "number"
 	);
 }
 

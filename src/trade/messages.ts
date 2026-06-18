@@ -32,9 +32,9 @@ export function isPoeTradeMessage(value: unknown): value is PoeTradeMessage {
 	const message = value as { source?: unknown; type?: unknown; features?: unknown };
 
 	return (
-		message.source === poeTradeMessageSource &&
-		message.type === PoeTradeMessageType.featuresUpdate &&
-		isTradeFeatures(message.features)
+		message.source === poeTradeMessageSource
+		&& message.type === PoeTradeMessageType.featuresUpdate
+		&& isTradeFeatures(message.features)
 	);
 }
 
@@ -43,8 +43,8 @@ function isTradeFeatures(value: unknown): value is TradeFeatures {
 
 	const features = value as { translate?: unknown; itemCopy?: unknown; statPreset?: unknown };
 	return (
-		typeof features.translate === "boolean" &&
-		typeof features.itemCopy === "boolean" &&
-		typeof features.statPreset === "boolean"
+		typeof features.translate === "boolean"
+		&& typeof features.itemCopy === "boolean"
+		&& typeof features.statPreset === "boolean"
 	);
 }

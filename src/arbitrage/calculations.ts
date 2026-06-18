@@ -20,8 +20,8 @@ export function calculateArbitrageOpportunities(state: ArbitrageState): Arbitrag
 	for (const outgoing of state.exchangeQuotes) {
 		for (const returning of state.exchangeQuotes) {
 			if (
-				outgoing.sourceCurrencyId !== returning.targetCurrencyId ||
-				outgoing.targetCurrencyId !== returning.sourceCurrencyId
+				outgoing.sourceCurrencyId !== returning.targetCurrencyId
+				|| outgoing.targetCurrencyId !== returning.sourceCurrencyId
 			)
 				continue;
 
