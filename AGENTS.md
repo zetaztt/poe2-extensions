@@ -26,7 +26,7 @@
 
 - `src/entrypoints/`：WXT entrypoints。
     - `background.ts`：background 逻辑，负责侧边栏点击行为、翻译字典的本地 fallback、缓存、远端版本检查和消息响应。
-    - `content.ts`：content script，运行在 trade2 页面，负责读取三个 trade 功能开关、注入 `/injector.js`，同步功能状态，并桥接翻译字典和筛选预设存储消息。
+    - `content.ts`：trade2 页面的 WXT content entrypoint，负责匹配页面并调用 `src/trade/content.ts`。
     - `injector.unlisted.ts`：生成主世界注入脚本，实际调用 `src/trade/inject.ts`。
     - `sidepanel/`：扩展侧边栏的 Vue 页面和全局样式，包含书签、差价、词典和设置四个标签页。
 - `src/settings/settings.ts`：全项目云同步用户设置入口，包含默认关闭的中文翻译、物品文本复制和筛选预设三个 trade 功能开关。
@@ -36,10 +36,11 @@
 - `src/entrypoints/sidepanel/arbitrage/`：货币、商品、兑换报价、利润门槛和差价机会管理页面。
 - `src/entrypoints/sidepanel/dictionary/`：翻译字典中英文搜索和英文原文复制页面。
 - `src/entrypoints/sidepanel/settings/`：三个 trade 功能开关及当前活动 trade2 标签页同步逻辑。
-- `src/trade/`：trade 页面主世界逻辑、功能状态消息、通用类型和工具。
-    - `translate/`：中文化数据 hook、DOM 翻译、翻译消息和 `_zh` 本地缓存隔离。
+- `src/trade/`：trade 页面逻辑、功能状态消息、通用类型和工具。
+    - `content.ts`：trade content script 编排入口，负责读取三个 trade 功能开关、安装模块 content bridge、注入 `/injector.js` 并同步功能状态。
+    - `translate/`：中文化数据 hook、DOM 翻译、翻译消息、翻译字典 content bridge 和 `_zh` 本地缓存隔离。
     - `item-copy/`：接管搜索结果复制按钮，并将 trade 物品数据格式化为 PoB 文本。
-    - `stat-preset/`：在高级筛选界面安装预设 UI，并通过受控消息桥接完成预设存储操作。
+    - `stat-preset/`：在高级筛选界面安装预设 UI，并通过 content bridge 和本地存储消息处理完成预设存储操作。
 - `src/translate-dictionary.ts`：主世界脚本侧加载翻译字典的入口，通过 `window.postMessage` 请求 content/background。
 - `scripts/translate/`：翻译数据拉取、自动翻译和字典生成脚本。
 - `data/`：翻译源 CSV 数据。
@@ -66,7 +67,7 @@
 1. `src/entrypoints/background.ts` 设置点击扩展图标打开侧边栏。
 2. 侧边栏包含书签、差价、词典和设置四个标签页；书签初始化成功时默认进入书签页，否则停留在设置页。
 3. 设置页通过 `src/settings/settings.ts` 读写 `browser.storage.sync` 中三个默认关闭的功能开关。
-4. `src/entrypoints/content.ts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 读取全部功能状态，并始终安装受控消息桥接。
+4. `src/entrypoints/content.ts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 调用 `src/trade/content.ts` 完成 trade content 安装。
 5. content script 始终通过 WXT 的 `injectScript('/injector.js')` 注入主世界入口，随后使用 trade 功能消息下发当前开关状态。
 6. `src/entrypoints/injector.unlisted.ts` 调用 `injectTrade()`；主世界脚本验证域名、路径和站点标识后监听功能状态，只安装已启用功能对应的 hook 或 UI。
 7. 中文翻译启用时，主世界脚本注入官方繁中脚本、安装 trade 数据和 DOM 翻译逻辑，并将指定 localStorage key 重定向到 `_zh` 后缀。
