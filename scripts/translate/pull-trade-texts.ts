@@ -5,9 +5,9 @@ import {
 	TradeStaticConfig,
 	TradeStaticsDataResponse,
 	TradeStatsResponse,
-} from "@/trade/types";
+} from "@/trade/trade-types";
 import { readTexts, type TextData, writeTexts } from "./utils";
-import { isUniqueItem } from "@/trade/utils";
+import { isUniqueItem } from "@/trade/trade-utils";
 
 const poe2TwHref = "www.pathofexile.tw";
 const poe2Href = "www.pathofexile.com";

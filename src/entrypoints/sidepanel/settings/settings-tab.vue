@@ -8,7 +8,7 @@ import {
 	setTradeStatPresetEnabled,
 	setTradeTranslateEnabled,
 } from "@/settings/settings";
-import { createTradeFeaturesUpdateMessage } from "@/trade/messages";
+import { createTradeFeaturesUpdateMessage } from "@/trade/trade-messages";
 
 const tradeTranslateEnabled = ref(false);
 const tradeItemCopyEnabled = ref(false);

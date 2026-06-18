@@ -1,4 +1,4 @@
-import type { TradeStatPreset, TradeStatPresetQuery } from "../types";
+import type { TradeStatPreset, TradeStatPresetQuery } from "../trade-types";
 
 const poeStatPresetMessageSource = "poe2-extensions:trade-stat-preset";
 

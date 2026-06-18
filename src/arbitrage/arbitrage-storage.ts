@@ -5,7 +5,7 @@ import type {
 	CurrencyExchangeQuote,
 	OpportunitySort,
 	ProductPriceQuote,
-} from "./types";
+} from "./arbitrage-types";
 
 const storageKey = "tradeArbitrageState";
 

@@ -1,4 +1,4 @@
-import type { TradeStatPreset } from "../types";
+import type { TradeStatPreset } from "../trade-types";
 import {
 	createStatPresetErrorMessage,
 	createStatPresetResultMessage,
@@ -6,7 +6,7 @@ import {
 	isTradeStatPresetArray,
 	PoeStatPresetMessageType,
 	type PoeStatPresetRequestMessage,
-} from "./messages";
+} from "./trade-stat-preset-messages";
 
 const tradeStatPresetStorageKey = "tradeStatPresets";
 

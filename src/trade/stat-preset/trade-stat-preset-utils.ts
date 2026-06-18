@@ -1,5 +1,5 @@
-import { logPrefix } from "../utils";
-import type { TradeStatPreset, TradeStatPresetQuery } from "../types";
+import { logPrefix } from "../trade-utils";
+import type { TradeStatPreset, TradeStatPresetQuery } from "../trade-types";
 
 export function ensureBodyReady(callback: () => void): void {
 	if (document.body) {

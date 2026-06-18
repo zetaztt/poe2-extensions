@@ -12,8 +12,8 @@ import {
 	renameBookmarkFolder,
 	renameTradeBookmark,
 	replaceTradeBookmarkWithCurrentSearch,
-} from "@/bookmarks/bookmarks";
-import type { TradeBookmarkItem, TradeBookmarkTreeNode } from "@/bookmarks/types";
+} from "@/bookmarks/bookmarks-bookmarks";
+import type { TradeBookmarkItem, TradeBookmarkTreeNode } from "@/bookmarks/bookmarks-types";
 import BookmarkFolder from "./bookmark-folder.vue";
 import BookmarkItem from "./bookmark-item.vue";
 

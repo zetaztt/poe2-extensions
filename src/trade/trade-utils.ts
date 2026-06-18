@@ -1,4 +1,4 @@
-import type { TradeItemConfig, TradeItemUniqueConfig, TradeSearchItem } from "./types";
+import type { TradeItemConfig, TradeItemUniqueConfig, TradeSearchItem } from "./trade-types";
 
 export const logPrefix = "[poe2-extensions][trade]";
 

@@ -1,5 +1,5 @@
-import { getTradeSearchItemById, logPrefix } from "../utils";
-import { formatTradeItemText } from "./format";
+import { getTradeSearchItemById, logPrefix } from "../trade-utils";
+import { formatTradeItemText } from "./trade-item-code-format";
 
 const itemCopyBoundKey = "poeItemCopyBound";
 const itemCopyOriginalClassKey = "poeItemCopyOriginalClass";

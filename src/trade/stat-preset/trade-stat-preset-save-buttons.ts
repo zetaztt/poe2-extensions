@@ -1,5 +1,5 @@
-import { logPrefix } from "../utils";
-import { openSavePresetModal } from "./modal";
+import { logPrefix } from "../trade-utils";
+import { openSavePresetModal } from "./trade-stat-preset-modal";
 
 const saveButtonClass = "poe2-extensions-stat-preset-save";
 const statGroupBodySelector = ".search-advanced-pane.brown .filter-group-header .filter-body";

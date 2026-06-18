@@ -1,10 +1,15 @@
-import { logPrefix } from "../utils";
-import { resetStatPresetModal } from "./modal";
-import { getPresetPickerFilter, installPresetPicker, removePresetPicker, renderPresetDropdown } from "./picker";
-import { installSaveButtons, removeSaveButtons } from "./save-buttons";
-import { handleStorageResponse, rejectPendingRequests, requestPresetList } from "./storage-client";
-import { installStatPresetStyle, removeStatPresetStyle } from "./style";
-import { ensureBodyReady } from "./utils";
+import { logPrefix } from "../trade-utils";
+import { resetStatPresetModal } from "./trade-stat-preset-modal";
+import {
+	getPresetPickerFilter,
+	installPresetPicker,
+	removePresetPicker,
+	renderPresetDropdown,
+} from "./trade-stat-preset-picker";
+import { installSaveButtons, removeSaveButtons } from "./trade-stat-preset-save-buttons";
+import { handleStorageResponse, rejectPendingRequests, requestPresetList } from "./trade-stat-preset-storage-client";
+import { installStatPresetStyle, removeStatPresetStyle } from "./trade-stat-preset-style";
+import { ensureBodyReady } from "./trade-stat-preset-utils";
 
 let enabled = false;
 

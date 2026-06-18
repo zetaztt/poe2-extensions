@@ -1,8 +1,8 @@
-import { logPrefix } from "../utils";
-import type { TradeStatPreset } from "../types";
-import { openRenamePresetModal } from "./modal";
-import { requestDeletePreset } from "./storage-client";
-import { applyStatPreset } from "./utils";
+import { logPrefix } from "../trade-utils";
+import type { TradeStatPreset } from "../trade-types";
+import { openRenamePresetModal } from "./trade-stat-preset-modal";
+import { requestDeletePreset } from "./trade-stat-preset-storage-client";
+import { applyStatPreset } from "./trade-stat-preset-utils";
 
 const pickerId = "poe2-extensions-stat-preset-picker";
 const hostSelector = ".multiselect.filter-select.filter-group-select";

@@ -1,7 +1,7 @@
-import { isPoeTradeMessage, type TradeFeatures } from "./messages";
-import { setTradeItemCopyEnabled } from "./item-code/inject";
-import { setTradeStatPresetEnabled } from "./stat-preset/inject";
-import { installTradeTranslate } from "./translate/inject";
+import { isPoeTradeMessage, type TradeFeatures } from "./trade-messages";
+import { setTradeItemCopyEnabled } from "./item-code/trade-item-code-inject";
+import { setTradeStatPresetEnabled } from "./stat-preset/trade-stat-preset-inject";
+import { installTradeTranslate } from "./translate/trade-translate-inject";
 
 let currentFeatures: TradeFeatures = {
 	translate: false,

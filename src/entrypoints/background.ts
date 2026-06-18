@@ -6,7 +6,7 @@ import {
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationFetchMessage,
 	type PoeTranslationFetchResultMessage,
-} from "@/trade/translate/messages";
+} from "@/trade/translate/trade-translate-messages";
 
 export const translateDictionaryUrl = "https://zetaztt.github.io/poe2/translate.json";
 export const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2/translate-meta.json";

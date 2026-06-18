@@ -1,7 +1,7 @@
-import { logPrefix } from "../utils";
-import { focusPresetPickerDropdown, getPresetPickerFilter, renderPresetDropdown } from "./picker";
-import { requestRenamePreset, requestSavePreset } from "./storage-client";
-import { cloneStatPresetQuery, getCurrentStatGroupQuery } from "./utils";
+import { logPrefix } from "../trade-utils";
+import { focusPresetPickerDropdown, getPresetPickerFilter, renderPresetDropdown } from "./trade-stat-preset-picker";
+import { requestRenamePreset, requestSavePreset } from "./trade-stat-preset-storage-client";
+import { cloneStatPresetQuery, getCurrentStatGroupQuery } from "./trade-stat-preset-utils";
 
 const modalId = "poe2-extensions-stat-preset-modal";
 

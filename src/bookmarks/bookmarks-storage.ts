@@ -1,4 +1,4 @@
-import type { StoredTradeBookmark, StoredTradeBookmarkFolder, StoredTradeBookmarkTree } from "./types";
+import type { StoredTradeBookmark, StoredTradeBookmarkFolder, StoredTradeBookmarkTree } from "./bookmarks-types";
 
 export const rootFolderId = "trade-bookmarks-root";
 

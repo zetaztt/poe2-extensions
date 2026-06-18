@@ -1,4 +1,4 @@
-import type { TradeSearchItem } from "../types";
+import type { TradeSearchItem } from "../trade-types";
 
 type MergedRuneMod =
 	| "unmerged"

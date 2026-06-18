@@ -1,7 +1,7 @@
-import { logPrefix } from "../utils";
-import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./translate-data";
-import { observeItemElement } from "./item-element";
-import { installLocalStorageHook } from "./storage";
+import { logPrefix } from "../trade-utils";
+import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./trade-translate-data";
+import { observeItemElement } from "./trade-translate-item-element";
+import { installLocalStorageHook } from "./trade-translate-storage";
 
 export const traditionalChineseScriptUrl = "https://web.poecdn.com/js/translate.zh_TW.js";
 

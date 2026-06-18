@@ -1,8 +1,8 @@
 import { injectScript } from "wxt/utils/inject-script";
 import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from "@/settings/settings";
-import { createTradeFeaturesUpdateMessage, isPoeTradeMessage, type TradeFeatures } from "./messages";
-import { installStatPresetStorageBridge } from "./stat-preset/content";
-import { installTranslationDictionaryBridge } from "./translate/content";
+import { createTradeFeaturesUpdateMessage, isPoeTradeMessage, type TradeFeatures } from "./trade-messages";
+import { installStatPresetStorageBridge } from "./stat-preset/trade-stat-preset-content";
+import { installTranslationDictionaryBridge } from "./translate/trade-translate-content";
 
 let currentFeatures: TradeFeatures = {
 	translate: false,

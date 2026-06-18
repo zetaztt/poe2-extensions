@@ -1,4 +1,4 @@
-import type { TradeStatPreset } from "../types";
+import type { TradeStatPreset } from "../trade-types";
 import {
 	createStatPresetDeleteMessage,
 	createStatPresetListMessage,
@@ -7,8 +7,8 @@ import {
 	isPoeStatPresetResponseMessage,
 	PoeStatPresetMessageType,
 	type PoeStatPresetResponseMessage,
-} from "./messages";
-import { createRequestId } from "./utils";
+} from "./trade-stat-preset-messages";
+import { createRequestId } from "./trade-stat-preset-utils";
 
 const requestTimeoutMs = 5_000;
 

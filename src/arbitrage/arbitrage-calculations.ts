@@ -4,7 +4,7 @@ import type {
 	CurrencyExchangeQuote,
 	MissingExchangeOpportunity,
 	OpportunitySort,
-} from "./types";
+} from "./arbitrage-types";
 
 export interface ArbitrageCalculationResult {
 	opportunities: ArbitrageOpportunity[];

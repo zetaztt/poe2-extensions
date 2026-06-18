@@ -1,4 +1,4 @@
-import { getBookmarkTree, rootFolderId, saveBookmarkTree } from "./storage";
+import { getBookmarkTree, rootFolderId, saveBookmarkTree } from "./bookmarks-storage";
 import type {
 	BookmarkFolderOption,
 	StoredTradeBookmark,
@@ -6,9 +6,14 @@ import type {
 	TradeBookmarkGroup,
 	TradeBookmarkItem,
 	TradeBookmarkTreeNode,
-} from "./types";
+} from "./bookmarks-types";
 
-export type { BookmarkFolderOption, TradeBookmarkGroup, TradeBookmarkItem, TradeBookmarkTreeNode } from "./types";
+export type {
+	BookmarkFolderOption,
+	TradeBookmarkGroup,
+	TradeBookmarkItem,
+	TradeBookmarkTreeNode,
+} from "./bookmarks-types";
 
 type ActiveBrowserTab = {
 	id?: number;

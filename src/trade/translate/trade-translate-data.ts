@@ -5,9 +5,9 @@ import {
 	type TradeStaticsDataResponse,
 	type TradeStatsResponse,
 	type Translated,
-} from "../types";
+} from "../trade-types";
 import { loadTranslateDictionary, preloadTranslateDictionary, TranslateDictionary } from "../../translate-dictionary";
-import { isUniqueItem } from "../utils";
+import { isUniqueItem } from "../trade-utils";
 
 export const tradeDataPaths = {
 	items: "/api/trade2/data/items",

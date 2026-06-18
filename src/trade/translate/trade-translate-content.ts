@@ -4,7 +4,7 @@ import {
 	PoeTranslationMessageType,
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationMessage,
-} from "./messages";
+} from "./trade-translate-messages";
 
 const backgroundResponseTimeoutMs = 15_000;
 

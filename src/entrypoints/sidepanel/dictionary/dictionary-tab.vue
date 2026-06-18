@@ -5,7 +5,7 @@ import {
 	createPoeTranslationFetchMessage,
 	isPoeTranslationMessage,
 	PoeTranslationMessageType,
-} from "@/trade/translate/messages";
+} from "@/trade/translate/trade-translate-messages";
 
 interface Props {
 	active: boolean;

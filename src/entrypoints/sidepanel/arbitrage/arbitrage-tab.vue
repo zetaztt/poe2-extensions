@@ -1,14 +1,18 @@
 <script lang="ts" setup>
 import { computed, onMounted, reactive, ref } from "vue";
-import { calculateArbitrageOpportunities, formatNumber, sortArbitrageOpportunities } from "@/arbitrage/calculations";
-import { createEmptyArbitrageState, loadArbitrageState, saveArbitrageState } from "@/arbitrage/storage";
+import {
+	calculateArbitrageOpportunities,
+	formatNumber,
+	sortArbitrageOpportunities,
+} from "@/arbitrage/arbitrage-calculations";
+import { createEmptyArbitrageState, loadArbitrageState, saveArbitrageState } from "@/arbitrage/arbitrage-storage";
 import type {
 	ArbitrageCurrency,
 	ArbitrageProduct,
 	ArbitrageState,
 	CurrencyExchangeQuote,
 	ProductPriceQuote,
-} from "@/arbitrage/types";
+} from "@/arbitrage/arbitrage-types";
 
 const state = reactive<ArbitrageState>(createEmptyArbitrageState());
 const isLoading = ref(true);

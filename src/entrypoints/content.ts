@@ -1,4 +1,4 @@
-import { installTradeContent } from "@/trade/content";
+import { installTradeContent } from "@/trade/trade-content";
 
 export default defineContentScript({
 	matches: ["https://www.pathofexile.com/trade2*"],
