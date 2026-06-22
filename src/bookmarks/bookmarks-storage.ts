@@ -1,3 +1,4 @@
+import browser from "../browser";
 import type { StoredTradeBookmark, StoredTradeBookmarkFolder, StoredTradeBookmarkTree } from "./bookmarks-types";
 
 export const rootFolderId = "trade-bookmarks-root";

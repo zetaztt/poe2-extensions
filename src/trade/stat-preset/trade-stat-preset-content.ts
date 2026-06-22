@@ -1,3 +1,4 @@
+import browser from "../../browser";
 import type { TradeStatPreset } from "../trade-types";
 import {
 	createStatPresetErrorMessage,

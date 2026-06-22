@@ -31,9 +31,7 @@
     - `sidepanel/`：扩展侧边栏的 Vue 页面和全局样式，包含书签、差价、词典和设置四个标签页。
 - `src/settings/settings.ts`：全项目云同步用户设置入口，包含默认关闭的中文翻译、物品文本复制和筛选预设三个 trade 功能开关。
 - `src/bookmarks/`：扩展自有的 trade2 书签树类型、`browser.storage.local` 存储校验和增删改查业务逻辑；不依赖浏览器书签 API，源码文件使用 `bookmarks-*` 前缀命名。
-- `src/arbitrage/`：差价工具的数据类型、本地状态校验、货币循环和商品买卖机会计算逻辑，源码文件使用 `arbitrage-*` 前缀命名。
 - `src/entrypoints/sidepanel/bookmarks/`：书签树、文件夹、条目、菜单、拖拽和当前 trade2 搜索保存交互。
-- `src/entrypoints/sidepanel/arbitrage/`：货币、商品、兑换报价、利润门槛和差价机会管理页面。
 - `src/entrypoints/sidepanel/dictionary/`：翻译字典中英文搜索和英文原文复制页面。
 - `src/entrypoints/sidepanel/settings/`：三个 trade 功能开关及当前活动 trade2 标签页同步逻辑。
 - `src/trade/`：trade 页面逻辑、功能状态消息、通用类型和工具。
@@ -102,7 +100,7 @@
 
 - 保持 WXT entrypoint 约定，不要绕过 `src/entrypoints/` 直接引入浏览器运行入口。
 - 新增功能设置应优先集中在 `src/settings/settings.ts`，保持默认值、storage key 和读写函数可复用。
-- sidepanel 的 Vue、DOM、拖拽、菜单和提示状态保留在对应页面目录；存储、校验、计算和可复用业务操作放在 `src/bookmarks/`、`src/arbitrage/`、`src/settings/` 等功能模块。
+- sidepanel 的 Vue、DOM、拖拽、菜单和提示状态保留在对应页面目录；存储、校验、计算和可复用业务操作放在 `src/bookmarks/`、`src/settings/` 等功能模块。
 - 用户开关设置使用 `browser.storage.sync` 云同步；书签、差价状态、筛选预设、翻译字典缓存等业务或大体积数据继续使用 `browser.storage.local`。
 - content script 与主世界脚本之间只能通过受控消息桥接；新增消息时同步更新类型守卫和消息类型定义。
 - background 返回的翻译字典必须经过结构校验，避免把无效远端或缓存数据传入页面。
@@ -124,7 +122,7 @@
 - 代码格式由 Prettier 统一，配置见 `.prettierrc.json`：Tab 缩进宽度 4、双引号、分号、`bracketSameLine: true`。
 - 遍历数组、NodeList、Map、Set 等集合时优先使用 `for...of`，避免使用 `.forEach(...)`，需要索引时使用 `entries()`。
 - TypeScript 保持模块化、小范围类型守卫，中文日志和用户可见说明可以保留中文。
-- 功能模块源码文件默认使用“模块路径 + 职责名”的 `kebab-case` 命名，并保留目录结构；例如 `src/trade/stat-preset/trade-stat-preset-modal.ts`。当前已迁移 `src/trade`、`src/bookmarks`、`src/arbitrage`，后续新增功能模块按同样规则命名。
+- 功能模块源码文件默认使用“模块路径 + 职责名”的 `kebab-case` 命名，并保留目录结构；例如 `src/trade/stat-preset/trade-stat-preset-modal.ts`。当前已迁移 `src/trade`、`src/bookmarks`，后续新增功能模块按同样规则命名。
 - Vue 单文件组件使用 `kebab-case.vue`；保留 WXT 约定文件名如 `content.ts`、`background.ts`、`injector.unlisted.ts`，不为 entrypoint 强制添加模块前缀。
 - Git 提交日志使用中文，保持简短并说明核心变更。
 

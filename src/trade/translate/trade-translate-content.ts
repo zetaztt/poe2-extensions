@@ -1,3 +1,4 @@
+import browser from "../../browser";
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
@@ -31,10 +32,10 @@ function sendRuntimeMessageWithTimeout(message: PoeTranslationMessage): Promise<
 
 		browser.runtime
 			.sendMessage(message)
-			.then((response: PoeTranslationMessage | undefined) => {
+			.then((response: unknown) => {
 				window.clearTimeout(timeoutId);
 
-				if (!response) {
+				if (!isPoeTranslationMessage(response)) {
 					reject(new Error("background 无响应"));
 					return;
 				}

@@ -1,11 +1,12 @@
 <script lang="ts" setup>
+import browser from "../../browser";
 import { onBeforeUnmount, ref, watch } from "vue";
-import type { TranslateDictionary } from "@/translate-dictionary";
+import type { TranslateDictionary } from "../../translate-dictionary";
 import {
 	createPoeTranslationFetchMessage,
 	isPoeTranslationMessage,
 	PoeTranslationMessageType,
-} from "@/trade/translate/trade-translate-messages";
+} from "../../trade/translate/trade-translate-messages";
 
 interface Props {
 	active: boolean;

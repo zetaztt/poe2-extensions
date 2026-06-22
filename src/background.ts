@@ -1,4 +1,5 @@
-import { type TranslateDictionary } from "@/translate-dictionary";
+import browser from "./browser";
+import { type TranslateDictionary } from "./translate-dictionary";
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
@@ -6,7 +7,7 @@ import {
 	type PoeTranslationFetchErrorMessage,
 	type PoeTranslationFetchMessage,
 	type PoeTranslationFetchResultMessage,
-} from "@/trade/translate/trade-translate-messages";
+} from "./trade/translate/trade-translate-messages";
 
 export const translateDictionaryUrl = "https://zetaztt.github.io/poe2/translate.json";
 export const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2/translate-meta.json";
@@ -27,16 +28,14 @@ interface CachedTranslateDictionary {
 let localTranslateDictionaryPromise: Promise<TranslateDictionary | null> | null = null;
 let localTranslateMetaPromise: Promise<TranslateMeta | null> | null = null;
 
-export default defineBackground(() => {
-	console.debug("[poe2-extensions] background loaded.", { id: browser.runtime.id });
-	void enableSidePanelOnActionClick();
+console.debug("[poe2-extensions] background loaded.", { id: browser.runtime.id });
+void enableSidePanelOnActionClick();
 
-	browser.runtime.onMessage.addListener((message: unknown) => {
-		if (!isPoeTranslationMessage(message)) return;
-		if (message.type !== PoeTranslationMessageType.fetch) return;
+browser.runtime.onMessage.addListener((message: unknown) => {
+	if (!isPoeTranslationMessage(message)) return;
+	if (message.type !== PoeTranslationMessageType.fetch) return;
 
-		return fetchTranslateDictionary(message);
-	});
+	return fetchTranslateDictionary(message);
 });
 
 type ChromeSidePanelApi = {

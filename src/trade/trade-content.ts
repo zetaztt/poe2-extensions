@@ -1,5 +1,5 @@
-import { injectScript } from "wxt/utils/inject-script";
-import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from "@/settings/settings";
+import browser from "../browser";
+import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from "../settings";
 import { createTradeFeaturesUpdateMessage, isPoeTradeMessage, type TradeFeatures } from "./trade-messages";
 import { installStatPresetStorageBridge } from "./stat-preset/trade-stat-preset-content";
 import { installTranslationDictionaryBridge } from "./translate/trade-translate-content";
@@ -21,7 +21,7 @@ export async function installTradeContent(): Promise<void> {
 	installStatPresetStorageBridge(isTradeStatPresetEnabled);
 	installTradeFeaturesBridge();
 
-	await injectScript("/injector.js", {
+	await injectExtensionScript("src/trade/trade-inject.js", {
 		keepInDom: false,
 	}).catch((error) => {
 		console.error("[poe2-extensions][trade] 主世界脚本注入失败", error);
@@ -50,3 +50,42 @@ function isTradeTranslateEnabled(): boolean {
 function isTradeStatPresetEnabled(): boolean {
 	return currentFeatures.statPreset;
 }
+
+interface InjectExtensionScriptOptions {
+	keepInDom?: boolean;
+}
+
+interface InjectExtensionScriptResult {
+	script: HTMLScriptElement;
+}
+
+function injectExtensionScript(
+	path: string,
+	options: InjectExtensionScriptOptions = {},
+): Promise<InjectExtensionScriptResult> {
+	return new Promise((resolve, reject) => {
+		const script = document.createElement("script");
+		script.src = browser.runtime.getURL(path);
+		script.async = false;
+
+		script.addEventListener(
+			"load",
+			() => {
+				if (!options.keepInDom) script.remove();
+				resolve({ script });
+			},
+			{ once: true },
+		);
+		script.addEventListener(
+			"error",
+			() => {
+				if (!options.keepInDom) script.remove();
+				reject(new Error(`脚本注入失败: ${path}`));
+			},
+			{ once: true },
+		);
+
+		(document.head || document.documentElement).append(script);
+	});
+}
+void installTradeContent();

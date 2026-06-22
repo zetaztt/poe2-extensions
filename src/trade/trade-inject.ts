@@ -38,3 +38,5 @@ function applyTradeFeatures(features: TradeFeatures): void {
 export function getCurrentTradeFeatures(): TradeFeatures {
 	return currentFeatures;
 }
+
+injectTrade();

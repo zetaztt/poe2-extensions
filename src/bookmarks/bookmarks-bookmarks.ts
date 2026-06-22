@@ -1,3 +1,4 @@
+import browser from "../browser";
 import { getBookmarkTree, rootFolderId, saveBookmarkTree } from "./bookmarks-storage";
 import type {
 	BookmarkFolderOption,

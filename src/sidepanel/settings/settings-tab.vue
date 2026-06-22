@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import browser from "../../browser";
 import { computed, onMounted, ref } from "vue";
 import {
 	getTradeItemCopyEnabled,
@@ -7,8 +8,8 @@ import {
 	setTradeItemCopyEnabled,
 	setTradeStatPresetEnabled,
 	setTradeTranslateEnabled,
-} from "@/settings/settings";
-import { createTradeFeaturesUpdateMessage } from "@/trade/trade-messages";
+} from "../../settings";
+import { createTradeFeaturesUpdateMessage } from "../../trade/trade-messages";
 
 const tradeTranslateEnabled = ref(false);
 const tradeItemCopyEnabled = ref(false);

@@ -1,3 +1,4 @@
+import browser from "./browser";
 export const tradeTranslateEnabledKey = "tradeTranslateEnabled";
 export const defaultTradeTranslateEnabled = false;
 export const tradeItemCopyEnabledKey = "tradeItemCopyEnabled";
