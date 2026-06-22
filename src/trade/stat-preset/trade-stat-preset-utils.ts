@@ -1,6 +1,6 @@
 import { logPrefix } from "../trade-utils";
 import type { TradeStatPreset, TradeStatPresetQuery } from "../trade-types";
-import statPresetStyle from "./style.css?raw";
+import statPresetStyle from "./trade-stat-preset-style.css?raw";
 
 export function ensureBodyReady(callback: () => void): void {
 	if (document.body) {

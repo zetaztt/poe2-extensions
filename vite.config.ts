@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import webExtension from "vite-plugin-web-extension";
-import pkg from "./package.json" with { assert: "json" };
-import manifest from "./src/manifest.json" with { assert: "json" };
+import pkg from "./package.json" with { type: "json" };
+import manifest from "./src/manifest.json" with { type: "json" };
 import fs from "fs";
 import path from "path";
 
