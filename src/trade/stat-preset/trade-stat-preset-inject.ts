@@ -8,7 +8,7 @@ import {
 } from "./trade-stat-preset-picker";
 import { installSaveButtons, removeSaveButtons } from "./trade-stat-preset-save-buttons";
 import { handleStorageResponse, rejectPendingRequests, requestPresetList } from "./trade-stat-preset-storage-client";
-import { installStatPresetStyle, removeStatPresetStyle } from "./trade-stat-preset-style";
+import { installStatPresetStyle, removeStatPresetStyle } from "./trade-stat-preset-utils";
 import { ensureBodyReady } from "./trade-stat-preset-utils";
 
 let enabled = false;

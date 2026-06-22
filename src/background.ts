@@ -1,4 +1,4 @@
-import browser from "./browser";
+import browser from "webextension-polyfill";
 import { type TranslateDictionary } from "./translate-dictionary";
 import {
 	isPoeTranslationMessage,

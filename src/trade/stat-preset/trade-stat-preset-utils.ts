@@ -1,5 +1,6 @@
 import { logPrefix } from "../trade-utils";
 import type { TradeStatPreset, TradeStatPresetQuery } from "../trade-types";
+import statPresetStyle from "./style.css?raw";
 
 export function ensureBodyReady(callback: () => void): void {
 	if (document.body) {
@@ -38,4 +39,20 @@ export function applyStatPreset(preset: TradeStatPreset): void {
 	} catch (error) {
 		console.warn(`${logPrefix} 筛选预设应用失败`, error);
 	}
+}
+
+const styleId = "poe2-extensions-stat-preset-style";
+
+export function installStatPresetStyle(): void {
+	if (document.getElementById(styleId)) return;
+
+	const style = document.createElement("style");
+	style.id = styleId;
+	style.textContent = statPresetStyle;
+
+	document.documentElement.appendChild(style);
+}
+
+export function removeStatPresetStyle(): void {
+	document.getElementById(styleId)?.remove();
 }

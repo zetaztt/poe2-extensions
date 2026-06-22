@@ -1,4 +1,4 @@
-import browser from "./browser";
+import browser from "webextension-polyfill";
 export const tradeTranslateEnabledKey = "tradeTranslateEnabled";
 export const defaultTradeTranslateEnabled = false;
 export const tradeItemCopyEnabledKey = "tradeItemCopyEnabled";

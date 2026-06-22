@@ -1,4 +1,4 @@
-import browser from "../../browser";
+import browser from "webextension-polyfill";
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,

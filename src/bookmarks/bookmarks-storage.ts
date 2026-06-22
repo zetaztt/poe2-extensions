@@ -1,4 +1,4 @@
-import browser from "../browser";
+import browser from "webextension-polyfill";
 import type { StoredTradeBookmark, StoredTradeBookmarkFolder, StoredTradeBookmarkTree } from "./bookmarks-types";
 
 export const rootFolderId = "trade-bookmarks-root";

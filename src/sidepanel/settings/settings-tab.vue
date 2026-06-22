@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import browser from "../../browser";
+import browser from "webextension-polyfill";
 import { computed, onMounted, ref } from "vue";
 import {
 	getTradeItemCopyEnabled,

@@ -1,4 +1,4 @@
-import browser from "../browser";
+import browser from "webextension-polyfill";
 import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from "../settings";
 import { createTradeFeaturesUpdateMessage, isPoeTradeMessage, type TradeFeatures } from "./trade-messages";
 import { installStatPresetStorageBridge } from "./stat-preset/trade-stat-preset-content";

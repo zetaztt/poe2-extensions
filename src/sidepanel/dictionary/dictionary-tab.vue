@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import browser from "../../browser";
+import browser from "webextension-polyfill";
 import { onBeforeUnmount, ref, watch } from "vue";
 import type { TranslateDictionary } from "../../translate-dictionary";
 import {
