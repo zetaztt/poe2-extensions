@@ -1,54 +1,83 @@
 import browser from "webextension-polyfill";
-import { getTradeItemCopyEnabled, getTradeStatPresetEnabled, getTradeTranslateEnabled } from "../settings";
-import { createTradeFeaturesUpdateMessage, isPoeTradeMessage, type TradeFeatures } from "./trade-messages";
+import { getTradeItemCopyEnabled, getTradeStatPresetEnabled } from "../settings";
+import {
+	createTradeItemCopyUpdateMessage,
+	createTradeStatPresetUpdateMessage,
+	isPoeTradeItemCopyUpdateMessage,
+	isPoeTradeStatPresetUpdateMessage,
+} from "./trade-messages";
 import { installStatPresetStorageBridge } from "./stat-preset/trade-stat-preset-content";
 import { installTranslationDictionaryBridge } from "./translate/trade-translate-content";
 
-let currentFeatures: TradeFeatures = {
-	translate: false,
-	itemCopy: false,
-	statPreset: false,
-};
+let currentItemCopyEnabled = false;
+let currentStatPresetEnabled = false;
 
 export async function installTradeContent(): Promise<void> {
-	currentFeatures = {
-		translate: await getTradeTranslateEnabled(),
-		itemCopy: await getTradeItemCopyEnabled(),
-		statPreset: await getTradeStatPresetEnabled(),
-	};
+	installTranslationDictionaryBridge();
 
-	installTranslationDictionaryBridge(isTradeTranslateEnabled);
+	[currentItemCopyEnabled, currentStatPresetEnabled] = await Promise.all([
+		getTradeItemCopyEnabled(),
+		getTradeStatPresetEnabled(),
+	]);
+
 	installStatPresetStorageBridge(isTradeStatPresetEnabled);
 	installTradeFeaturesBridge();
 
-	await injectExtensionScript("src/trade/trade-inject.js", {
-		keepInDom: false,
-	}).catch((error) => {
-		console.error("[poe2-extensions][trade] 主世界脚本注入失败", error);
-	});
+	await injectTradeFeatureScripts();
 
-	postTradeFeaturesUpdate();
+	postTradeFeatureUpdates();
+}
+
+async function injectTradeFeatureScripts(): Promise<void> {
+	const injectPaths = [
+		"src/trade/item-code/trade-item-code-inject.js",
+		"src/trade/stat-preset/trade-stat-preset-inject.js",
+	];
+	const injectPromises: Promise<void>[] = [];
+
+	for (const path of injectPaths) {
+		injectPromises.push(
+			injectExtensionScript(path, { keepInDom: true })
+				.then(() => undefined)
+				.catch((error) => {
+					console.error(`[poe2-extensions][trade] 主世界脚本注入失败: ${path}`, error);
+				}),
+		);
+	}
+
+	await Promise.all(injectPromises);
 }
 
 function installTradeFeaturesBridge(): void {
 	browser.runtime.onMessage.addListener((message: unknown) => {
-		if (!isPoeTradeMessage(message)) return;
+		if (isPoeTradeItemCopyUpdateMessage(message)) {
+			currentItemCopyEnabled = message.enabled;
+			postTradeItemCopyUpdate();
+			return;
+		}
 
-		currentFeatures = message.features;
-		postTradeFeaturesUpdate();
+		if (isPoeTradeStatPresetUpdateMessage(message)) {
+			currentStatPresetEnabled = message.enabled;
+			postTradeStatPresetUpdate();
+		}
 	});
 }
 
-function postTradeFeaturesUpdate(): void {
-	window.postMessage(createTradeFeaturesUpdateMessage(currentFeatures), window.location.origin);
+function postTradeFeatureUpdates(): void {
+	postTradeItemCopyUpdate();
+	postTradeStatPresetUpdate();
 }
 
-function isTradeTranslateEnabled(): boolean {
-	return currentFeatures.translate;
+function postTradeItemCopyUpdate(): void {
+	window.postMessage(createTradeItemCopyUpdateMessage(currentItemCopyEnabled), window.location.origin);
+}
+
+function postTradeStatPresetUpdate(): void {
+	window.postMessage(createTradeStatPresetUpdateMessage(currentStatPresetEnabled), window.location.origin);
 }
 
 function isTradeStatPresetEnabled(): boolean {
-	return currentFeatures.statPreset;
+	return currentStatPresetEnabled;
 }
 
 interface InjectExtensionScriptOptions {
@@ -67,6 +96,7 @@ function injectExtensionScript(
 		const script = document.createElement("script");
 		script.src = browser.runtime.getURL(path);
 		script.async = false;
+		script.defer = false;
 
 		script.addEventListener(
 			"load",

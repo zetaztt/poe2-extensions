@@ -31,7 +31,16 @@ export default defineConfig({
 				chromiumProfile: chromeProfileDir,
 				args: ["--disable-blink-features=AutomationControlled"],
 			},
-			additionalInputs: ["src/trade/trade-inject.ts"],
+			additionalInputs: [
+				"src/trade/item-code/trade-item-code-inject.ts",
+				"src/trade/stat-preset/trade-stat-preset-inject.ts",
+				"src/trade/translate/trade-translate-inject.ts",
+			],
+			scriptViteConfig: {
+				build: {
+					sourcemap: "inline",
+				},
+			},
 			browser: "chrome",
 			watchFilePaths: ["package.json", "src/manifest.json"],
 			skipManifestValidation: true,

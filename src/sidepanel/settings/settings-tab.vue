@@ -9,7 +9,11 @@ import {
 	setTradeStatPresetEnabled,
 	setTradeTranslateEnabled,
 } from "../../settings";
-import { createTradeFeaturesUpdateMessage } from "../../trade/trade-messages";
+import {
+	createTradeItemCopyUpdateMessage,
+	createTradeStatPresetUpdateMessage,
+	createTradeSyncTranslateInjectionMessage,
+} from "../../trade/trade-messages";
 
 const tradeTranslateEnabled = ref(false);
 const tradeItemCopyEnabled = ref(false);
@@ -67,6 +71,7 @@ async function onTranslateToggle(nextValue: boolean): Promise<void> {
 
 	try {
 		await setTradeTranslateEnabled(nextValue);
+		await browser.runtime.sendMessage(createTradeSyncTranslateInjectionMessage());
 		const reloaded = await reloadActiveTradeTab();
 		settingsStatusText.value = reloaded
 			? "设置已保存，trade2 页面已刷新。"
@@ -88,7 +93,7 @@ async function onItemCopyToggle(nextValue: boolean): Promise<void> {
 
 	try {
 		await setTradeItemCopyEnabled(nextValue);
-		const updated = await updateActiveTradeTabFeatures();
+		const updated = await updateActiveTradeTabItemCopy();
 		settingsStatusText.value = updated
 			? "设置已保存，trade2 页面已更新。"
 			: "设置已保存，打开或刷新 trade2 页面后生效。";
@@ -109,7 +114,7 @@ async function onStatPresetToggle(nextValue: boolean): Promise<void> {
 
 	try {
 		await setTradeStatPresetEnabled(nextValue);
-		const updated = await updateActiveTradeTabFeatures();
+		const updated = await updateActiveTradeTabStatPreset();
 		settingsStatusText.value = updated
 			? "设置已保存，trade2 页面已更新。"
 			: "设置已保存，打开或刷新 trade2 页面后生效。";
@@ -134,7 +139,15 @@ async function reloadActiveTradeTab(): Promise<boolean> {
 	return true;
 }
 
-async function updateActiveTradeTabFeatures(): Promise<boolean> {
+async function updateActiveTradeTabItemCopy(): Promise<boolean> {
+	return sendActiveTradeTabMessage(createTradeItemCopyUpdateMessage(tradeItemCopyEnabled.value));
+}
+
+async function updateActiveTradeTabStatPreset(): Promise<boolean> {
+	return sendActiveTradeTabMessage(createTradeStatPresetUpdateMessage(tradeStatPresetEnabled.value));
+}
+
+async function sendActiveTradeTabMessage(message: unknown): Promise<boolean> {
 	const [tab] = await browser.tabs.query({
 		active: true,
 		currentWindow: true,
@@ -143,14 +156,7 @@ async function updateActiveTradeTabFeatures(): Promise<boolean> {
 	if (!tab?.id || !isTrade2Url(tab.url)) return false;
 
 	try {
-		await browser.tabs.sendMessage(
-			tab.id,
-			createTradeFeaturesUpdateMessage({
-				translate: tradeTranslateEnabled.value,
-				itemCopy: tradeItemCopyEnabled.value,
-				statPreset: tradeStatPresetEnabled.value,
-			}),
-		);
+		await browser.tabs.sendMessage(tab.id, message);
 		return true;
 	} catch (error) {
 		console.warn("[poe2-extensions] trade2 页面设置同步失败", error);

@@ -1,5 +1,7 @@
 import browser from "webextension-polyfill";
+import { getTradeTranslateEnabled, tradeTranslateEnabledKey } from "./settings";
 import { type TranslateDictionary } from "./translate-dictionary";
+import { isPoeTradeSyncTranslateInjectionMessage } from "./trade/trade-messages";
 import {
 	isPoeTranslationMessage,
 	poeTranslationMessageSource,
@@ -15,6 +17,8 @@ export const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2/transl
 const translateDictionaryCacheKey = "translateDictionaryCache";
 const localTranslateDictionaryPath = "/translate.json" as Parameters<typeof browser.runtime.getURL>[0];
 const localTranslateMetaPath = "/translate-meta.json" as Parameters<typeof browser.runtime.getURL>[0];
+const tradeTranslateContentScriptId = "poe2-trade-translate-inject";
+const tradeTranslateContentScriptPath = "src/trade/translate/trade-translate-inject.js";
 
 interface TranslateMeta {
 	version: number;
@@ -27,15 +31,30 @@ interface CachedTranslateDictionary {
 
 let localTranslateDictionaryPromise: Promise<TranslateDictionary | null> | null = null;
 let localTranslateMetaPromise: Promise<TranslateMeta | null> | null = null;
+let tradeTranslateInjectionSyncPromise: Promise<void> = Promise.resolve();
 
 console.debug("[poe2-extensions] background loaded.", { id: browser.runtime.id });
 void enableSidePanelOnActionClick();
+void queueTradeTranslateInjectionSync().catch((error) => {
+	console.warn("[poe2-extensions] 翻译脚本注册同步失败", error);
+});
 
 browser.runtime.onMessage.addListener((message: unknown) => {
+	if (isPoeTradeSyncTranslateInjectionMessage(message)) {
+		return queueTradeTranslateInjectionSync();
+	}
+
 	if (!isPoeTranslationMessage(message)) return;
 	if (message.type !== PoeTranslationMessageType.fetch) return;
 
 	return fetchTranslateDictionary(message);
+});
+
+browser.storage.onChanged.addListener((changes, areaName) => {
+	if (areaName !== "sync" || !changes[tradeTranslateEnabledKey]) return;
+	void queueTradeTranslateInjectionSync().catch((error) => {
+		console.warn("[poe2-extensions] 翻译脚本注册同步失败", error);
+	});
 });
 
 type ChromeSidePanelApi = {
@@ -49,13 +68,29 @@ type ChromeActionApi = {
 	};
 };
 
+type ChromeRegisteredContentScript = {
+	id: string;
+	matches: string[];
+	js: string[];
+	runAt: "document_start";
+	world: "MAIN";
+	allFrames?: boolean;
+	persistAcrossSessions?: boolean;
+};
+
+type ChromeScriptingApi = {
+	registerContentScripts?: (scripts: ChromeRegisteredContentScript[]) => Promise<void> | void;
+	unregisterContentScripts?: (filter: { ids: string[] }) => Promise<void> | void;
+};
+
 type ChromeApi = {
 	action?: ChromeActionApi;
 	sidePanel?: ChromeSidePanelApi;
+	scripting?: ChromeScriptingApi;
 };
 
 async function enableSidePanelOnActionClick(): Promise<void> {
-	const chromeApi = (globalThis as typeof globalThis & { chrome?: ChromeApi }).chrome;
+	const chromeApi = getChromeApi();
 
 	try {
 		await chromeApi?.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: true });
@@ -68,6 +103,55 @@ async function enableSidePanelOnActionClick(): Promise<void> {
 			console.warn("[poe2-extensions] 侧边栏打开失败", error);
 		});
 	});
+}
+
+function queueTradeTranslateInjectionSync(): Promise<void> {
+	tradeTranslateInjectionSyncPromise = tradeTranslateInjectionSyncPromise
+		.catch(() => undefined)
+		.then(syncTradeTranslateInjection);
+	return tradeTranslateInjectionSyncPromise;
+}
+
+async function syncTradeTranslateInjection(): Promise<void> {
+	const chromeApi = getChromeApi();
+	const scripting = chromeApi?.scripting;
+
+	if (!scripting?.registerContentScripts || !scripting.unregisterContentScripts) {
+		console.warn("[poe2-extensions] 当前浏览器不支持动态注册翻译脚本");
+		return;
+	}
+
+	const enabled = await getTradeTranslateEnabled();
+
+	try {
+		await Promise.resolve(
+			scripting.unregisterContentScripts({
+				ids: [tradeTranslateContentScriptId],
+			}),
+		);
+	} catch {
+		// 未注册时注销可能失败，忽略后继续按当前开关注册。
+	}
+
+	if (!enabled) return;
+
+	await Promise.resolve(
+		scripting.registerContentScripts([
+			{
+				id: tradeTranslateContentScriptId,
+				matches: ["https://www.pathofexile.com/trade2*"],
+				js: [tradeTranslateContentScriptPath],
+				runAt: "document_start",
+				world: "MAIN",
+				allFrames: false,
+				persistAcrossSessions: true,
+			},
+		]),
+	);
+}
+
+function getChromeApi(): ChromeApi | undefined {
+	return (globalThis as typeof globalThis & { chrome?: ChromeApi }).chrome;
 }
 
 async function fetchTranslateDictionary(
@@ -123,10 +207,6 @@ function createFetchErrorMessage(
 			statusText,
 		},
 	};
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-	return error instanceof Error ? error.message : fallback;
 }
 
 async function getLocalTranslateDictionary(): Promise<CachedTranslateDictionary | null> {

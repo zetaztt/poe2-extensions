@@ -1,3 +1,4 @@
+import { isPoeTradeItemCopyUpdateMessage } from "../trade-messages";
 import { getTradeSearchItemById, logPrefix } from "../trade-utils";
 import { formatTradeItemText } from "./trade-item-code-format";
 
@@ -7,6 +8,19 @@ const itemCopyOriginalStyleKey = "poeItemCopyOriginalStyle";
 
 let enabled = false;
 let observer: MutationObserver | null = null;
+
+export function injectTradeItemCopy(): void {
+	if (window.location.hostname !== "www.pathofexile.com" || !window.location.pathname.startsWith("/trade2")) {
+		return;
+	}
+
+	window.addEventListener("message", (event: MessageEvent<unknown>) => {
+		if (event.source !== window) return;
+		if (!isPoeTradeItemCopyUpdateMessage(event.data)) return;
+
+		setTradeItemCopyEnabled(event.data.enabled);
+	});
+}
 
 export function setTradeItemCopyEnabled(nextEnabled: boolean): void {
 	if (enabled === nextEnabled) {
@@ -140,3 +154,5 @@ function getTradeRowCopyButton(row: HTMLElement): HTMLElement | null {
 function isTradeRow(node: HTMLElement): boolean {
 	return node.matches("div.row[data-id]");
 }
+
+injectTradeItemCopy();

@@ -1,3 +1,5 @@
+import { ensureBodyReady } from "../../utils";
+import { isPoeTradeStatPresetUpdateMessage } from "../trade-messages";
 import { logPrefix } from "../trade-utils";
 import { resetStatPresetModal } from "./trade-stat-preset-modal";
 import {
@@ -9,9 +11,21 @@ import {
 import { installSaveButtons, removeSaveButtons } from "./trade-stat-preset-save-buttons";
 import { handleStorageResponse, rejectPendingRequests, requestPresetList } from "./trade-stat-preset-storage-client";
 import { installStatPresetStyle, removeStatPresetStyle } from "./trade-stat-preset-utils";
-import { ensureBodyReady } from "./trade-stat-preset-utils";
 
 let enabled = false;
+
+export function injectTradeStatPreset(): void {
+	if (window.location.hostname !== "www.pathofexile.com" || !window.location.pathname.startsWith("/trade2")) {
+		return;
+	}
+
+	window.addEventListener("message", (event: MessageEvent<unknown>) => {
+		if (event.source !== window) return;
+		if (!isPoeTradeStatPresetUpdateMessage(event.data)) return;
+
+		setTradeStatPresetEnabled(event.data.enabled);
+	});
+}
 
 export function setTradeStatPresetEnabled(nextEnabled: boolean): void {
 	if (enabled === nextEnabled) {
@@ -64,3 +78,5 @@ function removeStatPresetUi(): void {
 	resetStatPresetModal();
 	removeStatPresetStyle();
 }
+
+injectTradeStatPreset();

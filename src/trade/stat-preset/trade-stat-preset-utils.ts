@@ -2,17 +2,6 @@ import { logPrefix } from "../trade-utils";
 import type { TradeStatPreset, TradeStatPresetQuery } from "../trade-types";
 import statPresetStyle from "./trade-stat-preset-style.css?raw";
 
-export function ensureBodyReady(callback: () => void): void {
-	if (document.body) {
-		callback();
-		return;
-	}
-
-	document.addEventListener("DOMContentLoaded", callback, {
-		once: true,
-	});
-}
-
 export function createRequestId(): string {
 	return globalThis.crypto?.randomUUID?.() ?? `stat-preset-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }

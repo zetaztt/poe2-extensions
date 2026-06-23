@@ -1,3 +1,4 @@
+import { ensureBodyReady } from "../../utils";
 import { logPrefix } from "../trade-utils";
 import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./trade-translate-data";
 import { observeItemElement } from "./trade-translate-item-element";
@@ -5,25 +6,20 @@ import { installLocalStorageHook } from "./trade-translate-storage";
 
 export const traditionalChineseScriptUrl = "https://web.poecdn.com/js/translate.zh_TW.js";
 
-const scriptSelector = `script[src="${traditionalChineseScriptUrl}"]`;
+export function injectTradeTranslate(): void {
+	ensureBodyReady(function () {
+		if ((document.querySelector("meta[property='og:site_name'") as HTMLMetaElement)?.content !== "Path of Exile") {
+			return;
+		}
 
-let installed = false;
-
-export function installTradeTranslate() {
-	if (installed) return;
-	installed = true;
-
-	injectTraditionalChineseScript();
-	installTranslateDataHook();
-	observeItemElement();
-	installLocalStorageHook();
-
-	// installPoePluginsHook();
+		injectTraditionalChineseScript();
+		installTranslateDataHook();
+		observeItemElement();
+		installLocalStorageHook();
+	});
 }
 
 export function injectTraditionalChineseScript(): void {
-	if (document.querySelector(scriptSelector)) return;
-
 	const script = document.createElement("script");
 	script.src = traditionalChineseScriptUrl;
 	script.async = false;
@@ -40,33 +36,4 @@ export function injectTraditionalChineseScript(): void {
 	target.appendChild(script);
 }
 
-// function installPoePluginsHook() {
-// 	let poePlugins: PoePlugins
-// 	Object.defineProperty(window, "poePlugins", {
-// 		get: () => poePlugins!,
-// 		set: (value: PoePlugins) => {
-// 			poePlugins = value;
-// 			const getPlugin = poePlugins.getPlugin.bind(poePlugins);
-// 			poePlugins.getPlugin = (name: string, value: unknown) => {
-// 				const plugin: any = getPlugin(name, value)
-
-// 				if (!plugin.__installed) {
-// 					plugin.__installed = true;
-// 					if (name === "api-plugins") {
-// 						installApiPluginHook(plugin)
-// 					}
-// 				}
-
-// 				return plugin;
-// 			}
-// 		}
-// 	})
-// }
-
-// function installApiPluginHook(plugin: ApiPlugins) {
-// 	plugin.hook({
-// 		on: 'response',
-// 		hook(response) {
-// 		},
-// 	});
-// }
+injectTradeTranslate();

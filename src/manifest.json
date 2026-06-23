@@ -27,7 +27,10 @@
 	],
 	"web_accessible_resources": [
 		{
-			"resources": ["src/trade/trade-inject.js"],
+			"resources": [
+				"src/trade/item-code/trade-item-code-inject.js",
+				"src/trade/stat-preset/trade-stat-preset-inject.js"
+			],
 			"matches": ["https://www.pathofexile.com/*"]
 		}
 	]

@@ -9,11 +9,10 @@ import {
 
 const backgroundResponseTimeoutMs = 15_000;
 
-export function installTranslationDictionaryBridge(isTranslateEnabled: () => boolean): void {
+export function installTranslationDictionaryBridge(): void {
 	window.addEventListener("message", async (event: MessageEvent<unknown>) => {
 		if (event.source !== window || !isPoeTranslationMessage(event.data)) return;
 		if (event.data.type !== PoeTranslationMessageType.fetch) return;
-		if (!isTranslateEnabled()) return;
 
 		try {
 			const response = await sendRuntimeMessageWithTimeout(event.data);
