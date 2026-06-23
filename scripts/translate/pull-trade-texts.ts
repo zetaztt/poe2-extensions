@@ -1,13 +1,13 @@
 import {
-	TradeFiltersDataResponse,
 	TradeItemsDataResponse,
-	TradeStatConfig,
-	TradeStaticConfig,
-	TradeStaticsDataResponse,
 	TradeStatsResponse,
-} from "@/trade/trade-types";
-import { readTexts, type TextData, writeTexts } from "./utils";
-import { isUniqueItem } from "@/trade/trade-utils";
+	TradeStatConfig,
+	TradeStaticsDataResponse,
+	TradeStaticConfig,
+	TradeFiltersDataResponse,
+} from "../../src/trade/trade-types";
+import { isUniqueItem } from "../../src/trade/trade-utils";
+import { type TextData, writeTexts } from "./utils";
 
 const poe2TwHref = "www.pathofexile.tw";
 const poe2Href = "www.pathofexile.com";
