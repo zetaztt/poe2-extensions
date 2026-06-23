@@ -134,6 +134,26 @@ function toggleFolderExpanded(folder: VisibleBookmarkFolder): void {
 
 	expandedFolderIds.value = nextExpandedIds;
 }
+function collapseAllFolders(): void {
+	statusText.value = "";
+	closeMoreMenu();
+	expandedFolderIds.value = new Set();
+}
+
+function collapseOtherFolders(folder: VisibleBookmarkFolder): void {
+	statusText.value = "";
+	closeMoreMenu();
+
+	const nextExpandedIds = new Set<string>();
+	let currentFolder: TradeBookmarkTreeNode | null = folder;
+
+	while (currentFolder?.parentId) {
+		nextExpandedIds.add(currentFolder.id);
+		currentFolder = bookmarkTree.value ? findFolderInTree(bookmarkTree.value, currentFolder.parentId) : null;
+	}
+
+	expandedFolderIds.value = nextExpandedIds;
+}
 
 function onFolderDoubleClick(folder: VisibleBookmarkFolder): void {
 	if (folder.displayDepth === 0 || renamingFolderId.value === folder.id || !hasFolderContent(folder)) return;
@@ -769,6 +789,8 @@ function clearDragState(): void {
 						@create-folder="onCreateFolder(folder.id)"
 						@start-rename="startRenameFolder(folder)"
 						@delete-folder="onDeleteFolder(folder)"
+						@collapse-others="collapseOtherFolders(folder)"
+						@collapse-all="collapseAllFolders"
 						@toggle-menu="toggleMoreMenu({ type: 'folder', id: folder.id })"
 						@context-menu="openContextMenu($event, { type: 'folder', id: folder.id })"
 						@drag-start="onFolderDragStart($event, folder)"

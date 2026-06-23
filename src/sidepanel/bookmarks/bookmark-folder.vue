@@ -23,6 +23,8 @@ const emit = defineEmits<{
 	"create-folder": [];
 	"start-rename": [];
 	"delete-folder": [];
+	"collapse-others": [];
+	"collapse-all": [];
 	"toggle-menu": [];
 	"context-menu": [event: MouseEvent];
 	"drag-start": [event: DragEvent];
@@ -49,6 +51,16 @@ function onMenuAction(actionId: string): void {
 
 	if (actionId === "create") {
 		emit("create-folder");
+		return;
+	}
+
+	if (actionId === "collapse-others") {
+		emit("collapse-others");
+		return;
+	}
+
+	if (actionId === "collapse-all") {
+		emit("collapse-all");
 		return;
 	}
 
@@ -131,16 +143,24 @@ function onMenuAction(actionId: string): void {
 			重命名
 		</button>
 		<BookmarkMenu
-			v-if="folder.displayDepth > 0"
 			:open="menuOpen"
 			:disabled="busy"
 			:menu-style="menuStyle"
-			:actions="[
-				{ id: 'add-bookmark', label: '添加当前搜索' },
-				{ id: 'create', label: '添加文件夹' },
-				{ id: 'rename', label: '重命名', disabled: !folder.canModify },
-				{ id: 'delete', label: '删除', disabled: !folder.canModify },
-			]"
+			:actions="
+				folder.displayDepth === 0
+					? [
+							{ id: 'add-bookmark', label: '添加当前搜索' },
+							{ id: 'create', label: '添加文件夹' },
+							{ id: 'collapse-all', label: '折叠所有' },
+						]
+					: [
+							{ id: 'add-bookmark', label: '添加当前搜索' },
+							{ id: 'create', label: '添加文件夹' },
+							{ id: 'collapse-others', label: '折叠其他文件夹' },
+							{ id: 'rename', label: '重命名', disabled: !folder.canModify },
+							{ id: 'delete', label: '删除', disabled: !folder.canModify },
+						]
+			"
 			@toggle="emit('toggle-menu')"
 			@select="onMenuAction" />
 	</div>
@@ -166,7 +186,7 @@ function onMenuAction(actionId: string): void {
 }
 
 .folder-row.top-level {
-	grid-template-columns: minmax(0, 1fr) auto auto auto;
+	grid-template-columns: minmax(0, 1fr) auto auto auto auto;
 	height: auto;
 	min-height: 31px;
 	margin-bottom: 0;
@@ -301,7 +321,7 @@ function onMenuAction(actionId: string): void {
 	}
 
 	.folder-row.top-level {
-		grid-template-columns: minmax(0, 1fr) auto auto;
+		grid-template-columns: minmax(0, 1fr) auto auto auto;
 	}
 
 	.folder-row .secondary-action {
