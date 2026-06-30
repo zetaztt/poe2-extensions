@@ -16,7 +16,6 @@ export interface TextData {
 	original: string;
 	translate: string | undefined;
 	source?: TranslateSource;
-	backfilled?: boolean;
 }
 
 function getSource(comments: string[]): TranslateSource | undefined {
@@ -27,10 +26,6 @@ function getSource(comments: string[]): TranslateSource | undefined {
 		}
 	}
 	return undefined;
-}
-
-function getBackfilled(comments: string[]): boolean {
-	return comments.some((comment) => /^source:\s*backfill$/.test(comment));
 }
 
 function createPo(texts: TextData[]): PO {
@@ -45,35 +40,62 @@ function createPo(texts: TextData[]): PO {
 		item.msgctxt = text.key;
 		item.msgid = text.original;
 		item.msgstr = [text.translate ?? ""];
-		const comments: string[] = [];
-		if (text.backfilled) {
-			comments.push("source: backfill");
-		} else if (text.source) {
-			comments.push(`source: ${text.source}`);
-		}
-		item.extractedComments = comments;
+		item.extractedComments = text.source ? [`source: ${text.source}`] : [];
 		po.items.push(item);
 	}
 
 	return po;
 }
 
+function mergePoMultilineStrings(content: string): string {
+	const lines = content.split("\n");
+	const mergedLines: string[] = [];
+
+	for (let i = 0; i < lines.length; i++) {
+		let line = lines[i]!;
+		const match = /^(msgctxt|msgid|msgid_plural|msgstr(?:\[\d+\])?) ""$/.exec(line);
+		if (!match) {
+			mergedLines.push(line);
+			continue;
+		}
+
+		const parts: string[] = [];
+		while (i + 1 < lines.length) {
+			const partMatch = /^"(.*)"$/.exec(lines[i + 1]!);
+			if (!partMatch || partMatch[1]!.endsWith("\\n")) {
+				break;
+			}
+			parts.push(partMatch[1]!);
+			i++;
+		}
+
+		if (!parts.length) {
+			mergedLines.push(line);
+			continue;
+		}
+
+		mergedLines.push(`${match[1]} "${parts.join("")}"`);
+	}
+
+	return mergedLines.join("\n");
+}
+
 function writePo(path: string, texts: TextData[]): void {
 	texts.sort((a, b) => a.key.localeCompare(b.key));
-	fs.writeFileSync(path, createPo(texts).toString());
+	fs.writeFileSync(path, mergePoMultilineStrings(createPo(texts).toString()));
 }
 
 function preserveBackfillMarkers(beforeTexts: Record<string, TextData>, afterTexts: TextData[]): TextData[] {
 	return afterTexts.map((text) => {
 		const beforeText = beforeTexts[text.key];
 		if (
-			beforeText?.backfilled
+			beforeText?.source === "backfill"
 			&& beforeText.original === text.original
 			&& beforeText.translate === text.translate
 		) {
-			return { ...text, source: "backfill", backfilled: true };
+			return { ...text, source: "backfill" };
 		}
-		return { ...text, backfilled: undefined };
+		return text;
 	});
 }
 
@@ -86,7 +108,6 @@ function formatTextSummary(text: TextData): string {
 		`original=${formatLogText(text.original)}`,
 		`translate=${formatLogText(text.translate)}`,
 		`source=${text.source ?? "(none)"}`,
-		`backfilled=${text.backfilled ? "true" : "false"}`,
 	].join(", ");
 }
 
@@ -131,11 +152,6 @@ function logTextChanges(
 		if (beforeText.source !== text.source) {
 			changes.push(`source ${beforeText.source ?? "(none)"} -> ${text.source ?? "(none)"}`);
 		}
-		if (!!beforeText.backfilled !== !!text.backfilled) {
-			changes.push(
-				`backfilled ${beforeText.backfilled ? "true" : "false"} -> ${text.backfilled ? "true" : "false"}`,
-			);
-		}
 
 		if (changes.length) {
 			logs.push(`text changed: ${text.key}, ${changes.join(", ")}`);
@@ -168,7 +184,6 @@ export function readTexts(): Record<string, TextData> {
 			original: item.msgid,
 			translate: item.msgstr[0] || undefined,
 			source: getSource(item.extractedComments),
-			backfilled: getBackfilled(item.extractedComments),
 		};
 	}
 
@@ -249,14 +264,13 @@ export function updatePoTranslateTexts(updates: Record<string, { translate: stri
 				...text,
 				translate: update.translate,
 				source: update.source,
-				backfilled: false,
 			};
 		}),
 	);
 }
 
 export function updatePoTextsByKey(
-	updates: Record<string, { translate: string; source: TranslateSource; backfilled?: boolean }>,
+	updates: Record<string, { translate: string; source: TranslateSource }>,
 	logSource?: TranslateChangeLogSource,
 ) {
 	const beforeTexts = readTexts();
@@ -269,7 +283,6 @@ export function updatePoTextsByKey(
 			...text,
 			translate: update.translate,
 			source: update.source,
-			backfilled: update.backfilled,
 		};
 	});
 	if (logSource) {
@@ -292,7 +305,6 @@ export function writeAutoTranslateTexts(texts: [string, string][]) {
 			...text,
 			translate: update.translate,
 			source: update.source,
-			backfilled: false,
 		};
 	});
 	logTextChanges("auto-translate", beforeTexts, updatedTexts);

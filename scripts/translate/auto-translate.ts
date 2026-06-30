@@ -24,12 +24,12 @@ const texts = readTexts();
 const autoTranslateTexts: Record<string, string> = {};
 const protectedOriginals = new Set(
 	Object.values(texts)
-		.filter((text) => text.translate && text.source !== "auto" && !text.backfilled)
+		.filter((text) => text.translate && text.source !== "auto" && text.source !== "backfill")
 		.map((text) => text.original),
 );
 const existingAutoOriginals = new Set(
 	Object.values(texts)
-		.filter((text) => text.translate && text.source === "auto" && !text.backfilled)
+		.filter((text) => text.translate && text.source === "auto")
 		.map((text) => text.original),
 );
 
@@ -75,7 +75,7 @@ function fillEmptyTextsByExistingTranslate(): void {
 	const ambiguousLogs: string[] = [];
 
 	for (const text of Object.values(texts)) {
-		if (!text.translate || !text.source || text.source === "backfill" || text.backfilled) {
+		if (!text.translate || !text.source || text.source === "backfill") {
 			continue;
 		}
 
@@ -98,10 +98,10 @@ function fillEmptyTextsByExistingTranslate(): void {
 		existingTranslate.source = getHigherPrioritySource(existingTranslate.source, text.source);
 	}
 
-	const updates: Record<string, { translate: string; source: "backfill"; backfilled: true }> = {};
+	const updates: Record<string, { translate: string; source: "backfill" }> = {};
 
 	for (const text of Object.values(texts)) {
-		if (!text.backfilled && text.translate) {
+		if (text.source !== "backfill" && text.translate) {
 			continue;
 		}
 
@@ -110,14 +110,13 @@ function fillEmptyTextsByExistingTranslate(): void {
 			continue;
 		}
 
-		if (text.translate === existingTranslate.translate && text.source === "backfill" && text.backfilled) {
+		if (text.translate === existingTranslate.translate && text.source === "backfill") {
 			continue;
 		}
 
 		text.translate = existingTranslate.translate;
 		text.source = "backfill";
-		text.backfilled = true;
-		updates[text.key] = { translate: existingTranslate.translate, source: "backfill", backfilled: true };
+		updates[text.key] = { translate: existingTranslate.translate, source: "backfill" };
 	}
 
 	writeTranslateChangeLogs("auto-translate", ambiguousLogs);

@@ -10074,7 +10074,7 @@ msgstr "心靈符文"
 #. source: official
 msgctxt "items/currency/Mirror of Kalandra"
 msgid "Mirror of Kalandra"
-msgstr "卡蘭德魔鏡"
+msgstr "卡蘭德的魔鏡"
 
 #. source: official
 msgctxt "items/currency/Mystic Alloy"
