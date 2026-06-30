@@ -47,42 +47,9 @@ function createPo(texts: TextData[]): PO {
 	return po;
 }
 
-function mergePoMultilineStrings(content: string): string {
-	const lines = content.split("\n");
-	const mergedLines: string[] = [];
-
-	for (let i = 0; i < lines.length; i++) {
-		let line = lines[i]!;
-		const match = /^(msgctxt|msgid|msgid_plural|msgstr(?:\[\d+\])?) ""$/.exec(line);
-		if (!match) {
-			mergedLines.push(line);
-			continue;
-		}
-
-		const parts: string[] = [];
-		while (i + 1 < lines.length) {
-			const partMatch = /^"(.*)"$/.exec(lines[i + 1]!);
-			if (!partMatch || partMatch[1]!.endsWith("\\n")) {
-				break;
-			}
-			parts.push(partMatch[1]!);
-			i++;
-		}
-
-		if (!parts.length) {
-			mergedLines.push(line);
-			continue;
-		}
-
-		mergedLines.push(`${match[1]} "${parts.join("")}"`);
-	}
-
-	return mergedLines.join("\n");
-}
-
 function writePo(path: string, texts: TextData[]): void {
 	texts.sort((a, b) => a.key.localeCompare(b.key));
-	fs.writeFileSync(path, mergePoMultilineStrings(createPo(texts).toString()));
+	fs.writeFileSync(path, createPo(texts).toString());
 }
 
 function preserveBackfillMarkers(beforeTexts: Record<string, TextData>, afterTexts: TextData[]): TextData[] {

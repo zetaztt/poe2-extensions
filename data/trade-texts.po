@@ -17438,7 +17438,7 @@ msgstr "衛者長矛"
 
 msgctxt "items/weapon/Guiding Palm"
 msgid "Guiding Palm"
-msgstr ""
+msgstr "引導之掌"
 
 #. source: auto
 msgctxt "items/weapon/Guiding Palm of the Eye"
@@ -37135,7 +37135,7 @@ msgstr "增加#%存在範圍的範圍效果"
 
 msgctxt "stats/explicit/explicit.stat_1019020209/#% increased Damage per Curse on you"
 msgid "#% increased Damage per Curse on you"
-msgstr ""
+msgstr "你身上每有一個詛咒，增加#%傷害"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_1022759479/Notable Passive Skills in Radius also grant #% increased Cast Speed"
