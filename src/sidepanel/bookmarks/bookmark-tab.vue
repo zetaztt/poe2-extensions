@@ -570,17 +570,17 @@ function getFolderDropTarget(event: DragEvent, folder: VisibleBookmarkFolder): D
 	if (!item) return null;
 
 	if (item.type === "bookmark") {
+		if (folder.displayDepth === 0) return null;
 		return { type: "folder", id: folder.id, position: "inside" };
 	}
 
 	if (item.id === folder.id || isFolderDescendant(item.id, folder.id)) return null;
 
-	const position = getRowDropPosition(event);
 	if (folder.displayDepth === 0) {
 		return { type: "folder", id: folder.id, position: "inside" };
 	}
 
-	return { type: "folder", id: folder.id, position };
+	return { type: "folder", id: folder.id, position: getHalfDropPosition(event) };
 }
 
 function getBookmarkDropTarget(event: DragEvent, bookmark: TradeBookmarkItem): DropTarget | null {
@@ -600,7 +600,7 @@ function getFolderMoveTarget(folderId: string, target: DropTarget): { parentId: 
 
 	if (target.position === "inside") {
 		const targetFolder = findFolderInTree(bookmarkTree.value, target.id);
-		if (!targetFolder) return null;
+		if (!targetFolder || targetFolder.parentId) return null;
 		return {
 			parentId: targetFolder.id,
 			index: targetFolder.children.length,
@@ -630,7 +630,7 @@ function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folder
 
 	if (target.type === "folder") {
 		const folder = findFolderInTree(bookmarkTree.value, target.id);
-		if (!folder) return null;
+		if (!folder?.parentId) return null;
 		return {
 			folderId: folder.id,
 			index: folder.bookmarks.length,
@@ -709,17 +709,6 @@ function findFolderInTree(node: TradeBookmarkTreeNode, folderId: string): TradeB
 function isFolderDescendant(parentFolderId: string, possibleDescendantId: string): boolean {
 	const parent = bookmarkTree.value ? findFolderInTree(bookmarkTree.value, parentFolderId) : null;
 	return Boolean(parent && parent.id !== possibleDescendantId && findFolderInTree(parent, possibleDescendantId));
-}
-
-function getRowDropPosition(event: DragEvent): "before" | "inside" | "after" {
-	const element = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-	if (!element) return "inside";
-
-	const rect = element.getBoundingClientRect();
-	const offset = event.clientY - rect.top;
-	if (offset < rect.height / 3) return "before";
-	if (offset > (rect.height * 2) / 3) return "after";
-	return "inside";
 }
 
 function getHalfDropPosition(event: DragEvent): "before" | "after" {

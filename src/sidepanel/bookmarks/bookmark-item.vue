@@ -102,16 +102,10 @@ function onMenuAction(actionId: string): void {
 	box-sizing: border-box;
 	height: 30px;
 	margin-bottom: 3px;
-	margin-left: 12px;
+	margin-left: 25px;
 	border: 1px solid #000;
-	border-left-color: #333;
-	border-radius: 0;
-	background: #101112;
-}
-
-.bookmark-item:hover {
-	border-color: #000;
 	border-left-color: #a38d6d;
+	border-radius: 0;
 	background: #181818;
 }
 

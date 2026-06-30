@@ -7,12 +7,15 @@ import {
 	TradeFiltersDataResponse,
 } from "../../src/trade/trade-types";
 import { isUniqueItem } from "../../src/trade/trade-utils";
-import { type TextData, writeTexts } from "./utils";
+import { clearTranslateChangesLog, type TextData, writeNeedCheckTexts, writeTexts } from "./utils";
+
+clearTranslateChangesLog("pull-translate");
 
 const poe2TwHref = "www.pathofexile.tw";
 const poe2Href = "www.pathofexile.com";
 
 const texts = new Map<string, TextData>();
+const needCheckTexts = new Map<string, TextData>();
 const words = new Map<string, string>();
 
 function setText(
@@ -28,7 +31,7 @@ function setText(
 		return;
 	}
 
-	let { needCheck, muteMultiWarn } = options ?? {};
+	const { needCheck, muteMultiWarn } = options ?? {};
 
 	if (texts.has(key)) {
 		if (!muteMultiWarn) {
@@ -37,19 +40,20 @@ function setText(
 		return;
 	}
 
-	if (!translate) {
-		needCheck = undefined;
-	}
-
 	if (needCheck) {
 		console.warn("text need check '" + key + "'", translate);
+		needCheckTexts.set(key, {
+			key,
+			original,
+			translate,
+		});
+		translate = undefined;
 	}
 
 	texts.set(key, {
 		key,
 		original,
 		translate,
-		needCheck,
 	});
 
 	if (translate) {
@@ -228,6 +232,9 @@ async function pullFilterTexts() {
 
 function mergeTexts() {
 	for (const text of texts.values()) {
+		if (needCheckTexts.has(text.key)) {
+			continue;
+		}
 		if (!text.translate && words.get(text.original)) {
 			text.translate = words.get(text.original);
 		}
@@ -238,3 +245,4 @@ await Promise.all([pullItemTexts(), pullStatsTexts(), pullStaticTexts(), pullFil
 
 mergeTexts();
 writeTexts(Array.from(texts.values()));
+writeNeedCheckTexts(Array.from(needCheckTexts.values()));

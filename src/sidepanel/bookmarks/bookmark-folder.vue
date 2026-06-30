@@ -117,6 +117,7 @@ function onMenuAction(actionId: string): void {
 		</span>
 		<span class="folder-count">{{ folder.bookmarks.length }}</span>
 		<button
+			v-if="folder.displayDepth > 0"
 			class="row-action primary-action"
 			type="button"
 			:disabled="busy"
@@ -149,13 +150,11 @@ function onMenuAction(actionId: string): void {
 			:actions="
 				folder.displayDepth === 0
 					? [
-							{ id: 'add-bookmark', label: '添加当前搜索' },
 							{ id: 'create', label: '添加文件夹' },
 							{ id: 'collapse-all', label: '折叠所有' },
 						]
 					: [
 							{ id: 'add-bookmark', label: '添加当前搜索' },
-							{ id: 'create', label: '添加文件夹' },
 							{ id: 'collapse-others', label: '折叠其他文件夹' },
 							{ id: 'rename', label: '重命名', disabled: !folder.canModify },
 							{ id: 'delete', label: '删除', disabled: !folder.canModify },
@@ -177,7 +176,6 @@ function onMenuAction(actionId: string): void {
 	margin-bottom: 3px;
 	gap: 7px;
 	border: 0;
-	border-bottom: 1px solid #465260;
 	border-radius: 0;
 	padding: 0 4px;
 	color: #dfcf99;
@@ -186,7 +184,7 @@ function onMenuAction(actionId: string): void {
 }
 
 .folder-row.top-level {
-	grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+	grid-template-columns: minmax(0, 1fr) auto auto auto;
 	height: auto;
 	min-height: 31px;
 	margin-bottom: 0;
@@ -197,17 +195,6 @@ function onMenuAction(actionId: string): void {
 	background: #101112;
 	text-shadow: none;
 }
-
-.folder-row:hover {
-	color: #fff;
-}
-
-.folder-row.top-level:hover {
-	border-color: #000;
-	border-left-color: #a38d6d;
-	background: #181818;
-}
-
 .folder-row[draggable="true"] {
 	cursor: grab;
 }
@@ -264,6 +251,10 @@ function onMenuAction(actionId: string): void {
 	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
 	font-size: 1.1em;
 	font-weight: 400;
+	text-decoration: underline;
+	text-decoration-color: #465260;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 5px;
 }
 
 .top-level .folder-title {
@@ -271,6 +262,7 @@ function onMenuAction(actionId: string): void {
 	padding: 0;
 	color: #e2e2e2;
 	font-size: inherit;
+	text-decoration: none;
 }
 
 .folder-count {

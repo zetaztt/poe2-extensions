@@ -8,18 +8,28 @@ import {
 	type CheerioCrawlingContext,
 } from "crawlee";
 import {
-	readManualTranslateTexts,
+	clearTranslateChangesLog,
 	readTexts,
 	type TextData,
+	type TranslateSource,
+	updatePoTextsByKey,
 	writeAutoTranslateTexts,
-	writeManualTranslateTexts,
+	writeTranslateChangeLogs,
 } from "./utils";
 
+clearTranslateChangesLog("auto-translate");
+
+const force = process.argv.includes("--force");
 const texts = readTexts();
 const autoTranslateTexts: Record<string, string> = {};
-const translatedOriginals = new Set(
+const protectedOriginals = new Set(
 	Object.values(texts)
-		.filter((text) => text.translate)
+		.filter((text) => text.translate && text.source !== "auto" && !text.backfilled)
+		.map((text) => text.original),
+);
+const existingAutoOriginals = new Set(
+	Object.values(texts)
+		.filter((text) => text.translate && text.source === "auto" && !text.backfilled)
 		.map((text) => text.original),
 );
 
@@ -40,38 +50,97 @@ const poeDbReplaceCharMap = new Map([
 
 const replaceCharRegex = new RegExp(`[${[...poeDbReplaceCharMap.keys()].join("")}]`, "g");
 
+type ExistingTranslateSource = Exclude<TranslateSource, "backfill">;
+
+interface ExistingTranslate {
+	translate: string;
+	source: ExistingTranslateSource;
+}
+
+const sourcePriority: Record<ExistingTranslateSource, number> = {
+	manual: 3,
+	official: 2,
+	auto: 1,
+};
+
+function getHigherPrioritySource(
+	source: ExistingTranslateSource,
+	nextSource: ExistingTranslateSource,
+): ExistingTranslateSource {
+	return sourcePriority[source] >= sourcePriority[nextSource] ? source : nextSource;
+}
+
+function fillEmptyTextsByExistingTranslate(): void {
+	const existingTranslates = new Map<string, ExistingTranslate>();
+	const ambiguousLogs: string[] = [];
+
+	for (const text of Object.values(texts)) {
+		if (!text.translate || !text.source || text.source === "backfill" || text.backfilled) {
+			continue;
+		}
+
+		const existingTranslate = existingTranslates.get(text.original);
+		if (!existingTranslate) {
+			existingTranslates.set(text.original, {
+				translate: text.translate,
+				source: text.source,
+			});
+			continue;
+		}
+
+		if (existingTranslate.translate !== text.translate) {
+			ambiguousLogs.push(
+				`ambiguous translate for original "${text.original}": use first "${existingTranslate.translate}", ignored "${text.translate}" from ${text.key}`,
+			);
+			continue;
+		}
+
+		existingTranslate.source = getHigherPrioritySource(existingTranslate.source, text.source);
+	}
+
+	const updates: Record<string, { translate: string; source: "backfill"; backfilled: true }> = {};
+
+	for (const text of Object.values(texts)) {
+		if (!text.backfilled && text.translate) {
+			continue;
+		}
+
+		const existingTranslate = existingTranslates.get(text.original);
+		if (!existingTranslate) {
+			continue;
+		}
+
+		if (text.translate === existingTranslate.translate && text.source === "backfill" && text.backfilled) {
+			continue;
+		}
+
+		text.translate = existingTranslate.translate;
+		text.source = "backfill";
+		text.backfilled = true;
+		updates[text.key] = { translate: existingTranslate.translate, source: "backfill", backfilled: true };
+	}
+
+	writeTranslateChangeLogs("auto-translate", ambiguousLogs);
+
+	if (Object.keys(updates).length) {
+		updatePoTextsByKey(updates, "auto-translate");
+	}
+}
+
 function hasTranslate(text: TextData): boolean {
-	return !!text.translate || translatedOriginals.has(text.original) || !!autoTranslateTexts[text.original];
+	return (
+		protectedOriginals.has(text.original)
+		|| (!force && existingAutoOriginals.has(text.original))
+		|| !!autoTranslateTexts[text.original]
+	);
 }
 
 function setAutoTranslate(text: TextData, translate: string): void {
-	if (translatedOriginals.has(text.original)) {
+	if (protectedOriginals.has(text.original)) {
 		delete autoTranslateTexts[text.original];
 		return;
 	}
 	autoTranslateTexts[text.original] = translate;
-}
-
-function buildManualTranslateTexts(): Record<string, string> {
-	const existingManualTranslateTexts = readManualTranslateTexts();
-	const originalTexts = new Set(Object.values(texts).map((text) => text.original));
-	const manualTranslateTexts: Record<string, string> = {};
-
-	for (const [original, translate] of Object.entries(existingManualTranslateTexts)) {
-		if (!originalTexts.has(original) || translatedOriginals.has(original) || autoTranslateTexts[original]) {
-			continue;
-		}
-		manualTranslateTexts[original] = translate;
-	}
-
-	for (const text of Object.values(texts)) {
-		if (hasTranslate(text)) {
-			continue;
-		}
-		manualTranslateTexts[text.original] ??= "";
-	}
-
-	return manualTranslateTexts;
 }
 
 async function translateByPoeDbAutoComplete() {
@@ -236,6 +305,8 @@ async function translateByPoeDbSearch() {
 	await crawler.run(requests);
 }
 
+fillEmptyTextsByExistingTranslate();
+
 await translateByPoeDbAutoComplete();
 await translateByPoeDbSearch();
 
@@ -270,4 +341,3 @@ for (const text of Object.values(texts)) {
 }
 
 writeAutoTranslateTexts(Object.entries(autoTranslateTexts));
-writeManualTranslateTexts(Object.entries(buildManualTranslateTexts()));

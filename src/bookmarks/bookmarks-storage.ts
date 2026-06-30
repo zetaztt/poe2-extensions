@@ -41,18 +41,22 @@ function createDefaultBookmarkTree(): StoredTradeBookmarkTree {
 
 function isStoredBookmarkTree(value: unknown): value is StoredTradeBookmarkTree {
 	if (!isRecord(value) || value.version !== 1) return false;
-	return isStoredFolder(value.root, true);
+	if (!isRecord(value.root) || value.root.id !== rootFolderId) return false;
+	return isStoredFolder(value.root, 0);
 }
 
-function isStoredFolder(value: unknown, isRoot = false): value is StoredTradeBookmarkFolder {
+function isStoredFolder(value: unknown, depth: number): value is StoredTradeBookmarkFolder {
 	if (!isRecord(value)) return false;
 	if (typeof value.id !== "string" || typeof value.title !== "string") return false;
-	if (!isRoot && typeof value.parentId !== "string") return false;
-	if (isRoot && value.parentId !== undefined) return false;
+	if (depth === 0 && value.parentId !== undefined) return false;
+	if (depth === 1 && value.parentId !== rootFolderId) return false;
+	if (depth > 0 && typeof value.parentId !== "string") return false;
 	if (typeof value.createdAt !== "number" || typeof value.updatedAt !== "number") return false;
 	if (!Array.isArray(value.children) || !Array.isArray(value.bookmarks)) return false;
+	if (depth === 0 && value.bookmarks.length > 0) return false;
+	if (depth > 0 && value.children.length > 0) return false;
 
-	return value.children.every((child) => isStoredFolder(child)) && value.bookmarks.every(isStoredBookmark);
+	return value.children.every((child) => isStoredFolder(child, depth + 1)) && value.bookmarks.every(isStoredBookmark);
 }
 
 function isStoredBookmark(value: unknown): value is StoredTradeBookmark {

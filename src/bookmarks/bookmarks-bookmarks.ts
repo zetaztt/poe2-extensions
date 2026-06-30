@@ -32,6 +32,8 @@ export async function getTradeBookmarkRootTree(): Promise<TradeBookmarkTreeNode>
 }
 
 export async function createBookmarkFolder(parentId: string, title: string): Promise<BookmarkFolderOption> {
+	if (parentId !== rootFolderId) throw new Error("只能在顶层创建一级文件夹");
+
 	const tree = await getBookmarkTree();
 	const parent = findFolder(tree.root, parentId);
 	if (!parent) throw new Error("未找到父级书签目录");
@@ -80,6 +82,8 @@ export async function deleteBookmarkFolder(folderId: string): Promise<void> {
 }
 
 export async function moveBookmarkFolder(folderId: string, targetParentId: string, targetIndex: number): Promise<void> {
+	if (targetParentId !== rootFolderId) throw new Error("文件夹只能保存在顶层");
+
 	const tree = await getBookmarkTree();
 	const currentParent = findParentFolder(tree.root, folderId);
 	const targetParent = findFolder(tree.root, targetParentId);
@@ -132,6 +136,7 @@ export async function addCurrentTradeSearchBookmark(folderId: string): Promise<T
 	const tree = await getBookmarkTree();
 	const folder = findFolder(tree.root, folderId);
 	if (!folder) throw new Error("未找到书签目录");
+	assertBookmarkTargetFolder(folder);
 
 	const now = Date.now();
 	const bookmark: StoredTradeBookmark = {
@@ -182,6 +187,7 @@ export async function moveTradeBookmark(
 	const targetFolder = findFolder(tree.root, targetFolderId);
 	const bookmark = currentFolder?.bookmarks.find((item) => item.id === bookmarkId);
 	if (!currentFolder || !targetFolder || !bookmark) throw new Error("未找到 trade2 书签");
+	assertBookmarkTargetFolder(targetFolder);
 
 	const now = Date.now();
 	const currentIndex = currentFolder.bookmarks.findIndex((item) => item.id === bookmarkId);
@@ -391,8 +397,16 @@ function assertModifiableFolder(folder: StoredTradeBookmarkFolder): void {
 	if (!canModifyFolder(folder)) throw new Error("该书签目录不能修改");
 }
 
+function assertBookmarkTargetFolder(folder: StoredTradeBookmarkFolder): void {
+	if (!isFirstLevelFolder(folder)) throw new Error("书签只能保存在一级文件夹内");
+}
+
 function canModifyFolder(folder: StoredTradeBookmarkFolder): boolean {
-	return Boolean(folder.parentId && folder.id !== rootFolderId);
+	return isFirstLevelFolder(folder);
+}
+
+function isFirstLevelFolder(folder: StoredTradeBookmarkFolder): boolean {
+	return folder.parentId === rootFolderId && folder.id !== rootFolderId;
 }
 
 function normalizeFolderTitle(title: string): string {
