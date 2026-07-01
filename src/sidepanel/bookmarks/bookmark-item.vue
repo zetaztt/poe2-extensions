@@ -54,7 +54,7 @@ function onMenuAction(actionId: string): void {
 
 <template>
 	<div
-		class="bookmark-item"
+		class="bookmark-item-row"
 		:class="dropClass"
 		:draggable="!renaming && !busy"
 		@dragstart="emit('drag-start', $event)"
@@ -62,100 +62,151 @@ function onMenuAction(actionId: string): void {
 		@drop="emit('drop', $event)"
 		@dragend="emit('drag-end')"
 		@contextmenu="emit('context-menu', $event)">
-		<button v-if="!renaming" class="bookmark-open" type="button" :title="bookmark.url" @click="emit('open')">
-			<span class="bookmark-title">{{ bookmark.title }}</span>
-		</button>
-		<div v-else class="bookmark-rename">
-			<input
-				v-model="renameTitle"
-				v-focus
-				class="rename-input"
-				type="text"
+		<span class="bookmark-item-content">
+			<button
+				v-if="!renaming"
+				class="bookmark-item-title bookmark-item-title-clickable bookmark-open"
+				type="button"
+				:title="bookmark.url"
+				@click="emit('open')">
+				<span class="bookmark-item-title-text">{{ bookmark.title }}</span>
+			</button>
+			<span v-else class="bookmark-rename">
+				<input
+					v-model="renameTitle"
+					v-focus
+					class="rename-input"
+					type="text"
+					:disabled="busy"
+					@keydown.enter.prevent="emit('confirm-rename')"
+					@keydown.esc.prevent="emit('cancel-rename')"
+					@blur="emit('rename-blur')" />
+			</span>
+		</span>
+		<span class="bookmark-item-action">
+			<button
+				class="row-action"
+				type="button"
 				:disabled="busy"
-				@keydown.enter.prevent="emit('confirm-rename')"
-				@keydown.esc.prevent="emit('cancel-rename')"
-				@blur="emit('rename-blur')" />
-		</div>
-		<button class="row-action" type="button" :disabled="busy" title="重命名书签" @click.stop="emit('start-rename')">
-			重命名
-		</button>
-		<BookmarkMenu
-			:open="menuOpen"
-			:disabled="busy"
-			:menu-style="menuStyle"
-			:actions="[
-				{ id: 'rename', label: '重命名' },
-				{ id: 'replace', label: '用当前搜索替换' },
-				{ id: 'delete', label: '删除' },
-			]"
-			@toggle="emit('toggle-menu')"
-			@select="onMenuAction" />
+				title="重命名书签"
+				@click.stop="emit('start-rename')">
+				重命名
+			</button>
+		</span>
+		<span class="bookmark-item-action menu-action">
+			<BookmarkMenu
+				:open="menuOpen"
+				:disabled="busy"
+				:menu-style="menuStyle"
+				:actions="[
+					{ id: 'rename', label: '重命名' },
+					{ id: 'replace', label: '用当前搜索替换' },
+					{ id: 'delete', label: '删除' },
+				]"
+				@toggle="emit('toggle-menu')"
+				@select="onMenuAction" />
+		</span>
 	</div>
 </template>
 
 <style scoped>
-.bookmark-item {
+.bookmark-item-row {
 	position: relative;
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto auto;
-	align-items: center;
-	box-sizing: border-box;
-	height: 30px;
+	display: table;
+	width: 100%;
 	margin-bottom: 3px;
-	margin-left: 25px;
-	border: 1px solid #000;
-	border-left-color: #a38d6d;
-	border-radius: 0;
-	background: #181818;
+	border-collapse: separate;
+	padding: 0;
 }
 
-.bookmark-item[draggable="true"] {
+.bookmark-item-row[draggable="true"] {
 	cursor: grab;
 }
 
-.bookmark-item.dragging-source {
+.bookmark-item-row.dragging-source {
 	opacity: 0.48;
 }
 
-.bookmark-item.drop-before,
-.bookmark-item.drop-after {
+.bookmark-item-row.drop-before,
+.bookmark-item-row.drop-after {
 	box-shadow: inset 0 2px 0 var(--color-accent-bright);
 }
 
-.bookmark-item.drop-after {
+.bookmark-item-row.drop-after {
 	box-shadow: inset 0 -2px 0 var(--color-accent-bright);
 }
 
-.bookmark-open {
+.bookmark-item-content {
+	position: relative;
+	display: table;
+	width: 100%;
+	border-collapse: separate;
 	min-width: 0;
-	height: 100%;
-	border: 0;
-	padding: 0;
-	color: inherit;
+}
+
+.bookmark-item-title {
+	display: table;
+	float: left;
+	width: 100%;
+	min-width: 0;
+	height: 30px;
+	table-layout: fixed;
+	overflow: hidden;
+	padding: 6px 12px;
+	border-left: 1px solid #634928;
+	color: #fff8e1;
+	background-color: #2d31364d;
+	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 14px;
+	font-weight: 400;
+	line-height: 18px;
 	text-align: left;
-	background: transparent;
-	font: inherit;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.bookmark-item-title-clickable {
 	cursor: pointer;
 }
 
-.bookmark-title {
-	display: flex;
-	align-items: center;
+.bookmark-open {
 	box-sizing: border-box;
-	height: 100%;
+	border-top: 0;
+	border-right: 0;
+	border-bottom: 0;
+	font: inherit;
+}
+
+.bookmark-item-title-text {
+	display: inline-block;
+	width: 100%;
 	overflow: hidden;
-	padding: 6px 12px;
+	line-height: 18px;
 	text-overflow: ellipsis;
+	vertical-align: middle;
 	white-space: nowrap;
-	color: #fff8e1;
-	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
-	font-size: 1.1em;
-	font-weight: 400;
+}
+
+.bookmark-item-action {
+	position: relative;
+	display: table-cell;
+	width: 1%;
+	padding-left: 4px;
+	font-size: 0;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+.bookmark-item-action.menu-action {
+	padding-left: 4px;
 }
 
 .bookmark-rename {
+	display: block;
 	min-width: 0;
 	padding: 2px 8px;
+	background-color: #2d31364d;
+	border-left: 1px solid #634928;
 }
 
 .rename-input {
@@ -172,8 +223,8 @@ function onMenuAction(actionId: string): void {
 }
 
 .row-action {
-	min-height: 25px;
-	border: 1px solid #444;
+	min-height: 30px;
+	border: 0;
 	border-radius: 0;
 	padding: 0 6px;
 	background: #1e2124;
@@ -185,9 +236,8 @@ function onMenuAction(actionId: string): void {
 }
 
 .row-action:hover {
-	border-color: #666;
 	color: #fff;
-	background: #292d30;
+	background: #2d3136;
 }
 
 .row-action:disabled {
@@ -196,7 +246,7 @@ function onMenuAction(actionId: string): void {
 }
 
 @media (max-width: 380px) {
-	.row-action {
+	.bookmark-item-action:not(.menu-action) {
 		display: none;
 	}
 }

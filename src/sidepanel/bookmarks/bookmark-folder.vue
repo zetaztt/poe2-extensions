@@ -75,7 +75,7 @@ function onMenuAction(actionId: string): void {
 
 <template>
 	<div
-		class="folder-row"
+		class="bookmark-folder-header"
 		:class="[{ 'top-level': folder.displayDepth === 0 }, dropClass]"
 		:draggable="folder.canModify && !renaming && !busy"
 		@dragstart="emit('drag-start', $event)"
@@ -83,57 +83,67 @@ function onMenuAction(actionId: string): void {
 		@drop="emit('drop', $event)"
 		@dragend="emit('drag-end')"
 		@contextmenu="emit('context-menu', $event)">
-		<button
-			v-if="folder.displayDepth > 0"
-			class="tree-toggle"
-			type="button"
-			:disabled="!hasContent"
-			:title="expanded ? '折叠' : '展开'"
-			@click.stop="emit('toggle-expanded')">
-			<img
-				class="tree-toggle-icon"
-				:src="
-					hasContent && expanded
-						? '/sidepanel/filter-toggle-expanded.png'
-						: '/sidepanel/filter-toggle-collapsed.png'
-				"
-				alt=""
-				aria-hidden="true" />
-		</button>
-		<input
-			v-if="renaming"
-			v-model="renameTitle"
-			v-focus
-			class="rename-input"
-			type="text"
-			:disabled="busy"
-			@click.stop
-			@dblclick.stop
-			@keydown.enter.prevent="emit('confirm-rename')"
-			@keydown.esc.prevent="emit('cancel-rename')"
-			@blur="emit('rename-blur')" />
-		<span v-else class="folder-title" @dblclick.stop="emit('folder-double-click')">
-			{{ folder.title }}
-		</span>
-		<span class="folder-count">{{ folder.bookmarks.length }}</span>
-		<button
-			v-if="folder.displayDepth > 0"
-			class="row-action primary-action"
-			type="button"
-			:disabled="busy"
-			title="添加当前搜索到此文件夹"
-			@click.stop="emit('add-bookmark')">
-			添加书签
-		</button>
-		<button
-			v-if="folder.displayDepth === 0"
-			class="row-action secondary-action"
-			type="button"
-			:disabled="busy"
-			title="添加子文件夹"
-			@click.stop="emit('create-folder')">
-			添加文件夹
-		</button>
+		<div class="bookmark-folder-title-bar">
+			<div class="bookmark-folder-title-layout">
+				<span v-if="folder.displayDepth > 0" class="bookmark-folder-toggle-cell">
+					<button
+						class="bookmark-folder-toggle-button tree-toggle"
+						type="button"
+						:disabled="!hasContent"
+						:title="expanded ? '折叠' : '展开'"
+						@click.stop="emit('toggle-expanded')">
+						<img
+							class="tree-toggle-icon"
+							:src="
+								hasContent && expanded
+									? '/sidepanel/filter-toggle-expanded.png'
+									: '/sidepanel/filter-toggle-collapsed.png'
+							"
+							alt=""
+							aria-hidden="true" />
+					</button>
+				</span>
+				<span class="bookmark-folder-title-content">
+					<input
+						v-if="renaming"
+						v-model="renameTitle"
+						v-focus
+						class="rename-input"
+						type="text"
+						:disabled="busy"
+						@click.stop
+						@dblclick.stop
+						@keydown.enter.prevent="emit('confirm-rename')"
+						@keydown.esc.prevent="emit('cancel-rename')"
+						@blur="emit('rename-blur')" />
+					<span
+						v-else
+						class="bookmark-folder-title-label bookmark-folder-title-clickable bookmark-folder-title"
+						@dblclick.stop="emit('folder-double-click')">
+						<span class="bookmark-folder-title-text">{{ folder.title }}</span>
+					</span>
+					<span v-if="folder.displayDepth > 0" class="bookmark-folder-title-action">
+						<button
+							class="bookmark-folder-title-button bookmark-folder-add-bookmark-button"
+							type="button"
+							:disabled="busy"
+							title="添加书签"
+							aria-label="添加书签"
+							@click.stop="emit('add-bookmark')"></button>
+					</span>
+					<span v-if="folder.displayDepth === 0" class="bookmark-folder-title-action">
+						<button
+							class="bookmark-folder-title-button bookmark-folder-add-folder-button"
+							type="button"
+							:disabled="busy"
+							title="添加文件夹"
+							aria-label="添加文件夹"
+							@click.stop="emit('create-folder')"></button>
+					</span>
+				</span>
+			</div>
+		</div>
+		<span class="bookmark-folder-count">{{ folder.bookmarks.length }}</span>
 		<button
 			v-if="folder.displayDepth > 0 && folder.canModify"
 			class="row-action secondary-action"
@@ -166,10 +176,10 @@ function onMenuAction(actionId: string): void {
 </template>
 
 <style scoped>
-.folder-row {
+.bookmark-folder-header {
 	position: relative;
 	display: grid;
-	grid-template-columns: 15px minmax(0, 1fr) auto auto auto auto;
+	grid-template-columns: minmax(0, 1fr) auto auto auto;
 	align-items: center;
 	box-sizing: border-box;
 	height: 30px;
@@ -177,55 +187,158 @@ function onMenuAction(actionId: string): void {
 	gap: 7px;
 	border: 0;
 	border-radius: 0;
-	padding: 0 4px;
+	padding: 0;
 	color: #dfcf99;
 	background: #000;
 	text-shadow: 1px 1px 2px #1e2124;
 }
 
-.folder-row.top-level {
-	grid-template-columns: minmax(0, 1fr) auto auto auto;
+.bookmark-folder-header.top-level {
+	grid-template-columns: minmax(0, 1fr) auto auto;
 	height: auto;
 	min-height: 31px;
 	margin-bottom: 0;
 	border: 1px solid #000;
 	border-left-color: #8a6d3b;
-	padding-right: 4px;
 	color: var(--color-text-primary);
 	background: #101112;
 	text-shadow: none;
 }
-.folder-row[draggable="true"] {
+.bookmark-folder-header[draggable="true"] {
 	cursor: grab;
 }
 
-.folder-row.dragging-source {
+.bookmark-folder-header.dragging-source {
 	opacity: 0.48;
 }
 
-.folder-row.drop-inside {
+.bookmark-folder-header.drop-inside {
 	outline: 1px solid #dfcf99;
 	background: #1e2124;
 }
 
-.folder-row.drop-before,
-.folder-row.drop-after {
+.bookmark-folder-header.drop-before,
+.bookmark-folder-header.drop-after {
 	box-shadow: inset 0 2px 0 var(--color-accent-bright);
 }
 
-.folder-row.drop-after {
+.bookmark-folder-header.drop-after {
 	box-shadow: inset 0 -2px 0 var(--color-accent-bright);
 }
 
-.tree-toggle {
-	display: grid;
-	width: 15px;
-	height: 15px;
+.bookmark-folder-title-bar {
+	min-width: 0;
+}
+
+.bookmark-folder-title-layout {
+	position: relative;
+	display: table;
+	width: 100%;
+	margin-bottom: 3px;
+	border-collapse: separate;
+	min-width: 0;
+}
+
+.bookmark-folder-toggle-cell {
+	position: relative;
+	display: table-cell;
+	width: 42px;
+	padding-left: 4px;
+	font-size: 0;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+.bookmark-folder-toggle-cell:first-child {
+	padding-right: 4px;
+	padding-left: 0;
+}
+.bookmark-folder-title-action {
+	position: relative;
+	display: table-cell;
+	width: 1%;
+	padding-left: 4px;
+	font-size: 0;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+.bookmark-folder-title-button {
+	position: relative;
+	display: inline-block;
+	width: 39px;
+	height: 30px;
+	margin-bottom: 0;
 	border: 0;
+	border-color: transparent;
+	border-radius: 0;
+	padding: 0;
+	color: #e2e2e2;
+	background: transparent;
+	background-image: none;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 400;
+	line-height: 20px;
+	text-align: center;
+	vertical-align: middle;
+	white-space: nowrap;
+	cursor: pointer;
+	user-select: none;
+}
+
+.bookmark-folder-title-button::after {
+	content: " ";
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 20px;
+	height: 20px;
+	margin-top: -10px;
+	margin-left: -10px;
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: contain;
+}
+
+.bookmark-folder-add-bookmark-button::after {
+	background-image: url("/sidepanel/bookmark-add.png");
+}
+
+.bookmark-folder-add-folder-button::after {
+	background-image: url("/sidepanel/bookmark-folder-add.png");
+}
+
+.bookmark-folder-toggle-button {
+	position: relative;
+	display: inline-block;
+	margin-bottom: 0;
+	border: 1px solid #000;
+	border-radius: 0;
+	padding: 5px 12px;
+	color: #e2e2e2;
+	background: #1e2124;
+	background-image: none;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 400;
+	line-height: 20px;
+	text-align: center;
+	vertical-align: middle;
+	white-space: nowrap;
+	cursor: pointer;
+	user-select: none;
+}
+
+.bookmark-folder-title-bar .bookmark-folder-toggle-button {
+	border: 0;
+}
+
+.tree-toggle {
+	width: 39px;
+	height: 30px;
 	padding: 0;
 	background: transparent;
-	place-items: center;
-	cursor: pointer;
 }
 
 .tree-toggle:disabled {
@@ -233,39 +346,72 @@ function onMenuAction(actionId: string): void {
 }
 
 .tree-toggle-icon {
+	position: absolute;
+	top: 50%;
+	left: 50%;
 	display: block;
 	width: 15px;
 	height: 15px;
+	margin-top: -7.5px;
+	margin-left: -7.5px;
 }
 
-.folder-title {
-	display: flex;
-	align-items: center;
-	box-sizing: border-box;
+.bookmark-folder-title-content {
+	position: relative;
+	display: table;
+	width: 100%;
+	border-collapse: separate;
+	vertical-align: top;
+	min-width: 0;
+}
+
+.bookmark-folder-title-label {
+	display: table;
+	float: left;
+	width: 100%;
+	min-width: 0;
 	height: 30px;
+	table-layout: fixed;
 	overflow: hidden;
-	padding: 6px 12px;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	padding: 5px 0;
+	border-bottom: 1px solid #465260;
 	color: #fff8e1;
-	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
-	font-size: 1.1em;
-	font-weight: 400;
-	text-decoration: underline;
-	text-decoration-color: #465260;
-	text-decoration-thickness: 1px;
-	text-underline-offset: 5px;
+	line-height: 18px;
+	text-overflow: ellipsis;
+	text-shadow: 1px 1px 2px #1e2124;
+	white-space: nowrap;
 }
 
-.top-level .folder-title {
-	height: auto;
+.bookmark-folder-title-clickable {
+	cursor: pointer;
+}
+
+.bookmark-folder-title {
+	box-sizing: border-box;
+	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 14px;
+	font-weight: 400;
+}
+
+.bookmark-folder-title-text {
+	display: inline-block;
+	width: 100%;
+	overflow: hidden;
+	line-height: 18px;
+	text-overflow: ellipsis;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+.top-level .bookmark-folder-title {
 	padding: 0;
+	border-bottom: 0;
 	color: #e2e2e2;
 	font-size: inherit;
 	text-decoration: none;
 }
 
-.folder-count {
+.bookmark-folder-count {
 	color: #a38d6d;
 	font-size: 11px;
 }
@@ -308,15 +454,15 @@ function onMenuAction(actionId: string): void {
 }
 
 @media (max-width: 430px) {
-	.folder-row {
-		grid-template-columns: 15px minmax(0, 1fr) auto auto auto;
+	.bookmark-folder-header {
+		grid-template-columns: minmax(0, 1fr) auto auto;
 	}
 
-	.folder-row.top-level {
-		grid-template-columns: minmax(0, 1fr) auto auto auto;
+	.bookmark-folder-header.top-level {
+		grid-template-columns: minmax(0, 1fr) auto auto;
 	}
 
-	.folder-row .secondary-action {
+	.bookmark-folder-header .secondary-action {
 		display: none;
 	}
 }

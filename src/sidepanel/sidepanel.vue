@@ -84,7 +84,7 @@ function onBookmarksInitialized(success: boolean): void {
 	color: #a38d6d;
 	font-family: FontinSmallCaps, Verdana, Arial, sans-serif;
 	font-size: 13px;
-	letter-spacing: 0.04em;
+	letter-spacing: 0.5px;
 	text-transform: uppercase;
 }
 
@@ -126,7 +126,7 @@ h1 {
 	color: #e9cf9f;
 	font: inherit;
 	font-family: FontinSmallCaps, Verdana, Arial, "Microsoft YaHei", sans-serif;
-	font-size: 1.1em;
+	font-size: 14px;
 	cursor: pointer;
 }
 

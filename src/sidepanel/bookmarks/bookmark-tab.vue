@@ -760,62 +760,69 @@ function clearDragState(): void {
 					:key="folder.id"
 					class="bookmark-folder"
 					:style="{ marginLeft: `${Math.max(0, folder.displayDepth - 1) * 8}px` }">
-					<BookmarkFolder
-						v-model:rename-title="renamingFolderTitle"
-						:folder="folder"
-						:expanded="isFolderExpanded(folder)"
-						:has-content="hasFolderContent(folder)"
-						:busy="isBusy"
-						:renaming="renamingFolderId === folder.id"
-						:drop-class="getFolderDropClass(folder)"
-						:menu-open="isMenuOpen('folder', folder.id)"
-						:menu-style="
-							isMenuOpen('folder', folder.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined
-						"
-						@toggle-expanded="toggleFolderExpanded(folder)"
-						@folder-double-click="onFolderDoubleClick(folder)"
-						@add-bookmark="addCurrentSearchToFolder(folder.id)"
-						@create-folder="onCreateFolder(folder.id)"
-						@start-rename="startRenameFolder(folder)"
-						@delete-folder="onDeleteFolder(folder)"
-						@collapse-others="collapseOtherFolders(folder)"
-						@collapse-all="collapseAllFolders"
-						@toggle-menu="toggleMoreMenu({ type: 'folder', id: folder.id })"
-						@context-menu="openContextMenu($event, { type: 'folder', id: folder.id })"
-						@drag-start="onFolderDragStart($event, folder)"
-						@drag-over="onFolderDragOver($event, folder)"
-						@drop="onDrop"
-						@drag-end="clearDragState"
-						@confirm-rename="confirmRenameFolder"
-						@cancel-rename="cancelFolderRename"
-						@rename-blur="onFolderRenameBlur" />
+					<div
+						class="bookmark-folder-group"
+						:class="{ expanded: hasFolderContent(folder) && isFolderExpanded(folder) }">
+						<BookmarkFolder
+							v-model:rename-title="renamingFolderTitle"
+							:folder="folder"
+							:expanded="isFolderExpanded(folder)"
+							:has-content="hasFolderContent(folder)"
+							:busy="isBusy"
+							:renaming="renamingFolderId === folder.id"
+							:drop-class="getFolderDropClass(folder)"
+							:menu-open="isMenuOpen('folder', folder.id)"
+							:menu-style="
+								isMenuOpen('folder', folder.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined
+							"
+							@toggle-expanded="toggleFolderExpanded(folder)"
+							@folder-double-click="onFolderDoubleClick(folder)"
+							@add-bookmark="addCurrentSearchToFolder(folder.id)"
+							@create-folder="onCreateFolder(folder.id)"
+							@start-rename="startRenameFolder(folder)"
+							@delete-folder="onDeleteFolder(folder)"
+							@collapse-others="collapseOtherFolders(folder)"
+							@collapse-all="collapseAllFolders"
+							@toggle-menu="toggleMoreMenu({ type: 'folder', id: folder.id })"
+							@context-menu="openContextMenu($event, { type: 'folder', id: folder.id })"
+							@drag-start="onFolderDragStart($event, folder)"
+							@drag-over="onFolderDragOver($event, folder)"
+							@drop="onDrop"
+							@drag-end="clearDragState"
+							@confirm-rename="confirmRenameFolder"
+							@cancel-rename="cancelFolderRename"
+							@rename-blur="onFolderRenameBlur" />
 
-					<BookmarkItem
-						v-for="bookmark in folder.bookmarks"
-						v-show="isFolderExpanded(folder)"
-						:key="bookmark.id"
-						v-model:rename-title="renamingBookmarkTitle"
-						:bookmark="bookmark"
-						:busy="isBusy"
-						:renaming="renamingBookmarkId === bookmark.id"
-						:drop-class="getBookmarkDropClass(bookmark)"
-						:menu-open="isMenuOpen('bookmark', bookmark.id)"
-						:menu-style="
-							isMenuOpen('bookmark', bookmark.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined
-						"
-						@open="onOpenBookmark(bookmark)"
-						@start-rename="startRenameBookmark(bookmark)"
-						@replace="onReplaceBookmark(bookmark)"
-						@delete="onDeleteBookmark(bookmark)"
-						@toggle-menu="toggleMoreMenu({ type: 'bookmark', id: bookmark.id })"
-						@context-menu="openContextMenu($event, { type: 'bookmark', id: bookmark.id })"
-						@drag-start="onBookmarkDragStart($event, bookmark)"
-						@drag-over="onBookmarkDragOver($event, bookmark)"
-						@drop="onDrop"
-						@drag-end="clearDragState"
-						@confirm-rename="confirmRenameBookmark"
-						@cancel-rename="cancelBookmarkRename"
-						@rename-blur="onBookmarkRenameBlur" />
+						<div v-show="isFolderExpanded(folder)" class="bookmark-folder-body">
+							<BookmarkItem
+								v-for="bookmark in folder.bookmarks"
+								:key="bookmark.id"
+								v-model:rename-title="renamingBookmarkTitle"
+								:bookmark="bookmark"
+								:busy="isBusy"
+								:renaming="renamingBookmarkId === bookmark.id"
+								:drop-class="getBookmarkDropClass(bookmark)"
+								:menu-open="isMenuOpen('bookmark', bookmark.id)"
+								:menu-style="
+									isMenuOpen('bookmark', bookmark.id) && openMenu
+										? getMoreMenuStyle(openMenu)
+										: undefined
+								"
+								@open="onOpenBookmark(bookmark)"
+								@start-rename="startRenameBookmark(bookmark)"
+								@replace="onReplaceBookmark(bookmark)"
+								@delete="onDeleteBookmark(bookmark)"
+								@toggle-menu="toggleMoreMenu({ type: 'bookmark', id: bookmark.id })"
+								@context-menu="openContextMenu($event, { type: 'bookmark', id: bookmark.id })"
+								@drag-start="onBookmarkDragStart($event, bookmark)"
+								@drag-over="onBookmarkDragOver($event, bookmark)"
+								@drop="onDrop"
+								@drag-end="clearDragState"
+								@confirm-rename="confirmRenameBookmark"
+								@cancel-rename="cancelBookmarkRename"
+								@rename-blur="onBookmarkRenameBlur" />
+						</div>
+					</div>
 				</div>
 			</section>
 		</section>
@@ -867,6 +874,22 @@ p {
 
 .bookmark-folder {
 	display: grid;
-	gap: 1px;
+	gap: 0;
+}
+
+.bookmark-folder-group {
+	position: relative;
+	width: 100%;
+	margin-bottom: 3px;
+}
+
+.bookmark-folder-group.expanded {
+	margin-bottom: 3px;
+}
+
+.bookmark-folder-body {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0 39px;
 }
 </style>
