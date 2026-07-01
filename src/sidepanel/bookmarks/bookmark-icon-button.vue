@@ -1,9 +1,18 @@
 <script lang="ts" setup>
-defineProps<{
+import { computed, useAttrs } from "vue";
+
+defineOptions({ inheritAttrs: false });
+
+const props = defineProps<{
 	icon: string;
 	title: string;
 	disabled?: boolean;
+	cell?: boolean;
 }>();
+
+const attrs = useAttrs();
+
+const wrapperClass = computed(() => [attrs.class, { "bookmark-icon-button-cell": props.cell }]);
 
 const emit = defineEmits<{
 	click: [];
@@ -11,18 +20,37 @@ const emit = defineEmits<{
 </script>
 
 <template>
-	<button
-		class="bookmark-icon-button"
-		type="button"
-		:disabled="disabled"
-		:title="title"
-		:aria-label="title"
-		@click.stop="emit('click')">
-		<span class="bookmark-icon-button-icon" :style="{ backgroundImage: `url(${icon})` }"></span>
-	</button>
+	<span class="bookmark-icon-button-wrap" :class="wrapperClass" :style="attrs.style">
+		<button
+			class="bookmark-icon-button"
+			type="button"
+			:disabled="disabled"
+			:title="title"
+			:aria-label="title"
+			@click.stop="emit('click')">
+			<span class="bookmark-icon-button-icon" :style="{ backgroundImage: `url(${icon})` }"></span>
+		</button>
+		<slot></slot>
+	</span>
 </template>
 
 <style scoped>
+.bookmark-icon-button-wrap {
+	position: relative;
+	display: inline-block;
+	width: 39px;
+	height: 30px;
+	font-size: 0;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+.bookmark-icon-button-cell {
+	display: table-cell;
+	width: 1%;
+	padding-left: 4px;
+}
+
 .bookmark-icon-button {
 	position: relative;
 	display: inline-block;

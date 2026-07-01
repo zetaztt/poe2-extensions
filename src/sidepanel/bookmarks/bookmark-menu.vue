@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 defineProps<{
 	open: boolean;
-	disabled: boolean;
 	menuStyle?: Record<string, string>;
 	actions: Array<{
 		id: string;
@@ -11,16 +10,12 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-	toggle: [];
 	select: [actionId: string];
 }>();
 </script>
 
 <template>
-	<div class="more-wrap">
-		<button class="more-button" type="button" :disabled="disabled" title="更多" @click.stop="emit('toggle')">
-			⋯
-		</button>
+	<span class="more-wrap">
 		<div v-if="open" class="more-menu" :style="menuStyle" @click.stop>
 			<button
 				v-for="action in actions"
@@ -31,36 +26,16 @@ const emit = defineEmits<{
 				{{ action.label }}
 			</button>
 		</div>
-	</div>
+	</span>
 </template>
 
 <style scoped>
 .more-wrap {
 	position: relative;
-}
-
-.more-button {
-	width: 26px;
-	height: 26px;
-	border: 0;
-	border-radius: 0;
-	padding: 0;
-	color: var(--color-text);
-	background: transparent;
-	font: inherit;
-	font-size: 18px;
-	line-height: 1;
-	cursor: pointer;
-}
-
-.more-button:hover {
-	background: #1e2124;
-	color: #fff;
-}
-
-.more-button:disabled {
-	opacity: 0.6;
-	cursor: default;
+	display: inline-block;
+	width: 0;
+	height: 0;
+	vertical-align: top;
 }
 
 .more-menu {

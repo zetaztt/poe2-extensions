@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { Directive } from "vue";
 import type { TradeBookmarkItem } from "../../bookmarks/bookmarks-types";
+import BookmarkIconButton from "./bookmark-icon-button.vue";
 import BookmarkMenu from "./bookmark-menu.vue";
 
 defineProps<{
@@ -83,29 +84,28 @@ function onMenuAction(actionId: string): void {
 					@blur="emit('rename-blur')" />
 			</span>
 		</span>
-		<span class="bookmark-item-action">
-			<button
-				class="row-action"
-				type="button"
-				:disabled="busy"
-				title="重命名书签"
-				@click.stop="emit('start-rename')">
-				重命名
-			</button>
-		</span>
-		<span class="bookmark-item-action menu-action">
+		<BookmarkIconButton
+			cell
+			icon="/sidepanel/bookmark-rename.png"
+			:disabled="busy"
+			title="重命名书签"
+			@click="emit('start-rename')" />
+		<BookmarkIconButton
+			cell
+			icon="/sidepanel/bookmark-more.png"
+			:disabled="busy"
+			title="更多"
+			@click="emit('toggle-menu')">
 			<BookmarkMenu
 				:open="menuOpen"
-				:disabled="busy"
 				:menu-style="menuStyle"
 				:actions="[
 					{ id: 'rename', label: '重命名' },
 					{ id: 'replace', label: '用当前搜索替换' },
 					{ id: 'delete', label: '删除' },
 				]"
-				@toggle="emit('toggle-menu')"
 				@select="onMenuAction" />
-		</span>
+		</BookmarkIconButton>
 	</div>
 </template>
 
@@ -187,20 +187,6 @@ function onMenuAction(actionId: string): void {
 	white-space: nowrap;
 }
 
-.bookmark-item-action {
-	position: relative;
-	display: table-cell;
-	width: 1%;
-	padding-left: 4px;
-	font-size: 0;
-	vertical-align: middle;
-	white-space: nowrap;
-}
-
-.bookmark-item-action.menu-action {
-	padding-left: 4px;
-}
-
 .bookmark-rename {
 	display: block;
 	min-width: 0;
@@ -220,34 +206,5 @@ function onMenuAction(actionId: string): void {
 	background: #1e2124;
 	box-shadow: var(--shadow-inset);
 	font: inherit;
-}
-
-.row-action {
-	min-height: 30px;
-	border: 0;
-	border-radius: 0;
-	padding: 0 6px;
-	background: #1e2124;
-	color: #e2e2e2;
-	font: inherit;
-	font-size: 12px;
-	white-space: nowrap;
-	cursor: pointer;
-}
-
-.row-action:hover {
-	color: #fff;
-	background: #2d3136;
-}
-
-.row-action:disabled {
-	opacity: 0.6;
-	cursor: default;
-}
-
-@media (max-width: 380px) {
-	.bookmark-item-action:not(.menu-action) {
-		display: none;
-	}
 }
 </style>

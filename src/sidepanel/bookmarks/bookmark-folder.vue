@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { Directive } from "vue";
 import type { TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
+import BookmarkIconButton from "./bookmark-icon-button.vue";
 import BookmarkMenu from "./bookmark-menu.vue";
 
 const props = defineProps<{
@@ -123,55 +124,53 @@ function onMenuAction(actionId: string): void {
 						<span class="bookmark-folder-title-text">{{ folder.title }}</span>
 					</span>
 					<span v-if="folder.displayDepth > 0" class="bookmark-folder-title-action">
-						<button
-							class="bookmark-folder-title-button bookmark-folder-add-bookmark-button"
-							type="button"
+						<BookmarkIconButton
+							icon="/sidepanel/bookmark-add.png"
 							:disabled="busy"
 							title="添加书签"
-							aria-label="添加书签"
-							@click.stop="emit('add-bookmark')"></button>
+							@click="emit('add-bookmark')" />
 					</span>
 					<span v-if="folder.displayDepth === 0" class="bookmark-folder-title-action">
-						<button
-							class="bookmark-folder-title-button bookmark-folder-add-folder-button"
-							type="button"
+						<BookmarkIconButton
+							icon="/sidepanel/bookmark-folder-add.png"
 							:disabled="busy"
 							title="添加文件夹"
-							aria-label="添加文件夹"
-							@click.stop="emit('create-folder')"></button>
+							@click="emit('create-folder')" />
 					</span>
 				</span>
 			</div>
 		</div>
-		<span class="bookmark-folder-count">{{ folder.bookmarks.length }}</span>
-		<button
+		<BookmarkIconButton
 			v-if="folder.displayDepth > 0 && folder.canModify"
-			class="row-action secondary-action"
-			type="button"
+			class="secondary-action"
+			icon="/sidepanel/bookmark-rename.png"
 			:disabled="busy"
 			title="重命名文件夹"
-			@click.stop="emit('start-rename')">
-			重命名
-		</button>
-		<BookmarkMenu
-			:open="menuOpen"
+			@click="emit('start-rename')" />
+		<BookmarkIconButton
+			class="bookmark-folder-menu-action"
+			icon="/sidepanel/bookmark-more.png"
 			:disabled="busy"
-			:menu-style="menuStyle"
-			:actions="
-				folder.displayDepth === 0
-					? [
-							{ id: 'create', label: '添加文件夹' },
-							{ id: 'collapse-all', label: '折叠所有' },
-						]
-					: [
-							{ id: 'add-bookmark', label: '添加当前搜索' },
-							{ id: 'collapse-others', label: '折叠其他文件夹' },
-							{ id: 'rename', label: '重命名', disabled: !folder.canModify },
-							{ id: 'delete', label: '删除', disabled: !folder.canModify },
-						]
-			"
-			@toggle="emit('toggle-menu')"
-			@select="onMenuAction" />
+			title="更多"
+			@click="emit('toggle-menu')">
+			<BookmarkMenu
+				:open="menuOpen"
+				:menu-style="menuStyle"
+				:actions="
+					folder.displayDepth === 0
+						? [
+								{ id: 'create', label: '添加文件夹' },
+								{ id: 'collapse-all', label: '折叠所有' },
+							]
+						: [
+								{ id: 'add-bookmark', label: '添加当前搜索' },
+								{ id: 'collapse-others', label: '折叠其他文件夹' },
+								{ id: 'rename', label: '重命名', disabled: !folder.canModify },
+								{ id: 'delete', label: '删除', disabled: !folder.canModify },
+							]
+				"
+				@select="onMenuAction" />
+		</BookmarkIconButton>
 	</div>
 </template>
 
@@ -179,7 +178,7 @@ function onMenuAction(actionId: string): void {
 .bookmark-folder-header {
 	position: relative;
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto auto auto;
+	grid-template-columns: minmax(0, 1fr) auto auto;
 	align-items: center;
 	box-sizing: border-box;
 	height: 30px;
@@ -253,6 +252,7 @@ function onMenuAction(actionId: string): void {
 	padding-right: 4px;
 	padding-left: 0;
 }
+
 .bookmark-folder-title-action {
 	position: relative;
 	display: table-cell;
@@ -261,52 +261,6 @@ function onMenuAction(actionId: string): void {
 	font-size: 0;
 	vertical-align: middle;
 	white-space: nowrap;
-}
-
-.bookmark-folder-title-button {
-	position: relative;
-	display: inline-block;
-	width: 39px;
-	height: 30px;
-	margin-bottom: 0;
-	border: 0;
-	border-color: transparent;
-	border-radius: 0;
-	padding: 0;
-	color: #e2e2e2;
-	background: transparent;
-	background-image: none;
-	font: inherit;
-	font-size: 13px;
-	font-weight: 400;
-	line-height: 20px;
-	text-align: center;
-	vertical-align: middle;
-	white-space: nowrap;
-	cursor: pointer;
-	user-select: none;
-}
-
-.bookmark-folder-title-button::after {
-	content: " ";
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	width: 20px;
-	height: 20px;
-	margin-top: -10px;
-	margin-left: -10px;
-	background-repeat: no-repeat;
-	background-position: center;
-	background-size: contain;
-}
-
-.bookmark-folder-add-bookmark-button::after {
-	background-image: url("/sidepanel/bookmark-add.png");
-}
-
-.bookmark-folder-add-folder-button::after {
-	background-image: url("/sidepanel/bookmark-folder-add.png");
 }
 
 .bookmark-folder-toggle-button {
@@ -409,35 +363,6 @@ function onMenuAction(actionId: string): void {
 	color: #e2e2e2;
 	font-size: inherit;
 	text-decoration: none;
-}
-
-.bookmark-folder-count {
-	color: #a38d6d;
-	font-size: 11px;
-}
-
-.row-action {
-	min-height: 25px;
-	border: 1px solid #444;
-	border-radius: 0;
-	padding: 0 6px;
-	background: #1e2124;
-	color: #e2e2e2;
-	font: inherit;
-	font-size: 12px;
-	white-space: nowrap;
-	cursor: pointer;
-}
-
-.row-action:hover {
-	border-color: #666;
-	color: #fff;
-	background: #292d30;
-}
-
-.row-action:disabled {
-	opacity: 0.6;
-	cursor: default;
 }
 
 .rename-input {
