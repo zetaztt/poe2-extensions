@@ -225,7 +225,7 @@ function onMenuAction(actionId: string): void {
 	border-radius: 0;
 	padding: 4px 7px;
 	background: #1e2124;
-	font-size: 1em;
+	font-size: 14px;
 }
 
 .bookmark-rename-input {
