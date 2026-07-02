@@ -1,18 +1,15 @@
 <script lang="ts" setup>
-import { computed, useAttrs } from "vue";
+import { useAttrs } from "vue";
 
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
+defineProps<{
 	icon: string;
 	title: string;
 	disabled?: boolean;
-	cell?: boolean;
 }>();
 
 const attrs = useAttrs();
-
-const wrapperClass = computed(() => [attrs.class, { "bookmark-icon-button-cell": props.cell }]);
 
 const emit = defineEmits<{
 	click: [];
@@ -20,7 +17,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-	<span class="bookmark-icon-button-wrap" :class="wrapperClass" :style="attrs.style">
+	<span class="bookmark-icon-button-wrap" :class="attrs.class" :style="attrs.style">
 		<button
 			class="bookmark-icon-button"
 			type="button"
@@ -37,17 +34,12 @@ const emit = defineEmits<{
 <style scoped>
 .bookmark-icon-button-wrap {
 	position: relative;
-	display: inline-block;
-	width: 39px;
+	display: table-cell;
+	width: 1%;
 	height: 30px;
 	font-size: 0;
 	vertical-align: middle;
 	white-space: nowrap;
-}
-
-.bookmark-icon-button-cell {
-	display: table-cell;
-	width: 1%;
 	padding-left: 4px;
 }
 

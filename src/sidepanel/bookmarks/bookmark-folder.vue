@@ -123,20 +123,18 @@ function onMenuAction(actionId: string): void {
 						@dblclick.stop="emit('folder-double-click')">
 						<span class="bookmark-folder-title-text">{{ folder.title }}</span>
 					</span>
-					<span v-if="folder.displayDepth > 0" class="bookmark-folder-title-action">
-						<BookmarkIconButton
-							icon="/sidepanel/bookmark-add.png"
-							:disabled="busy"
-							title="添加书签"
-							@click="emit('add-bookmark')" />
-					</span>
-					<span v-if="folder.displayDepth === 0" class="bookmark-folder-title-action">
-						<BookmarkIconButton
-							icon="/sidepanel/bookmark-folder-add.png"
-							:disabled="busy"
-							title="添加文件夹"
-							@click="emit('create-folder')" />
-					</span>
+					<BookmarkIconButton
+						v-if="folder.displayDepth > 0"
+						icon="/sidepanel/bookmark-add.png"
+						:disabled="busy"
+						title="添加书签"
+						@click="emit('add-bookmark')" />
+					<BookmarkIconButton
+						v-if="folder.displayDepth === 0"
+						icon="/sidepanel/bookmark-folder-add.png"
+						:disabled="busy"
+						title="添加文件夹"
+						@click="emit('create-folder')" />
 				</span>
 			</div>
 		</div>
@@ -177,13 +175,12 @@ function onMenuAction(actionId: string): void {
 <style scoped>
 .bookmark-folder-header {
 	position: relative;
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto auto;
-	align-items: center;
+	display: table;
+	width: 100%;
 	box-sizing: border-box;
 	height: 30px;
 	margin-bottom: 3px;
-	gap: 7px;
+	border-collapse: separate;
 	border: 0;
 	border-radius: 0;
 	padding: 0;
@@ -193,7 +190,6 @@ function onMenuAction(actionId: string): void {
 }
 
 .bookmark-folder-header.top-level {
-	grid-template-columns: minmax(0, 1fr) auto auto;
 	height: auto;
 	min-height: 31px;
 	margin-bottom: 0;
@@ -226,7 +222,10 @@ function onMenuAction(actionId: string): void {
 }
 
 .bookmark-folder-title-bar {
+	display: table-cell;
+	width: 100%;
 	min-width: 0;
+	vertical-align: middle;
 }
 
 .bookmark-folder-title-layout {
@@ -251,16 +250,6 @@ function onMenuAction(actionId: string): void {
 .bookmark-folder-toggle-cell:first-child {
 	padding-right: 4px;
 	padding-left: 0;
-}
-
-.bookmark-folder-title-action {
-	position: relative;
-	display: table-cell;
-	width: 1%;
-	padding-left: 4px;
-	font-size: 0;
-	vertical-align: middle;
-	white-space: nowrap;
 }
 
 .bookmark-folder-toggle-button {
@@ -320,8 +309,7 @@ function onMenuAction(actionId: string): void {
 }
 
 .bookmark-folder-title-label {
-	display: table;
-	float: left;
+	display: table-cell;
 	width: 100%;
 	min-width: 0;
 	height: 30px;
@@ -380,11 +368,13 @@ function onMenuAction(actionId: string): void {
 
 @media (max-width: 430px) {
 	.bookmark-folder-header {
-		grid-template-columns: minmax(0, 1fr) auto auto;
+		display: table;
+		width: 100%;
 	}
 
 	.bookmark-folder-header.top-level {
-		grid-template-columns: minmax(0, 1fr) auto auto;
+		display: table;
+		width: 100%;
 	}
 
 	.bookmark-folder-header .secondary-action {

@@ -890,6 +890,6 @@ p {
 .bookmark-folder-body {
 	width: 100%;
 	box-sizing: border-box;
-	padding: 0 39px;
+	padding: 0 0 0 39px;
 }
 </style>

@@ -85,13 +85,11 @@ function onMenuAction(actionId: string): void {
 			</span>
 		</span>
 		<BookmarkIconButton
-			cell
 			icon="/sidepanel/bookmark-rename.png"
 			:disabled="busy"
 			title="重命名书签"
 			@click="emit('start-rename')" />
 		<BookmarkIconButton
-			cell
 			icon="/sidepanel/bookmark-more.png"
 			:disabled="busy"
 			title="更多"
@@ -138,19 +136,17 @@ function onMenuAction(actionId: string): void {
 
 .bookmark-item-content {
 	position: relative;
-	display: table;
+	display: table-cell;
 	width: 100%;
-	border-collapse: separate;
 	min-width: 0;
+	vertical-align: middle;
 }
 
 .bookmark-item-title {
-	display: table;
-	float: left;
+	display: block;
 	width: 100%;
 	min-width: 0;
 	height: 30px;
-	table-layout: fixed;
 	overflow: hidden;
 	padding: 6px 12px;
 	border-left: 1px solid #634928;
