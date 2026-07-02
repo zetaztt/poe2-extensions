@@ -56,40 +56,46 @@ function onMenuAction(actionId: string): void {
 <template>
 	<div
 		class="bookmark-item-row"
-		:class="dropClass"
+		:class="[dropClass, { renaming }]"
 		:draggable="!renaming && !busy"
 		@dragstart="emit('drag-start', $event)"
 		@dragover="emit('drag-over', $event)"
 		@drop="emit('drop', $event)"
 		@dragend="emit('drag-end')"
 		@contextmenu="emit('context-menu', $event)">
-		<span class="bookmark-item-content">
+		<span class="bookmark-item-content filter-body">
 			<button
 				v-if="!renaming"
-				class="bookmark-item-title bookmark-item-title-clickable bookmark-open"
+				class="filter-title filter-title-clickable bookmark-item-title bookmark-item-title-clickable bookmark-open"
 				type="button"
 				:title="bookmark.url"
 				@click="emit('open')">
 				<span class="bookmark-item-title-text">{{ bookmark.title }}</span>
 			</button>
-			<span v-else class="bookmark-rename">
-				<input
-					v-model="renameTitle"
-					v-focus
-					class="rename-input"
-					type="text"
-					:disabled="busy"
-					@keydown.enter.prevent="emit('confirm-rename')"
-					@keydown.esc.prevent="emit('cancel-rename')"
-					@blur="emit('rename-blur')" />
+			<span
+				v-else
+				class="multiselect filter-select filter-select-title filter-select-mutate multiselect--active multiselect--above bookmark-rename">
+				<span class="multiselect__tags">
+					<input
+						v-model="renameTitle"
+						v-focus
+						class="multiselect__input rename-input"
+						type="text"
+						:disabled="busy"
+						@keydown.enter.prevent="emit('confirm-rename')"
+						@keydown.esc.prevent="emit('cancel-rename')"
+						@blur="emit('rename-blur')" />
+				</span>
 			</span>
 		</span>
 		<BookmarkIconButton
+			class="bookmark-item-action"
 			icon="/sidepanel/bookmark-rename.png"
 			:disabled="busy"
 			title="重命名书签"
 			@click="emit('start-rename')" />
 		<BookmarkIconButton
+			class="bookmark-item-action"
 			icon="/sidepanel/bookmark-more.png"
 			:disabled="busy"
 			title="更多"
@@ -117,6 +123,14 @@ function onMenuAction(actionId: string): void {
 	padding: 0;
 }
 
+.bookmark-item-row.renaming {
+	margin-bottom: 2px;
+}
+
+.bookmark-item-row.renaming .bookmark-item-action {
+	vertical-align: top;
+}
+
 .bookmark-item-row[draggable="true"] {
 	cursor: grab;
 }
@@ -142,6 +156,10 @@ function onMenuAction(actionId: string): void {
 	vertical-align: middle;
 }
 
+.filter-body {
+	border-collapse: separate;
+}
+
 .bookmark-item-title {
 	display: block;
 	width: 100%;
@@ -161,6 +179,7 @@ function onMenuAction(actionId: string): void {
 	white-space: nowrap;
 }
 
+.filter-title-clickable,
 .bookmark-item-title-clickable {
 	cursor: pointer;
 }
@@ -183,24 +202,68 @@ function onMenuAction(actionId: string): void {
 	white-space: nowrap;
 }
 
-.bookmark-rename {
+.multiselect {
+	position: relative;
+	box-sizing: content-box;
 	display: block;
+	width: 100%;
 	min-width: 0;
-	padding: 2px 8px;
+	min-height: 30px;
+	height: 31px;
+	color: #e2e2e2;
+	text-align: left;
+}
+
+.multiselect--active {
+	z-index: 5;
+}
+
+.filter-select-title {
+	height: 31px;
+}
+
+.bookmark-rename {
 	background-color: #2d31364d;
 	border-left: 1px solid #634928;
 }
 
-.rename-input {
-	min-width: 0;
+.multiselect__tags {
+	display: block;
 	width: 100%;
-	height: 26px;
-	border: 1px solid #a38d6d;
+	min-height: 30px;
+	height: 100%;
+	max-height: 30px;
+	overflow: hidden;
+	border: 1px solid #000;
 	border-radius: 0;
-	padding: 0 6px;
-	color: var(--color-text-secondary);
+	padding: 4px 7px;
 	background: #1e2124;
-	box-shadow: var(--shadow-inset);
+	font-size: 1em;
+}
+
+.multiselect__input {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+	min-width: 0;
+	min-height: 20px;
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+	padding: 1px 0 0 5px;
+	color: #e2e2e2;
+	background: transparent;
+	line-height: 20px;
+	box-shadow: none;
+	transition: border 0.1s ease;
+}
+
+.multiselect__input::placeholder {
+	color: #707070;
+}
+
+.rename-input {
 	font: inherit;
+	outline: 0;
 }
 </style>

@@ -55,6 +55,7 @@ const skipNextFolderRenameBlur = ref(false);
 const skipNextBookmarkRenameBlur = ref(false);
 const dragItem = ref<DragItem | null>(null);
 const dropTarget = ref<DropTarget | null>(null);
+let pendingRenamePromise: Promise<void> | null = null;
 
 const visibleBookmarkFolders = computed<VisibleBookmarkFolder[]>(() =>
 	bookmarkTree.value ? flattenVisibleBookmarkFolders([bookmarkTree.value]) : [],
@@ -122,7 +123,8 @@ function hasFolderContent(folder: VisibleBookmarkFolder): boolean {
 	return folder.children.length > 0 || folder.bookmarks.length > 0;
 }
 
-function toggleFolderExpanded(folder: VisibleBookmarkFolder): void {
+async function toggleFolderExpanded(folder: VisibleBookmarkFolder): Promise<void> {
+	await flushPendingRename();
 	if (folder.displayDepth === 0 || !hasFolderContent(folder)) return;
 
 	const nextExpandedIds = new Set(expandedFolderIds.value);
@@ -134,13 +136,15 @@ function toggleFolderExpanded(folder: VisibleBookmarkFolder): void {
 
 	expandedFolderIds.value = nextExpandedIds;
 }
-function collapseAllFolders(): void {
+async function collapseAllFolders(): Promise<void> {
+	await flushPendingRename();
 	statusText.value = "";
 	closeMoreMenu();
 	expandedFolderIds.value = new Set();
 }
 
-function collapseOtherFolders(folder: VisibleBookmarkFolder): void {
+async function collapseOtherFolders(folder: VisibleBookmarkFolder): Promise<void> {
+	await flushPendingRename();
 	statusText.value = "";
 	closeMoreMenu();
 
@@ -155,12 +159,13 @@ function collapseOtherFolders(folder: VisibleBookmarkFolder): void {
 	expandedFolderIds.value = nextExpandedIds;
 }
 
-function onFolderDoubleClick(folder: VisibleBookmarkFolder): void {
+async function onFolderDoubleClick(folder: VisibleBookmarkFolder): Promise<void> {
 	if (folder.displayDepth === 0 || renamingFolderId.value === folder.id || !hasFolderContent(folder)) return;
-	toggleFolderExpanded(folder);
+	await toggleFolderExpanded(folder);
 }
 
-function toggleMoreMenu(menu: OpenMenu): void {
+async function toggleMoreMenu(menu: OpenMenu): Promise<void> {
+	await flushPendingRename();
 	statusText.value = "";
 	if (openMenu.value?.type === menu.type && openMenu.value.id === menu.id && menu.x === undefined) {
 		openMenu.value = null;
@@ -183,11 +188,12 @@ function closeMoreMenuOnOutsidePointer(event: MouseEvent): void {
 	closeMoreMenu();
 }
 
-function openContextMenu(event: MouseEvent, menu: OpenMenu): void {
+async function openContextMenu(event: MouseEvent, menu: OpenMenu): Promise<void> {
 	if (isBusy.value) return;
 
 	event.preventDefault();
 	event.stopPropagation();
+	await flushPendingRename();
 	statusText.value = "";
 	openMenu.value = {
 		...menu,
@@ -213,6 +219,8 @@ function isMenuOpen(type: OpenMenu["type"], id: string): boolean {
 
 async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 	if (isBusy.value) return;
+	await flushPendingRename();
+	if (isBusy.value) return;
 
 	isBusy.value = true;
 	statusText.value = "";
@@ -235,6 +243,8 @@ async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 
 async function onCreateFolder(parentId: string): Promise<void> {
 	if (isBusy.value) return;
+	await flushPendingRename();
+	if (isBusy.value) return;
 
 	isBusy.value = true;
 	statusText.value = "";
@@ -255,32 +265,18 @@ async function onCreateFolder(parentId: string): Promise<void> {
 	}
 }
 
-function startRenameFolder(folder: TradeBookmarkTreeNode): void {
+async function startRenameFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 	if (!folder.canModify) return;
+	await flushPendingRename();
 	closeMoreMenu();
-	void cancelBookmarkRename();
+	await cancelBookmarkRename();
 	renamingFolderId.value = folder.id;
 	renamingFolderTitle.value = folder.title;
 }
 
 async function confirmRenameFolder(): Promise<void> {
-	const folderId = renamingFolderId.value;
-	if (!folderId || isBusy.value) return;
-
-	isBusy.value = true;
-	statusText.value = "";
-
-	try {
-		await renameBookmarkFolder(folderId, renamingFolderTitle.value);
-		creatingFolderId.value = "";
-		clearFolderRename();
-		await loadBookmarks();
-	} catch (error) {
-		statusText.value = "重命名文件夹失败，请稍后重试。";
-		console.error("[poe2-extensions] trade 书签目录重命名失败", error);
-	} finally {
-		isBusy.value = false;
-	}
+	const pendingRename = queueFolderRename();
+	if (pendingRename) await pendingRename;
 }
 
 async function cancelFolderRename(): Promise<void> {
@@ -317,11 +313,13 @@ function onFolderRenameBlur(): void {
 		return;
 	}
 
-	void confirmRenameFolder();
+	queueFolderRename();
 }
 
 async function onDeleteFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 	if (!folder.canModify || isBusy.value) return;
+	await flushPendingRename();
+	if (isBusy.value) return;
 	if (!window.confirm(`确定删除“${folder.title}”及其所有内容吗？`)) return;
 
 	isBusy.value = true;
@@ -340,31 +338,17 @@ async function onDeleteFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 	}
 }
 
-function startRenameBookmark(bookmark: TradeBookmarkItem): void {
+async function startRenameBookmark(bookmark: TradeBookmarkItem): Promise<void> {
+	await flushPendingRename();
 	closeMoreMenu();
-	void cancelFolderRename();
+	await cancelFolderRename();
 	renamingBookmarkId.value = bookmark.id;
 	renamingBookmarkTitle.value = bookmark.title;
 }
 
 async function confirmRenameBookmark(): Promise<void> {
-	const bookmarkId = renamingBookmarkId.value;
-	if (!bookmarkId || isBusy.value) return;
-
-	isBusy.value = true;
-	statusText.value = "";
-
-	try {
-		await renameTradeBookmark(bookmarkId, renamingBookmarkTitle.value);
-		creatingBookmarkId.value = "";
-		clearBookmarkRename();
-		await loadBookmarks();
-	} catch (error) {
-		statusText.value = "重命名书签失败，请稍后重试。";
-		console.error("[poe2-extensions] trade 书签重命名失败", error);
-	} finally {
-		isBusy.value = false;
-	}
+	const pendingRename = queueBookmarkRename();
+	if (pendingRename) await pendingRename;
 }
 
 async function cancelBookmarkRename(): Promise<void> {
@@ -401,10 +385,11 @@ function onBookmarkRenameBlur(): void {
 		return;
 	}
 
-	void confirmRenameBookmark();
+	queueBookmarkRename();
 }
 
 async function onOpenBookmark(bookmark: TradeBookmarkItem): Promise<void> {
+	await flushPendingRename();
 	try {
 		await openTradeBookmark(bookmark.url);
 	} catch (error) {
@@ -414,6 +399,8 @@ async function onOpenBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 }
 
 async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
+	if (isBusy.value) return;
+	await flushPendingRename();
 	if (isBusy.value) return;
 
 	isBusy.value = true;
@@ -434,6 +421,8 @@ async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 
 async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	if (isBusy.value) return;
+	await flushPendingRename();
+	if (isBusy.value) return;
 	if (!window.confirm(`确定删除“${bookmark.title}”吗？`)) return;
 
 	isBusy.value = true;
@@ -452,6 +441,12 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 }
 
 function onFolderDragStart(event: DragEvent, folder: VisibleBookmarkFolder): void {
+	if (pendingRenamePromise) {
+		event.preventDefault();
+		void flushPendingRename();
+		return;
+	}
+
 	if (isBusy.value || !folder.canModify || renamingFolderId.value === folder.id || isInteractiveDragSource(event)) {
 		event.preventDefault();
 		return;
@@ -463,6 +458,12 @@ function onFolderDragStart(event: DragEvent, folder: VisibleBookmarkFolder): voi
 }
 
 function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): void {
+	if (pendingRenamePromise) {
+		event.preventDefault();
+		void flushPendingRename();
+		return;
+	}
+
 	if (isBusy.value || renamingBookmarkId.value === bookmark.id || isInteractiveDragSource(event)) {
 		event.preventDefault();
 		return;
@@ -502,6 +503,7 @@ function onBookmarkDragOver(event: DragEvent, bookmark: TradeBookmarkItem): void
 async function onDrop(event: DragEvent): Promise<void> {
 	event.preventDefault();
 	event.stopPropagation();
+	await flushPendingRename();
 
 	const item = dragItem.value;
 	const target = dropTarget.value;
@@ -652,6 +654,97 @@ function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folder
 	};
 }
 
+function queueFolderRename(): Promise<void> | null {
+	const folderId = renamingFolderId.value;
+	if (!folderId) return pendingRenamePromise;
+
+	const title = renamingFolderTitle.value;
+	creatingFolderId.value = "";
+	clearFolderRename();
+	updateFolderTitleInTree(folderId, getFolderRenameTitle(title));
+
+	return queueRename(async () => {
+		try {
+			const folder = await renameBookmarkFolder(folderId, title);
+			updateFolderTitleInTree(folder.id, folder.title);
+		} catch (error) {
+			statusText.value = "重命名文件夹失败，请稍后重试。";
+			console.error("[poe2-extensions] trade 书签目录重命名失败", error);
+			await loadBookmarks();
+		}
+	});
+}
+
+function queueBookmarkRename(): Promise<void> | null {
+	const bookmarkId = renamingBookmarkId.value;
+	if (!bookmarkId) return pendingRenamePromise;
+
+	const title = renamingBookmarkTitle.value;
+	creatingBookmarkId.value = "";
+	clearBookmarkRename();
+	updateBookmarkTitleInTree(bookmarkId, getBookmarkRenameTitle(bookmarkId, title));
+
+	return queueRename(async () => {
+		try {
+			const bookmark = await renameTradeBookmark(bookmarkId, title);
+			updateBookmarkTitleInTree(bookmark.id, bookmark.title);
+		} catch (error) {
+			statusText.value = "重命名书签失败，请稍后重试。";
+			console.error("[poe2-extensions] trade 书签重命名失败", error);
+			await loadBookmarks();
+		}
+	});
+}
+
+function queueRename(action: () => Promise<void>): Promise<void> {
+	const pendingRename = (pendingRenamePromise ?? Promise.resolve()).then(action).finally(() => {
+		if (pendingRenamePromise === pendingRename) pendingRenamePromise = null;
+	});
+
+	pendingRenamePromise = pendingRename;
+	return pendingRename;
+}
+
+async function flushPendingRename(): Promise<void> {
+	const pendingRename = pendingRenamePromise;
+	if (pendingRename) await pendingRename;
+}
+
+function updateFolderTitleInTree(folderId: string, title: string): void {
+	const folder = bookmarkTree.value ? findFolderInTree(bookmarkTree.value, folderId) : null;
+	if (folder) folder.title = title;
+}
+
+function updateBookmarkTitleInTree(bookmarkId: string, title: string): void {
+	const bookmark = bookmarkTree.value ? findBookmarkInTree(bookmarkTree.value, bookmarkId) : null;
+	if (bookmark) bookmark.title = title;
+}
+
+function getFolderRenameTitle(title: string): string {
+	return title.trim() || "New Folder";
+}
+
+function getBookmarkRenameTitle(bookmarkId: string, title: string): string {
+	const trimmedTitle = title.trim();
+	if (trimmedTitle) return trimmedTitle;
+
+	const bookmark = bookmarkTree.value ? findBookmarkInTree(bookmarkTree.value, bookmarkId) : null;
+	return bookmark ? getTradeBookmarkTitle(undefined, bookmark.url) : "Trade 搜索";
+}
+
+function getTradeBookmarkTitle(title: string | undefined, url: string): string {
+	const trimmedTitle = title?.trim();
+	if (trimmedTitle) return trimmedTitle;
+
+	try {
+		const parsedUrl = new URL(url);
+		const queryId = parsedUrl.pathname.split("/").filter(Boolean).pop();
+		return queryId ? `Trade 搜索 ${queryId}` : "Trade 搜索";
+	} catch {
+		return "Trade 搜索";
+	}
+}
+
 function clearFolderRename(): void {
 	renamingFolderId.value = "";
 	renamingFolderTitle.value = "";
@@ -700,6 +793,19 @@ function findFolderInTree(node: TradeBookmarkTreeNode, folderId: string): TradeB
 
 	for (const child of node.children) {
 		const match = findFolderInTree(child, folderId);
+		if (match) return match;
+	}
+
+	return null;
+}
+
+function findBookmarkInTree(node: TradeBookmarkTreeNode, bookmarkId: string): TradeBookmarkItem | null {
+	for (const bookmark of node.bookmarks) {
+		if (bookmark.id === bookmarkId) return bookmark;
+	}
+
+	for (const child of node.children) {
+		const match = findBookmarkInTree(child, bookmarkId);
 		if (match) return match;
 	}
 

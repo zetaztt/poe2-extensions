@@ -77,7 +77,7 @@ function onMenuAction(actionId: string): void {
 <template>
 	<div
 		class="bookmark-folder-header"
-		:class="[{ 'top-level': folder.displayDepth === 0 }, dropClass]"
+		:class="[{ 'top-level': folder.displayDepth === 0, renaming }, dropClass]"
 		:draggable="folder.canModify && !renaming && !busy"
 		@dragstart="emit('drag-start', $event)"
 		@dragover="emit('drag-over', $event)"
@@ -104,32 +104,39 @@ function onMenuAction(actionId: string): void {
 							aria-hidden="true" />
 					</button>
 				</span>
-				<span class="bookmark-folder-title-content">
-					<input
+				<span class="bookmark-folder-title-content filter-body">
+					<span
 						v-if="renaming"
-						v-model="renameTitle"
-						v-focus
-						class="rename-input"
-						type="text"
-						:disabled="busy"
-						@click.stop
-						@dblclick.stop
-						@keydown.enter.prevent="emit('confirm-rename')"
-						@keydown.esc.prevent="emit('cancel-rename')"
-						@blur="emit('rename-blur')" />
+						class="multiselect filter-select filter-select-title filter-select-mutate multiselect--active multiselect--above bookmark-rename-select">
+						<span class="multiselect__tags">
+							<input
+								v-model="renameTitle"
+								v-focus
+								class="multiselect__input rename-input"
+								type="text"
+								:disabled="busy"
+								@click.stop
+								@dblclick.stop
+								@keydown.enter.prevent="emit('confirm-rename')"
+								@keydown.esc.prevent="emit('cancel-rename')"
+								@blur="emit('rename-blur')" />
+						</span>
+					</span>
 					<span
 						v-else
-						class="bookmark-folder-title-label bookmark-folder-title-clickable bookmark-folder-title"
+						class="filter-title filter-title-clickable bookmark-folder-title-label bookmark-folder-title-clickable bookmark-folder-title"
 						@dblclick.stop="emit('folder-double-click')">
 						<span class="bookmark-folder-title-text">{{ folder.title }}</span>
 					</span>
 					<BookmarkIconButton
+						class="bookmark-folder-inline-action"
 						v-if="folder.displayDepth > 0"
 						icon="/sidepanel/bookmark-add.png"
 						:disabled="busy"
 						title="添加书签"
 						@click="emit('add-bookmark')" />
 					<BookmarkIconButton
+						class="bookmark-folder-inline-action"
 						v-if="folder.displayDepth === 0"
 						icon="/sidepanel/bookmark-folder-add.png"
 						:disabled="busy"
@@ -153,6 +160,7 @@ function onMenuAction(actionId: string): void {
 			@click="emit('toggle-menu')">
 			<BookmarkMenu
 				:open="menuOpen"
+				offset="folder"
 				:menu-style="menuStyle"
 				:actions="
 					folder.displayDepth === 0
@@ -189,6 +197,16 @@ function onMenuAction(actionId: string): void {
 	text-shadow: 1px 1px 2px #1e2124;
 }
 
+.bookmark-folder-header.renaming {
+	margin-bottom: 2px;
+}
+
+.bookmark-folder-header.renaming .bookmark-folder-inline-action,
+.bookmark-folder-header.renaming .secondary-action,
+.bookmark-folder-header.renaming .bookmark-folder-menu-action {
+	vertical-align: top;
+}
+
 .bookmark-folder-header.top-level {
 	height: auto;
 	min-height: 31px;
@@ -198,6 +216,10 @@ function onMenuAction(actionId: string): void {
 	color: var(--color-text-primary);
 	background: #101112;
 	text-shadow: none;
+}
+
+.bookmark-folder-header.top-level.renaming {
+	margin-bottom: 0;
 }
 .bookmark-folder-header[draggable="true"] {
 	cursor: grab;
@@ -324,6 +346,7 @@ function onMenuAction(actionId: string): void {
 	white-space: nowrap;
 }
 
+.filter-title-clickable,
 .bookmark-folder-title-clickable {
 	cursor: pointer;
 }
@@ -353,17 +376,65 @@ function onMenuAction(actionId: string): void {
 	text-decoration: none;
 }
 
-.rename-input {
-	min-width: 0;
+.multiselect {
+	position: relative;
+	box-sizing: content-box;
+	display: table-cell;
 	width: 100%;
-	height: 26px;
-	border: 1px solid #a38d6d;
+	min-width: 0;
+	min-height: 30px;
+	height: 31px;
+	color: #e2e2e2;
+	text-align: left;
+	vertical-align: top;
+}
+
+.multiselect--active {
+	z-index: 5;
+}
+
+.filter-select-title {
+	height: 31px;
+}
+
+.multiselect__tags {
+	display: block;
+	width: 100%;
+	min-height: 30px;
+	height: 100%;
+	max-height: 30px;
+	overflow: hidden;
+	border: 1px solid #000;
 	border-radius: 0;
-	padding: 0 6px;
-	color: var(--color-text-secondary);
+	padding: 4px 7px;
 	background: #1e2124;
-	box-shadow: var(--shadow-inset);
+	font-size: 1em;
+}
+
+.multiselect__input {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+	min-width: 0;
+	min-height: 20px;
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+	padding: 1px 0 0 5px;
+	color: #e2e2e2;
+	background: transparent;
+	line-height: 20px;
+	box-shadow: none;
+	transition: border 0.1s ease;
+}
+
+.multiselect__input::placeholder {
+	color: #707070;
+}
+
+.rename-input {
 	font: inherit;
+	outline: 0;
 }
 
 @media (max-width: 430px) {

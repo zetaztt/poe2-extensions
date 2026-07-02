@@ -75,12 +75,6 @@ body {
 	background-size: auto 100vh;
 }
 
-button,
-input,
-select {
-	font: inherit;
-}
-
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
