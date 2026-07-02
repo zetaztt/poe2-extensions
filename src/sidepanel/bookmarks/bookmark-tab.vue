@@ -13,6 +13,7 @@ import {
 	renameTradeBookmark,
 	replaceTradeBookmarkWithCurrentSearch,
 } from "../../bookmarks/bookmarks-bookmarks";
+import { exportBookmarkFolder, exportBookmarkTree, importBookmarkData } from "../../bookmarks/bookmarks-storage";
 import type { TradeBookmarkItem, TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
 import BookmarkFolder from "./bookmark-folder.vue";
 import BookmarkItem from "./bookmark-item.vue";
@@ -51,6 +52,7 @@ const creatingFolderId = ref("");
 const creatingBookmarkId = ref("");
 const statusText = ref("");
 const isBusy = ref(false);
+const importFileInput = ref<HTMLInputElement | null>(null);
 const skipNextFolderRenameBlur = ref(false);
 const skipNextBookmarkRenameBlur = ref(false);
 const dragItem = ref<DragItem | null>(null);
@@ -113,6 +115,104 @@ async function loadBookmarks(): Promise<void> {
 	} finally {
 		isLoadingBookmarks.value = false;
 	}
+}
+
+async function onExportBookmarks(folder?: TradeBookmarkTreeNode): Promise<void> {
+	if (isBusy.value) return;
+	await flushPendingRename();
+	if (isBusy.value) return;
+
+	isBusy.value = true;
+	statusText.value = "";
+	closeMoreMenu();
+
+	try {
+		const data = folder ? await exportBookmarkFolder(folder.id) : await exportBookmarkTree();
+		const blob = new Blob([JSON.stringify(data, null, "\t")], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = getBookmarkExportFileName(data, folder);
+		link.style.display = "none";
+		document.body.append(link);
+		link.click();
+		link.remove();
+		URL.revokeObjectURL(url);
+		statusText.value = folder ? "文件夹 JSON 已导出。" : "书签 JSON 已导出。";
+	} catch (error) {
+		statusText.value = "导出书签失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签导出失败", error);
+	} finally {
+		isBusy.value = false;
+	}
+}
+
+async function onImportBookmarksClick(): Promise<void> {
+	if (isBusy.value) return;
+	await flushPendingRename();
+	if (isBusy.value) return;
+
+	statusText.value = "";
+	closeMoreMenu();
+	importFileInput.value?.click();
+}
+
+async function onImportBookmarksChange(event: Event): Promise<void> {
+	const input = event.target instanceof HTMLInputElement ? event.target : null;
+	const file = input?.files?.[0];
+	if (input) input.value = "";
+	if (!file || isBusy.value) return;
+
+	isBusy.value = true;
+	statusText.value = "";
+	closeMoreMenu();
+
+	try {
+		const data: unknown = JSON.parse(await file.text());
+		const mode = getImportMode();
+		if (!mode) return;
+		await importBookmarkData(data, mode);
+		await loadBookmarks();
+		statusText.value = mode === "append" ? "书签 JSON 已添加。" : "书签 JSON 已覆盖导入。";
+	} catch (error) {
+		statusText.value = error instanceof Error ? error.message : "导入书签失败，请确认 JSON 文件有效。";
+		console.error("[poe2-extensions] trade 书签导入失败", error);
+	} finally {
+		isBusy.value = false;
+	}
+}
+
+function getImportMode(): "append" | "replace" | null {
+	if (window.confirm("导入 JSON 默认会添加到当前书签后面。\n\n点击“确定”添加，点击“取消”选择覆盖或放弃。")) {
+		return "append";
+	}
+
+	return window.confirm("确定覆盖当前所有 trade 书签吗？") ? "replace" : null;
+}
+
+function getBookmarkExportFileName(data: { exportedAt: number }, folder: TradeBookmarkTreeNode | undefined): string {
+	const scope = folder ? `folder-${getSafeFileName(folder.title)}` : "all";
+	return `poe2-trade-bookmarks-${scope}-${formatExportDate(data.exportedAt)}.json`;
+}
+
+function getSafeFileName(value: string): string {
+	return (
+		value
+			.trim()
+			.replace(/[<>:"/\\|?*]+/g, "-")
+			.replace(/\s+/g, "-") || "folder"
+	);
+}
+
+function formatExportDate(timestamp: number): string {
+	const date = new Date(timestamp);
+	const year = date.getFullYear().toString();
+	const month = (date.getMonth() + 1).toString().padStart(2, "0");
+	const day = date.getDate().toString().padStart(2, "0");
+	const hour = date.getHours().toString().padStart(2, "0");
+	const minute = date.getMinutes().toString().padStart(2, "0");
+	const second = date.getSeconds().toString().padStart(2, "0");
+	return `${year}${month}${day}-${hour}${minute}${second}`;
 }
 
 function isFolderExpanded(folder: VisibleBookmarkFolder): boolean {
@@ -850,6 +950,12 @@ function clearDragState(): void {
 
 <template>
 	<section class="tab-content">
+		<input
+			ref="importFileInput"
+			class="bookmark-import-input"
+			type="file"
+			accept="application/json,.json"
+			@change="onImportBookmarksChange" />
 		<section class="bookmark-list" aria-live="polite" @click="closeMoreMenu">
 			<p v-if="statusText" class="message">{{ statusText }}</p>
 			<div v-if="isLoadingBookmarks" class="panel muted">读取书签中</div>
@@ -883,6 +989,9 @@ function clearDragState(): void {
 							@delete-folder="onDeleteFolder(folder)"
 							@collapse-others="collapseOtherFolders(folder)"
 							@collapse-all="collapseAllFolders"
+							@import-bookmarks="onImportBookmarksClick"
+							@export-bookmarks="onExportBookmarks()"
+							@export-folder="onExportBookmarks(folder)"
 							@toggle-menu="toggleMoreMenu({ type: 'folder', id: folder.id })"
 							@context-menu="openContextMenu($event, { type: 'folder', id: folder.id })"
 							@drag-start="onFolderDragStart($event, folder)"
@@ -964,6 +1073,10 @@ p {
 .bookmark-list {
 	display: grid;
 	gap: 4px;
+}
+
+.bookmark-import-input {
+	display: none;
 }
 
 .bookmark-tree {

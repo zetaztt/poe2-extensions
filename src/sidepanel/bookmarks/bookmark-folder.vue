@@ -25,6 +25,9 @@ const emit = defineEmits<{
 	"delete-folder": [];
 	"collapse-others": [];
 	"collapse-all": [];
+	"import-bookmarks": [];
+	"export-bookmarks": [];
+	"export-folder": [];
 	"toggle-menu": [];
 	"context-menu": [event: MouseEvent];
 	"drag-start": [event: DragEvent];
@@ -74,6 +77,20 @@ function onMenuAction(actionId: string): void {
 
 	if (actionId === "collapse-all") {
 		emit("collapse-all");
+		return;
+	}
+
+	if (actionId === "import") {
+		emit("import-bookmarks");
+		return;
+	}
+
+	if (actionId === "export") {
+		if (props.folder.displayDepth === 0) {
+			emit("export-bookmarks");
+		} else {
+			emit("export-folder");
+		}
 		return;
 	}
 
@@ -170,11 +187,14 @@ function onMenuAction(actionId: string): void {
 								folder.displayDepth === 0
 									? [
 											{ id: 'create', label: '添加文件夹' },
+											{ id: 'import', label: '导入 JSON' },
+											{ id: 'export', label: '导出全部 JSON' },
 											{ id: 'collapse-all', label: '折叠所有' },
 										]
 									: [
 											{ id: 'add-bookmark', label: '添加当前搜索' },
 											{ id: 'collapse-others', label: '折叠其他文件夹' },
+											{ id: 'export', label: '导出文件夹 JSON' },
 											{ id: 'rename', label: '重命名', disabled: !folder.canModify },
 											{ id: 'delete', label: '删除', disabled: !folder.canModify },
 										]

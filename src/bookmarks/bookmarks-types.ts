@@ -51,3 +51,21 @@ export interface StoredTradeBookmarkTree {
 	version: 1;
 	root: StoredTradeBookmarkFolder;
 }
+
+export type TradeBookmarkExportData = TradeBookmarkTreeExportData | TradeBookmarkFolderExportData;
+
+export type TradeBookmarkImportMode = "append" | "replace";
+
+export interface TradeBookmarkTreeExportData {
+	source: "poe2-extensions-trade-bookmarks";
+	exportedAt: number;
+	content: "tree";
+	tree: StoredTradeBookmarkTree;
+}
+
+export interface TradeBookmarkFolderExportData {
+	source: "poe2-extensions-trade-bookmarks";
+	exportedAt: number;
+	content: "folder";
+	folder: StoredTradeBookmarkFolder;
+}
