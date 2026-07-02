@@ -2,7 +2,6 @@
 import type { Directive } from "vue";
 import type { TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
-import BookmarkMenu from "./bookmark-menu.vue";
 
 defineProps<{
 	folder: TradeBookmarkTreeNode;
@@ -11,8 +10,6 @@ defineProps<{
 	busy: boolean;
 	renaming: boolean;
 	dropClass: Record<string, boolean>;
-	menuOpen: boolean;
-	menuStyle?: Record<string, string>;
 }>();
 
 const renameTitle = defineModel<string>("renameTitle", { required: true });
@@ -24,7 +21,7 @@ const emit = defineEmits<{
 	"delete-folder": [];
 	"collapse-others": [];
 	"export-folder": [];
-	"toggle-menu": [];
+	"open-menu": [event: MouseEvent];
 	"context-menu": [event: MouseEvent];
 	"drag-start": [event: DragEvent];
 	"drag-over": [event: DragEvent];
@@ -144,29 +141,7 @@ function exportFolder(): void {
 						icon="/sidepanel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
-						@click="emit('toggle-menu')">
-						<BookmarkMenu
-							:open="menuOpen"
-							placement="folder-title"
-							:menu-style="menuStyle"
-							:actions="[
-								{ id: 'add-bookmark', label: '添加当前搜索', run: addBookmark },
-								{ id: 'collapse-others', label: '折叠其他文件夹', run: collapseOthers },
-								{ id: 'export', label: '导出文件夹 JSON', run: exportFolder },
-								{
-									id: 'rename',
-									label: '重命名',
-									disabled: !folder.canModify,
-									run: startRename,
-								},
-								{
-									id: 'delete',
-									label: '删除',
-									disabled: !folder.canModify,
-									run: deleteFolder,
-								},
-							]" />
-					</BookmarkIconButton>
+						@click="emit('open-menu', $event)" />
 				</span>
 			</div>
 		</div>

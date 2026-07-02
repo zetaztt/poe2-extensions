@@ -12,7 +12,7 @@ defineProps<{
 const attrs = useAttrs();
 
 const emit = defineEmits<{
-	click: [];
+	click: [event: MouseEvent];
 }>();
 </script>
 
@@ -24,7 +24,7 @@ const emit = defineEmits<{
 			:disabled="disabled"
 			:title="title"
 			:aria-label="title"
-			@click.stop="emit('click')">
+			@click.stop="emit('click', $event)">
 			<span class="bookmark-icon-button-icon" :style="{ backgroundImage: `url(${icon})` }"></span>
 		</button>
 		<slot></slot>

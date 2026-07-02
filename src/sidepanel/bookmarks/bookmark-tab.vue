@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import {
 	addCurrentTradeSearchBookmark,
 	createBookmarkFolder,
@@ -15,6 +15,12 @@ import {
 } from "../../bookmarks/bookmarks-bookmarks";
 import { exportBookmarkFolder, exportBookmarkTree, importBookmarkData } from "../../bookmarks/bookmarks-storage";
 import type { TradeBookmarkItem, TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
+import {
+	closeMenu,
+	openMenu as openSidepanelMenu,
+	type SidepanelMenuItem,
+	type SidepanelMenuOptions,
+} from "../common/menu/sidepanel-menu";
 import BookmarkFolder from "./bookmark-folder.vue";
 import BookmarkItem from "./bookmark-item.vue";
 import BookmarkTreeHeader from "./bookmark-tree-header.vue";
@@ -22,10 +28,6 @@ import BookmarkTreeHeader from "./bookmark-tree-header.vue";
 type VisibleBookmarkFolder = TradeBookmarkTreeNode & {
 	displayDepth: number;
 };
-
-type OpenMenu =
-	| { type: "folder"; id: string; x?: number; y?: number }
-	| { type: "bookmark"; id: string; x?: number; y?: number };
 
 type DragItem = { type: "folder"; id: string } | { type: "bookmark"; id: string };
 
@@ -44,7 +46,6 @@ const props = defineProps<{
 const bookmarkTree = ref<TradeBookmarkTreeNode | null>(null);
 const isLoadingBookmarks = ref(true);
 const expandedFolderIds = ref<Set<string>>(new Set());
-const openMenu = ref<OpenMenu | null>(null);
 const renamingFolderId = ref("");
 const renamingFolderTitle = ref("");
 const renamingBookmarkId = ref("");
@@ -92,14 +93,7 @@ watch(
 );
 
 onMounted(() => {
-	document.addEventListener("click", closeMoreMenuOnOutsidePointer);
-	document.addEventListener("contextmenu", closeMoreMenuOnOutsidePointer);
 	void loadBookmarks();
-});
-
-onBeforeUnmount(() => {
-	document.removeEventListener("click", closeMoreMenuOnOutsidePointer);
-	document.removeEventListener("contextmenu", closeMoreMenuOnOutsidePointer);
 });
 
 async function loadBookmarks(): Promise<void> {
@@ -125,7 +119,7 @@ async function onExportBookmarks(folder?: TradeBookmarkTreeNode): Promise<void> 
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 
 	try {
 		const data = folder ? await exportBookmarkFolder(folder.id) : await exportBookmarkTree();
@@ -154,7 +148,7 @@ async function onImportBookmarksClick(): Promise<void> {
 	if (isBusy.value) return;
 
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 	importFileInput.value?.click();
 }
 
@@ -166,7 +160,7 @@ async function onImportBookmarksChange(event: Event): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 
 	try {
 		const data: unknown = JSON.parse(await file.text());
@@ -238,13 +232,13 @@ function toggleFolderExpanded(folder: VisibleBookmarkFolder): void {
 }
 function collapseAllFolders(): void {
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 	expandedFolderIds.value = new Set();
 }
 
 function collapseOtherFolders(folder: VisibleBookmarkFolder): void {
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 
 	const nextExpandedIds = new Set<string>();
 	let currentFolder: TradeBookmarkTreeNode | null = folder;
@@ -257,57 +251,95 @@ function collapseOtherFolders(folder: VisibleBookmarkFolder): void {
 	expandedFolderIds.value = nextExpandedIds;
 }
 
-async function toggleMoreMenu(menu: OpenMenu): Promise<void> {
-	await flushPendingRename();
-	statusText.value = "";
-	if (openMenu.value?.type === menu.type && openMenu.value.id === menu.id && menu.x === undefined) {
-		openMenu.value = null;
-		return;
-	}
-
-	openMenu.value = menu;
+async function openRootFolderMenu(event: MouseEvent, folder: VisibleBookmarkFolder): Promise<void> {
+	await openBookmarkMenu(event, getButtonMenuPosition(event), getRootFolderMenuItems(folder));
 }
 
-function closeMoreMenu(): void {
-	openMenu.value = null;
+async function openFolderMenu(event: MouseEvent, folder: VisibleBookmarkFolder): Promise<void> {
+	await openBookmarkMenu(event, getButtonMenuPosition(event), getFolderMenuItems(folder));
 }
 
-function closeMoreMenuOnOutsidePointer(event: MouseEvent): void {
-	if (!openMenu.value) return;
-
-	const target = event.target;
-	if (target instanceof HTMLElement && target.closest(".bookmark-action-menu")) return;
-
-	closeMoreMenu();
+async function openBookmarkItemMenu(event: MouseEvent, bookmark: TradeBookmarkItem): Promise<void> {
+	await openBookmarkMenu(event, getButtonMenuPosition(event), getBookmarkMenuItems(bookmark));
 }
 
-async function openContextMenu(event: MouseEvent, menu: OpenMenu): Promise<void> {
+async function openRootFolderContextMenu(event: MouseEvent, folder: VisibleBookmarkFolder): Promise<void> {
+	await openBookmarkMenu(event, { x: event.clientX, y: event.clientY }, getRootFolderMenuItems(folder));
+}
+
+async function openFolderContextMenu(event: MouseEvent, folder: VisibleBookmarkFolder): Promise<void> {
+	await openBookmarkMenu(event, { x: event.clientX, y: event.clientY }, getFolderMenuItems(folder));
+}
+
+async function openBookmarkContextMenu(event: MouseEvent, bookmark: TradeBookmarkItem): Promise<void> {
+	await openBookmarkMenu(event, { x: event.clientX, y: event.clientY }, getBookmarkMenuItems(bookmark));
+}
+
+async function openBookmarkMenu(
+	event: MouseEvent,
+	position: SidepanelMenuOptions,
+	items: SidepanelMenuItem[],
+): Promise<void> {
 	if (isBusy.value) return;
 
 	event.preventDefault();
 	event.stopPropagation();
 	await flushPendingRename();
+	if (isBusy.value) return;
+
 	statusText.value = "";
-	openMenu.value = {
-		...menu,
-		x: event.clientX,
-		y: event.clientY,
-	};
+	openSidepanelMenu(items, position);
 }
 
-function getMoreMenuStyle(menu: OpenMenu): Record<string, string> | undefined {
-	if (menu.x === undefined || menu.y === undefined) return undefined;
+function getButtonMenuPosition(event: MouseEvent): SidepanelMenuOptions {
+	const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+	const fallbackTarget = event.target instanceof HTMLElement ? event.target.closest("button") : null;
+	const element = target ?? fallbackTarget;
+	if (!element) return { x: event.clientX, y: event.clientY };
 
+	const rect = element.getBoundingClientRect();
 	return {
-		position: "fixed",
-		left: `${menu.x}px`,
-		top: `${menu.y}px`,
-		right: "auto",
+		x: rect.right,
+		y: rect.bottom + 1,
+		align: "end",
 	};
 }
 
-function isMenuOpen(type: OpenMenu["type"], id: string): boolean {
-	return openMenu.value?.type === type && openMenu.value.id === id;
+function getRootFolderMenuItems(folder: VisibleBookmarkFolder): SidepanelMenuItem[] {
+	return [
+		{ id: "create", label: "添加文件夹", run: () => onCreateFolder(folder.id) },
+		{ id: "import", label: "导入 JSON", run: onImportBookmarksClick },
+		{ id: "export", label: "导出全部 JSON", run: () => onExportBookmarks() },
+		{ id: "collapse-all", label: "折叠所有", run: collapseAllFolders },
+	];
+}
+
+function getFolderMenuItems(folder: VisibleBookmarkFolder): SidepanelMenuItem[] {
+	return [
+		{ id: "add-bookmark", label: "添加当前搜索", run: () => addCurrentSearchToFolder(folder.id) },
+		{ id: "collapse-others", label: "折叠其他文件夹", run: () => collapseOtherFolders(folder) },
+		{ id: "export", label: "导出文件夹 JSON", run: () => onExportBookmarks(folder) },
+		{
+			id: "rename",
+			label: "重命名",
+			disabled: !folder.canModify,
+			run: () => startRenameFolder(folder),
+		},
+		{
+			id: "delete",
+			label: "删除",
+			disabled: !folder.canModify,
+			run: () => onDeleteFolder(folder),
+		},
+	];
+}
+
+function getBookmarkMenuItems(bookmark: TradeBookmarkItem): SidepanelMenuItem[] {
+	return [
+		{ id: "rename", label: "重命名", run: () => startRenameBookmark(bookmark) },
+		{ id: "replace", label: "用当前搜索替换", run: () => onReplaceBookmark(bookmark) },
+		{ id: "delete", label: "删除", run: () => onDeleteBookmark(bookmark) },
+	];
 }
 
 async function addCurrentSearchToFolder(folderId: string): Promise<void> {
@@ -317,7 +349,7 @@ async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 
 	try {
 		const bookmark = await addCurrentTradeSearchBookmark(folderId);
@@ -341,7 +373,7 @@ async function onCreateFolder(parentId: string): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 
 	try {
 		const folder = await createBookmarkFolder(parentId, "New Folder");
@@ -361,7 +393,7 @@ async function onCreateFolder(parentId: string): Promise<void> {
 async function startRenameFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 	if (!folder.canModify) return;
 	await flushPendingRename();
-	closeMoreMenu();
+	closeMenu();
 	await cancelBookmarkRename();
 	renamingFolderId.value = folder.id;
 	renamingFolderTitle.value = folder.title;
@@ -417,7 +449,7 @@ async function onDeleteFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 
 	try {
 		await deleteBookmarkFolder(folder.id);
@@ -433,7 +465,7 @@ async function onDeleteFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 
 async function startRenameBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	await flushPendingRename();
-	closeMoreMenu();
+	closeMenu();
 	await cancelFolderRename();
 	renamingBookmarkId.value = bookmark.id;
 	renamingBookmarkTitle.value = bookmark.title;
@@ -498,7 +530,7 @@ async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 
 	try {
 		await replaceTradeBookmarkWithCurrentSearch(bookmark.id);
@@ -520,7 +552,7 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMoreMenu();
+	closeMenu();
 
 	try {
 		await deleteTradeBookmark(bookmark.id);
@@ -547,7 +579,7 @@ function onFolderDragStart(event: DragEvent, folder: VisibleBookmarkFolder): voi
 
 	dragItem.value = { type: "folder", id: folder.id };
 	prepareDragEvent(event);
-	closeMoreMenu();
+	closeMenu();
 }
 
 function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): void {
@@ -564,7 +596,7 @@ function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): voi
 
 	dragItem.value = { type: "bookmark", id: bookmark.id };
 	prepareDragEvent(event);
-	closeMoreMenu();
+	closeMenu();
 }
 
 function onFolderDragOver(event: DragEvent, folder: VisibleBookmarkFolder): void {
@@ -930,10 +962,7 @@ function isBookmarkDropTarget(bookmark: TradeBookmarkItem, position: "before" | 
 
 function isInteractiveDragSource(event: DragEvent): boolean {
 	const target = event.target;
-	return (
-		target instanceof HTMLElement
-		&& Boolean(target.closest("button, input, textarea, select, .bookmark-action-menu"))
-	);
+	return target instanceof HTMLElement && Boolean(target.closest("button, input, textarea, select, .sidepanel-menu"));
 }
 
 function prepareDragEvent(event: DragEvent): void {
@@ -957,7 +986,7 @@ function clearDragState(): void {
 			type="file"
 			accept="application/json,.json"
 			@change="onImportBookmarksChange" />
-		<section class="bookmark-list" aria-live="polite" @click="closeMoreMenu">
+		<section class="bookmark-list" aria-live="polite" @click="closeMenu">
 			<p v-if="statusText" class="message">{{ statusText }}</p>
 			<div v-if="isLoadingBookmarks" class="panel muted">读取书签中</div>
 			<div v-else-if="!bookmarkTree" class="panel muted">这个目录下还没有可用的书签目录。</div>
@@ -976,16 +1005,12 @@ function clearDragState(): void {
 							:folder="folder"
 							:busy="isBusy"
 							:drop-class="getFolderDropClass(folder)"
-							:menu-open="isMenuOpen('folder', folder.id)"
-							:menu-style="
-								isMenuOpen('folder', folder.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined
-							"
 							@create-folder="onCreateFolder(folder.id)"
 							@collapse-all="collapseAllFolders"
 							@import-bookmarks="onImportBookmarksClick"
 							@export-bookmarks="onExportBookmarks()"
-							@toggle-menu="toggleMoreMenu({ type: 'folder', id: folder.id })"
-							@context-menu="openContextMenu($event, { type: 'folder', id: folder.id })"
+							@open-menu="openRootFolderMenu($event, folder)"
+							@context-menu="openRootFolderContextMenu($event, folder)"
 							@drag-start="onFolderDragStart($event, folder)"
 							@drag-over="onFolderDragOver($event, folder)"
 							@drop="onDrop"
@@ -999,18 +1024,14 @@ function clearDragState(): void {
 							:busy="isBusy"
 							:renaming="renamingFolderId === folder.id"
 							:drop-class="getFolderDropClass(folder)"
-							:menu-open="isMenuOpen('folder', folder.id)"
-							:menu-style="
-								isMenuOpen('folder', folder.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined
-							"
 							@toggle-expanded="toggleFolderExpanded(folder)"
 							@add-bookmark="addCurrentSearchToFolder(folder.id)"
 							@start-rename="startRenameFolder(folder)"
 							@delete-folder="onDeleteFolder(folder)"
 							@collapse-others="collapseOtherFolders(folder)"
 							@export-folder="onExportBookmarks(folder)"
-							@toggle-menu="toggleMoreMenu({ type: 'folder', id: folder.id })"
-							@context-menu="openContextMenu($event, { type: 'folder', id: folder.id })"
+							@open-menu="openFolderMenu($event, folder)"
+							@context-menu="openFolderContextMenu($event, folder)"
 							@drag-start="onFolderDragStart($event, folder)"
 							@drag-over="onFolderDragOver($event, folder)"
 							@drop="onDrop"
@@ -1028,18 +1049,12 @@ function clearDragState(): void {
 								:busy="isBusy"
 								:renaming="renamingBookmarkId === bookmark.id"
 								:drop-class="getBookmarkDropClass(bookmark)"
-								:menu-open="isMenuOpen('bookmark', bookmark.id)"
-								:menu-style="
-									isMenuOpen('bookmark', bookmark.id) && openMenu
-										? getMoreMenuStyle(openMenu)
-										: undefined
-								"
 								@open="onOpenBookmark(bookmark)"
 								@start-rename="startRenameBookmark(bookmark)"
 								@replace="onReplaceBookmark(bookmark)"
 								@delete="onDeleteBookmark(bookmark)"
-								@toggle-menu="toggleMoreMenu({ type: 'bookmark', id: bookmark.id })"
-								@context-menu="openContextMenu($event, { type: 'bookmark', id: bookmark.id })"
+								@open-menu="openBookmarkItemMenu($event, bookmark)"
+								@context-menu="openBookmarkContextMenu($event, bookmark)"
 								@drag-start="onBookmarkDragStart($event, bookmark)"
 								@drag-over="onBookmarkDragOver($event, bookmark)"
 								@drop="onDrop"

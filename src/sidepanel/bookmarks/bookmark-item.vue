@@ -2,15 +2,12 @@
 import type { Directive } from "vue";
 import type { TradeBookmarkItem } from "../../bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
-import BookmarkMenu from "./bookmark-menu.vue";
 
 defineProps<{
 	bookmark: TradeBookmarkItem;
 	busy: boolean;
 	renaming: boolean;
 	dropClass: Record<string, boolean>;
-	menuOpen: boolean;
-	menuStyle?: Record<string, string>;
 }>();
 
 const renameTitle = defineModel<string>("renameTitle", { required: true });
@@ -20,7 +17,7 @@ const emit = defineEmits<{
 	"start-rename": [];
 	replace: [];
 	delete: [];
-	"toggle-menu": [];
+	"open-menu": [event: MouseEvent];
 	"context-menu": [event: MouseEvent];
 	"drag-start": [event: DragEvent];
 	"drag-over": [event: DragEvent];
@@ -104,16 +101,7 @@ function deleteBookmark(): void {
 			icon="/sidepanel/bookmark-more.png"
 			:disabled="busy"
 			title="更多"
-			@click="emit('toggle-menu')">
-			<BookmarkMenu
-				:open="menuOpen"
-				:menu-style="menuStyle"
-				:actions="[
-					{ id: 'rename', label: '重命名', run: startRename },
-					{ id: 'replace', label: '用当前搜索替换', run: replaceBookmark },
-					{ id: 'delete', label: '删除', run: deleteBookmark },
-				]" />
-		</BookmarkIconButton>
+			@click="emit('open-menu', $event)" />
 	</div>
 </template>
 

@@ -1,14 +1,11 @@
 <script lang="ts" setup>
 import type { TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
-import BookmarkMenu from "./bookmark-menu.vue";
 
 defineProps<{
 	folder: TradeBookmarkTreeNode;
 	busy: boolean;
 	dropClass: Record<string, boolean>;
-	menuOpen: boolean;
-	menuStyle?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
@@ -16,7 +13,7 @@ const emit = defineEmits<{
 	"collapse-all": [];
 	"import-bookmarks": [];
 	"export-bookmarks": [];
-	"toggle-menu": [];
+	"open-menu": [event: MouseEvent];
 	"context-menu": [event: MouseEvent];
 	"drag-start": [event: DragEvent];
 	"drag-over": [event: DragEvent];
@@ -68,18 +65,7 @@ function collapseAll(): void {
 						icon="/sidepanel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
-						@click="emit('toggle-menu')">
-						<BookmarkMenu
-							:open="menuOpen"
-							placement="folder-title"
-							:menu-style="menuStyle"
-							:actions="[
-								{ id: 'create', label: '添加文件夹', run: createFolder },
-								{ id: 'import', label: '导入 JSON', run: importBookmarks },
-								{ id: 'export', label: '导出全部 JSON', run: exportBookmarks },
-								{ id: 'collapse-all', label: '折叠所有', run: collapseAll },
-							]" />
-					</BookmarkIconButton>
+						@click="emit('open-menu', $event)" />
 				</span>
 			</div>
 		</div>
