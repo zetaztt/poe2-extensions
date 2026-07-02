@@ -7,11 +7,8 @@ defineProps<{
 		id: string;
 		label: string;
 		disabled?: boolean;
+		run: () => void;
 	}>;
-}>();
-
-const emit = defineEmits<{
-	select: [actionId: string];
 }>();
 </script>
 
@@ -29,7 +26,7 @@ const emit = defineEmits<{
 						type="button"
 						class="bookmark-action-menu-button"
 						:disabled="action.disabled"
-						@click="emit('select', action.id)">
+						@click="action.run()">
 						<span>{{ action.label }}</span>
 					</button>
 				</li>

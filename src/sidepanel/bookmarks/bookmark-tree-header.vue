@@ -24,25 +24,20 @@ const emit = defineEmits<{
 	"drag-end": [];
 }>();
 
-function onMenuAction(actionId: string): void {
-	if (actionId === "create") {
-		emit("create-folder");
-		return;
-	}
+function createFolder(): void {
+	emit("create-folder");
+}
 
-	if (actionId === "import") {
-		emit("import-bookmarks");
-		return;
-	}
+function importBookmarks(): void {
+	emit("import-bookmarks");
+}
 
-	if (actionId === "export") {
-		emit("export-bookmarks");
-		return;
-	}
+function exportBookmarks(): void {
+	emit("export-bookmarks");
+}
 
-	if (actionId === "collapse-all") {
-		emit("collapse-all");
-	}
+function collapseAll(): void {
+	emit("collapse-all");
 }
 </script>
 
@@ -67,7 +62,7 @@ function onMenuAction(actionId: string): void {
 						icon="/sidepanel/bookmark-folder-add.png"
 						:disabled="busy"
 						title="添加文件夹"
-						@click="emit('create-folder')" />
+						@click="createFolder" />
 					<BookmarkIconButton
 						class="bookmark-tree-header-action bookmark-tree-header-menu-action"
 						icon="/sidepanel/bookmark-more.png"
@@ -79,12 +74,11 @@ function onMenuAction(actionId: string): void {
 							placement="folder-title"
 							:menu-style="menuStyle"
 							:actions="[
-								{ id: 'create', label: '添加文件夹' },
-								{ id: 'import', label: '导入 JSON' },
-								{ id: 'export', label: '导出全部 JSON' },
-								{ id: 'collapse-all', label: '折叠所有' },
-							]"
-							@select="onMenuAction" />
+								{ id: 'create', label: '添加文件夹', run: createFolder },
+								{ id: 'import', label: '导入 JSON', run: importBookmarks },
+								{ id: 'export', label: '导出全部 JSON', run: exportBookmarks },
+								{ id: 'collapse-all', label: '折叠所有', run: collapseAll },
+							]" />
 					</BookmarkIconButton>
 				</span>
 			</div>

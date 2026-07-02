@@ -55,28 +55,24 @@ function toggleFolderExpanded(): void {
 	emit("toggle-expanded");
 }
 
-function onMenuAction(actionId: string): void {
-	if (actionId === "add-bookmark") {
-		emit("add-bookmark");
-		return;
-	}
+function addBookmark(): void {
+	emit("add-bookmark");
+}
 
-	if (actionId === "collapse-others") {
-		emit("collapse-others");
-		return;
-	}
+function startRename(): void {
+	emit("start-rename");
+}
 
-	if (actionId === "export") {
-		emit("export-folder");
-		return;
-	}
-
-	if (actionId === "rename") {
-		emit("start-rename");
-		return;
-	}
-
+function deleteFolder(): void {
 	emit("delete-folder");
+}
+
+function collapseOthers(): void {
+	emit("collapse-others");
+}
+
+function exportFolder(): void {
+	emit("export-folder");
 }
 </script>
 
@@ -134,7 +130,7 @@ function onMenuAction(actionId: string): void {
 						icon="/sidepanel/bookmark-add.png"
 						:disabled="busy"
 						title="添加书签"
-						@click="emit('add-bookmark')" />
+						@click="addBookmark" />
 
 					<BookmarkIconButton
 						v-if="folder.canModify"
@@ -142,7 +138,7 @@ function onMenuAction(actionId: string): void {
 						icon="/sidepanel/bookmark-rename.png"
 						:disabled="busy"
 						title="重命名文件夹"
-						@click="emit('start-rename')" />
+						@click="startRename" />
 					<BookmarkIconButton
 						class="bookmark-folder-header-action bookmark-folder-menu-action"
 						icon="/sidepanel/bookmark-more.png"
@@ -154,13 +150,22 @@ function onMenuAction(actionId: string): void {
 							placement="folder-title"
 							:menu-style="menuStyle"
 							:actions="[
-								{ id: 'add-bookmark', label: '添加当前搜索' },
-								{ id: 'collapse-others', label: '折叠其他文件夹' },
-								{ id: 'export', label: '导出文件夹 JSON' },
-								{ id: 'rename', label: '重命名', disabled: !folder.canModify },
-								{ id: 'delete', label: '删除', disabled: !folder.canModify },
-							]"
-							@select="onMenuAction" />
+								{ id: 'add-bookmark', label: '添加当前搜索', run: addBookmark },
+								{ id: 'collapse-others', label: '折叠其他文件夹', run: collapseOthers },
+								{ id: 'export', label: '导出文件夹 JSON', run: exportFolder },
+								{
+									id: 'rename',
+									label: '重命名',
+									disabled: !folder.canModify,
+									run: startRename,
+								},
+								{
+									id: 'delete',
+									label: '删除',
+									disabled: !folder.canModify,
+									run: deleteFolder,
+								},
+							]" />
 					</BookmarkIconButton>
 				</span>
 			</div>

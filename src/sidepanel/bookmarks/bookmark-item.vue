@@ -47,17 +47,15 @@ const vFocus: Directive<HTMLInputElement> = {
 	},
 };
 
-function onMenuAction(actionId: string): void {
-	if (actionId === "rename") {
-		emit("start-rename");
-		return;
-	}
+function startRename(): void {
+	emit("start-rename");
+}
 
-	if (actionId === "replace") {
-		emit("replace");
-		return;
-	}
+function replaceBookmark(): void {
+	emit("replace");
+}
 
+function deleteBookmark(): void {
 	emit("delete");
 }
 </script>
@@ -100,7 +98,7 @@ function onMenuAction(actionId: string): void {
 			icon="/sidepanel/bookmark-rename.png"
 			:disabled="busy"
 			title="重命名书签"
-			@click="emit('start-rename')" />
+			@click="startRename" />
 		<BookmarkIconButton
 			class="bookmark-item-row-action"
 			icon="/sidepanel/bookmark-more.png"
@@ -111,11 +109,10 @@ function onMenuAction(actionId: string): void {
 				:open="menuOpen"
 				:menu-style="menuStyle"
 				:actions="[
-					{ id: 'rename', label: '重命名' },
-					{ id: 'replace', label: '用当前搜索替换' },
-					{ id: 'delete', label: '删除' },
-				]"
-				@select="onMenuAction" />
+					{ id: 'rename', label: '重命名', run: startRename },
+					{ id: 'replace', label: '用当前搜索替换', run: replaceBookmark },
+					{ id: 'delete', label: '删除', run: deleteBookmark },
+				]" />
 		</BookmarkIconButton>
 	</div>
 </template>
