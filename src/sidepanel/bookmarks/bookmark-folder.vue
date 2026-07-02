@@ -4,8 +4,8 @@ import type { TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
 import BookmarkMenu from "./bookmark-menu.vue";
 
-const props = defineProps<{
-	folder: TradeBookmarkTreeNode & { displayDepth: number };
+defineProps<{
+	folder: TradeBookmarkTreeNode;
 	expanded: boolean;
 	hasContent: boolean;
 	busy: boolean;
@@ -20,13 +20,9 @@ const renameTitle = defineModel<string>("renameTitle", { required: true });
 const emit = defineEmits<{
 	"toggle-expanded": [];
 	"add-bookmark": [];
-	"create-folder": [];
 	"start-rename": [];
 	"delete-folder": [];
 	"collapse-others": [];
-	"collapse-all": [];
-	"import-bookmarks": [];
-	"export-bookmarks": [];
 	"export-folder": [];
 	"toggle-menu": [];
 	"context-menu": [event: MouseEvent];
@@ -65,32 +61,13 @@ function onMenuAction(actionId: string): void {
 		return;
 	}
 
-	if (actionId === "create") {
-		emit("create-folder");
-		return;
-	}
-
 	if (actionId === "collapse-others") {
 		emit("collapse-others");
 		return;
 	}
 
-	if (actionId === "collapse-all") {
-		emit("collapse-all");
-		return;
-	}
-
-	if (actionId === "import") {
-		emit("import-bookmarks");
-		return;
-	}
-
 	if (actionId === "export") {
-		if (props.folder.displayDepth === 0) {
-			emit("export-bookmarks");
-		} else {
-			emit("export-folder");
-		}
+		emit("export-folder");
 		return;
 	}
 
@@ -106,7 +83,7 @@ function onMenuAction(actionId: string): void {
 <template>
 	<div
 		class="bookmark-folder-header"
-		:class="[{ 'top-level': folder.displayDepth === 0, 'is-renaming': renaming }, dropClass]"
+		:class="[{ 'is-renaming': renaming }, dropClass]"
 		:draggable="folder.canModify && !renaming && !busy"
 		@dragstart="emit('drag-start', $event)"
 		@dragover="emit('drag-over', $event)"
@@ -115,7 +92,7 @@ function onMenuAction(actionId: string): void {
 		@contextmenu="emit('context-menu', $event)">
 		<div class="bookmark-folder-title-bar">
 			<div class="bookmark-folder-title-layout">
-				<span v-if="folder.displayDepth > 0" class="bookmark-folder-toggle-cell">
+				<span class="bookmark-folder-toggle-cell">
 					<button
 						class="bookmark-folder-toggle-button tree-toggle"
 						type="button"
@@ -154,20 +131,13 @@ function onMenuAction(actionId: string): void {
 					</span>
 					<BookmarkIconButton
 						class="bookmark-folder-header-action bookmark-folder-add-action"
-						v-if="folder.displayDepth > 0"
 						icon="/sidepanel/bookmark-add.png"
 						:disabled="busy"
 						title="添加书签"
 						@click="emit('add-bookmark')" />
+
 					<BookmarkIconButton
-						class="bookmark-folder-header-action bookmark-folder-add-action"
-						v-if="folder.displayDepth === 0"
-						icon="/sidepanel/bookmark-folder-add.png"
-						:disabled="busy"
-						title="添加文件夹"
-						@click="emit('create-folder')" />
-					<BookmarkIconButton
-						v-if="folder.displayDepth > 0 && folder.canModify"
+						v-if="folder.canModify"
 						class="bookmark-folder-header-action bookmark-folder-rename-action"
 						icon="/sidepanel/bookmark-rename.png"
 						:disabled="busy"
@@ -183,22 +153,13 @@ function onMenuAction(actionId: string): void {
 							:open="menuOpen"
 							placement="folder-title"
 							:menu-style="menuStyle"
-							:actions="
-								folder.displayDepth === 0
-									? [
-											{ id: 'create', label: '添加文件夹' },
-											{ id: 'import', label: '导入 JSON' },
-											{ id: 'export', label: '导出全部 JSON' },
-											{ id: 'collapse-all', label: '折叠所有' },
-										]
-									: [
-											{ id: 'add-bookmark', label: '添加当前搜索' },
-											{ id: 'collapse-others', label: '折叠其他文件夹' },
-											{ id: 'export', label: '导出文件夹 JSON' },
-											{ id: 'rename', label: '重命名', disabled: !folder.canModify },
-											{ id: 'delete', label: '删除', disabled: !folder.canModify },
-										]
-							"
+							:actions="[
+								{ id: 'add-bookmark', label: '添加当前搜索' },
+								{ id: 'collapse-others', label: '折叠其他文件夹' },
+								{ id: 'export', label: '导出文件夹 JSON' },
+								{ id: 'rename', label: '重命名', disabled: !folder.canModify },
+								{ id: 'delete', label: '删除', disabled: !folder.canModify },
+							]"
 							@select="onMenuAction" />
 					</BookmarkIconButton>
 				</span>
@@ -230,21 +191,6 @@ function onMenuAction(actionId: string): void {
 
 .bookmark-folder-header.is-renaming .bookmark-folder-header-action {
 	vertical-align: top;
-}
-
-.bookmark-folder-header.top-level {
-	height: auto;
-	min-height: 31px;
-	margin-bottom: 0;
-	border: 1px solid #000;
-	border-left-color: #8a6d3b;
-	color: var(--color-text-primary);
-	background: #101112;
-	text-shadow: none;
-}
-
-.bookmark-folder-header.top-level.is-renaming {
-	margin-bottom: 0;
 }
 
 .bookmark-folder-header[draggable="true"] {
@@ -388,14 +334,6 @@ function onMenuAction(actionId: string): void {
 	white-space: nowrap;
 }
 
-.top-level .bookmark-folder-title {
-	padding: 0;
-	border-bottom: 0;
-	color: #e2e2e2;
-	font-size: inherit;
-	text-decoration: none;
-}
-
 .bookmark-folder-rename-control {
 	position: relative;
 	box-sizing: content-box;
@@ -449,11 +387,6 @@ function onMenuAction(actionId: string): void {
 
 @media (max-width: 430px) {
 	.bookmark-folder-header {
-		display: table;
-		width: 100%;
-	}
-
-	.bookmark-folder-header.top-level {
 		display: table;
 		width: 100%;
 	}

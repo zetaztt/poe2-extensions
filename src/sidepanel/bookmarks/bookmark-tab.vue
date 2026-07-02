@@ -17,6 +17,7 @@ import { exportBookmarkFolder, exportBookmarkTree, importBookmarkData } from "..
 import type { TradeBookmarkItem, TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
 import BookmarkFolder from "./bookmark-folder.vue";
 import BookmarkItem from "./bookmark-item.vue";
+import BookmarkTreeHeader from "./bookmark-tree-header.vue";
 
 type VisibleBookmarkFolder = TradeBookmarkTreeNode & {
 	displayDepth: number;
@@ -970,7 +971,27 @@ function clearDragState(): void {
 					<div
 						class="bookmark-folder-group"
 						:class="{ expanded: hasFolderContent(folder) && isFolderExpanded(folder) }">
+						<BookmarkTreeHeader
+							v-if="folder.displayDepth === 0"
+							:folder="folder"
+							:busy="isBusy"
+							:drop-class="getFolderDropClass(folder)"
+							:menu-open="isMenuOpen('folder', folder.id)"
+							:menu-style="
+								isMenuOpen('folder', folder.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined
+							"
+							@create-folder="onCreateFolder(folder.id)"
+							@collapse-all="collapseAllFolders"
+							@import-bookmarks="onImportBookmarksClick"
+							@export-bookmarks="onExportBookmarks()"
+							@toggle-menu="toggleMoreMenu({ type: 'folder', id: folder.id })"
+							@context-menu="openContextMenu($event, { type: 'folder', id: folder.id })"
+							@drag-start="onFolderDragStart($event, folder)"
+							@drag-over="onFolderDragOver($event, folder)"
+							@drop="onDrop"
+							@drag-end="clearDragState" />
 						<BookmarkFolder
+							v-else
 							v-model:rename-title="renamingFolderTitle"
 							:folder="folder"
 							:expanded="isFolderExpanded(folder)"
@@ -984,13 +1005,9 @@ function clearDragState(): void {
 							"
 							@toggle-expanded="toggleFolderExpanded(folder)"
 							@add-bookmark="addCurrentSearchToFolder(folder.id)"
-							@create-folder="onCreateFolder(folder.id)"
 							@start-rename="startRenameFolder(folder)"
 							@delete-folder="onDeleteFolder(folder)"
 							@collapse-others="collapseOtherFolders(folder)"
-							@collapse-all="collapseAllFolders"
-							@import-bookmarks="onImportBookmarksClick"
-							@export-bookmarks="onExportBookmarks()"
 							@export-folder="onExportBookmarks(folder)"
 							@toggle-menu="toggleMoreMenu({ type: 'folder', id: folder.id })"
 							@context-menu="openContextMenu($event, { type: 'folder', id: folder.id })"
