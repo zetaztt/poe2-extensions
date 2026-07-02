@@ -19,7 +19,6 @@ const renameTitle = defineModel<string>("renameTitle", { required: true });
 
 const emit = defineEmits<{
 	"toggle-expanded": [];
-	"folder-double-click": [];
 	"add-bookmark": [];
 	"create-folder": [];
 	"start-rename": [];
@@ -52,6 +51,10 @@ const vFocus: Directive<HTMLInputElement> = {
 		focusRenameInput(element);
 	},
 };
+
+function toggleFolderExpanded(): void {
+	emit("toggle-expanded");
+}
 
 function onMenuAction(actionId: string): void {
 	if (actionId === "add-bookmark") {
@@ -101,7 +104,7 @@ function onMenuAction(actionId: string): void {
 						type="button"
 						:disabled="!hasContent"
 						:title="expanded ? '折叠' : '展开'"
-						@click.stop="emit('toggle-expanded')">
+						@click.stop="toggleFolderExpanded">
 						<img
 							class="tree-toggle-icon"
 							:src="
@@ -129,7 +132,7 @@ function onMenuAction(actionId: string): void {
 								@blur="emit('rename-blur')" />
 						</span>
 					</span>
-					<span v-else class="bookmark-folder-title" @dblclick.stop="emit('folder-double-click')">
+					<span v-else class="bookmark-folder-title" @click.stop="toggleFolderExpanded" @dblclick.stop>
 						<span class="bookmark-folder-title-text">{{ folder.title }}</span>
 					</span>
 					<BookmarkIconButton

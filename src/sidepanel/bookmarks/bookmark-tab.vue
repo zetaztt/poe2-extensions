@@ -123,8 +123,7 @@ function hasFolderContent(folder: VisibleBookmarkFolder): boolean {
 	return folder.children.length > 0 || folder.bookmarks.length > 0;
 }
 
-async function toggleFolderExpanded(folder: VisibleBookmarkFolder): Promise<void> {
-	await flushPendingRename();
+function toggleFolderExpanded(folder: VisibleBookmarkFolder): void {
 	if (folder.displayDepth === 0 || !hasFolderContent(folder)) return;
 
 	const nextExpandedIds = new Set(expandedFolderIds.value);
@@ -136,15 +135,13 @@ async function toggleFolderExpanded(folder: VisibleBookmarkFolder): Promise<void
 
 	expandedFolderIds.value = nextExpandedIds;
 }
-async function collapseAllFolders(): Promise<void> {
-	await flushPendingRename();
+function collapseAllFolders(): void {
 	statusText.value = "";
 	closeMoreMenu();
 	expandedFolderIds.value = new Set();
 }
 
-async function collapseOtherFolders(folder: VisibleBookmarkFolder): Promise<void> {
-	await flushPendingRename();
+function collapseOtherFolders(folder: VisibleBookmarkFolder): void {
 	statusText.value = "";
 	closeMoreMenu();
 
@@ -157,11 +154,6 @@ async function collapseOtherFolders(folder: VisibleBookmarkFolder): Promise<void
 	}
 
 	expandedFolderIds.value = nextExpandedIds;
-}
-
-async function onFolderDoubleClick(folder: VisibleBookmarkFolder): Promise<void> {
-	if (folder.displayDepth === 0 || renamingFolderId.value === folder.id || !hasFolderContent(folder)) return;
-	await toggleFolderExpanded(folder);
 }
 
 async function toggleMoreMenu(menu: OpenMenu): Promise<void> {
@@ -885,7 +877,6 @@ function clearDragState(): void {
 								isMenuOpen('folder', folder.id) && openMenu ? getMoreMenuStyle(openMenu) : undefined
 							"
 							@toggle-expanded="toggleFolderExpanded(folder)"
-							@folder-double-click="onFolderDoubleClick(folder)"
 							@add-bookmark="addCurrentSearchToFolder(folder.id)"
 							@create-folder="onCreateFolder(folder.id)"
 							@start-rename="startRenameFolder(folder)"
