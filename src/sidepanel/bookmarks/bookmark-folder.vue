@@ -86,7 +86,7 @@ function onMenuAction(actionId: string): void {
 <template>
 	<div
 		class="bookmark-folder-header"
-		:class="[{ 'top-level': folder.displayDepth === 0, renaming }, dropClass]"
+		:class="[{ 'top-level': folder.displayDepth === 0, 'is-renaming': renaming }, dropClass]"
 		:draggable="folder.canModify && !renaming && !busy"
 		@dragstart="emit('drag-start', $event)"
 		@dragover="emit('drag-over', $event)"
@@ -113,15 +113,13 @@ function onMenuAction(actionId: string): void {
 							aria-hidden="true" />
 					</button>
 				</span>
-				<span class="bookmark-folder-title-content filter-body">
-					<span
-						v-if="renaming"
-						class="multiselect filter-select filter-select-title filter-select-mutate multiselect--active multiselect--above bookmark-rename-select">
-						<span class="multiselect__tags">
+				<span class="bookmark-folder-title-content">
+					<span v-if="renaming" class="bookmark-folder-rename-control">
+						<span class="bookmark-rename-field">
 							<input
 								v-model="renameTitle"
 								v-focus
-								class="multiselect__input rename-input"
+								class="bookmark-rename-input"
 								type="text"
 								:disabled="busy"
 								@click.stop
@@ -131,21 +129,18 @@ function onMenuAction(actionId: string): void {
 								@blur="emit('rename-blur')" />
 						</span>
 					</span>
-					<span
-						v-else
-						class="filter-title filter-title-clickable bookmark-folder-title-label bookmark-folder-title-clickable bookmark-folder-title"
-						@dblclick.stop="emit('folder-double-click')">
+					<span v-else class="bookmark-folder-title" @dblclick.stop="emit('folder-double-click')">
 						<span class="bookmark-folder-title-text">{{ folder.title }}</span>
 					</span>
 					<BookmarkIconButton
-						class="bookmark-folder-inline-action"
+						class="bookmark-folder-header-action bookmark-folder-add-action"
 						v-if="folder.displayDepth > 0"
 						icon="/sidepanel/bookmark-add.png"
 						:disabled="busy"
 						title="添加书签"
 						@click="emit('add-bookmark')" />
 					<BookmarkIconButton
-						class="bookmark-folder-inline-action"
+						class="bookmark-folder-header-action bookmark-folder-add-action"
 						v-if="folder.displayDepth === 0"
 						icon="/sidepanel/bookmark-folder-add.png"
 						:disabled="busy"
@@ -153,20 +148,20 @@ function onMenuAction(actionId: string): void {
 						@click="emit('create-folder')" />
 					<BookmarkIconButton
 						v-if="folder.displayDepth > 0 && folder.canModify"
-						class="secondary-action"
+						class="bookmark-folder-header-action bookmark-folder-rename-action"
 						icon="/sidepanel/bookmark-rename.png"
 						:disabled="busy"
 						title="重命名文件夹"
 						@click="emit('start-rename')" />
 					<BookmarkIconButton
-						class="bookmark-folder-menu-action"
+						class="bookmark-folder-header-action bookmark-folder-menu-action"
 						icon="/sidepanel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
 						@click="emit('toggle-menu')">
 						<BookmarkMenu
 							:open="menuOpen"
-							offset="folder"
+							placement="folder-title"
 							:menu-style="menuStyle"
 							:actions="
 								folder.displayDepth === 0
@@ -206,13 +201,11 @@ function onMenuAction(actionId: string): void {
 	text-shadow: 1px 1px 2px #1e2124;
 }
 
-.bookmark-folder-header.renaming {
+.bookmark-folder-header.is-renaming {
 	margin-bottom: 2px;
 }
 
-.bookmark-folder-header.renaming .bookmark-folder-inline-action,
-.bookmark-folder-header.renaming .secondary-action,
-.bookmark-folder-header.renaming .bookmark-folder-menu-action {
+.bookmark-folder-header.is-renaming .bookmark-folder-header-action {
 	vertical-align: top;
 }
 
@@ -227,9 +220,10 @@ function onMenuAction(actionId: string): void {
 	text-shadow: none;
 }
 
-.bookmark-folder-header.top-level.renaming {
+.bookmark-folder-header.top-level.is-renaming {
 	margin-bottom: 0;
 }
+
 .bookmark-folder-header[draggable="true"] {
 	cursor: grab;
 }
@@ -340,8 +334,9 @@ function onMenuAction(actionId: string): void {
 	min-width: 0;
 }
 
-.bookmark-folder-title-label {
+.bookmark-folder-title {
 	display: table-cell;
+	box-sizing: border-box;
 	width: 100%;
 	min-width: 0;
 	height: 30px;
@@ -350,22 +345,14 @@ function onMenuAction(actionId: string): void {
 	padding: 5px 0;
 	border-bottom: 1px solid #465260;
 	color: #fff8e1;
+	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 14px;
+	font-weight: 400;
 	line-height: 18px;
 	text-overflow: ellipsis;
 	text-shadow: 1px 1px 2px #1e2124;
 	white-space: nowrap;
-}
-
-.filter-title-clickable,
-.bookmark-folder-title-clickable {
 	cursor: pointer;
-}
-
-.bookmark-folder-title {
-	box-sizing: border-box;
-	font-family: FontinRegular, Verdana, Arial, "Microsoft YaHei", sans-serif;
-	font-size: 14px;
-	font-weight: 400;
 }
 
 .bookmark-folder-title-text {
@@ -386,7 +373,7 @@ function onMenuAction(actionId: string): void {
 	text-decoration: none;
 }
 
-.multiselect {
+.bookmark-folder-rename-control {
 	position: relative;
 	box-sizing: content-box;
 	display: table-cell;
@@ -397,17 +384,10 @@ function onMenuAction(actionId: string): void {
 	color: #e2e2e2;
 	text-align: left;
 	vertical-align: top;
-}
-
-.multiselect--active {
 	z-index: 5;
 }
 
-.filter-select-title {
-	height: 31px;
-}
-
-.multiselect__tags {
+.bookmark-rename-field {
 	display: block;
 	width: 100%;
 	min-height: 30px;
@@ -421,7 +401,7 @@ function onMenuAction(actionId: string): void {
 	font-size: 1em;
 }
 
-.multiselect__input {
+.bookmark-rename-input {
 	position: relative;
 	display: inline-block;
 	width: 100%;
@@ -433,18 +413,15 @@ function onMenuAction(actionId: string): void {
 	padding: 1px 0 0 5px;
 	color: #e2e2e2;
 	background: transparent;
+	font: inherit;
 	line-height: 20px;
 	box-shadow: none;
+	outline: 0;
 	transition: border 0.1s ease;
 }
 
-.multiselect__input::placeholder {
+.bookmark-rename-input::placeholder {
 	color: #707070;
-}
-
-.rename-input {
-	font: inherit;
-	outline: 0;
 }
 
 @media (max-width: 430px) {
@@ -458,7 +435,7 @@ function onMenuAction(actionId: string): void {
 		width: 100%;
 	}
 
-	.bookmark-folder-header .secondary-action {
+	.bookmark-folder-header .bookmark-folder-rename-action {
 		display: none;
 	}
 }

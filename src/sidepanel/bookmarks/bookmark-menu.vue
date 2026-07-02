@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 defineProps<{
 	open: boolean;
-	offset?: "bookmark" | "folder";
+	placement?: "bookmark-row" | "folder-title";
 	menuStyle?: Record<string, string>;
 	actions: Array<{
 		id: string;
@@ -16,19 +16,18 @@ const emit = defineEmits<{
 </script>
 
 <template>
-	<span class="more-wrap">
+	<span class="bookmark-action-menu-anchor">
 		<div
 			v-if="open"
-			class="more-menu multiselect__content-wrapper"
-			:class="{ 'folder-offset': offset === 'folder' }"
+			class="bookmark-action-menu"
+			:class="{ 'bookmark-action-menu--folder-title': placement === 'folder-title' }"
 			:style="menuStyle"
 			@click.stop>
-			<ul class="multiselect__content">
-				<li v-for="action in actions" :key="action.id" class="multiselect__element">
+			<ul class="bookmark-action-menu-list">
+				<li v-for="action in actions" :key="action.id" class="bookmark-action-menu-item">
 					<button
 						type="button"
-						class="multiselect__option"
-						:class="{ 'multiselect__option--disabled': action.disabled }"
+						class="bookmark-action-menu-button"
 						:disabled="action.disabled"
 						@click="emit('select', action.id)">
 						<span>{{ action.label }}</span>
@@ -40,7 +39,7 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-.more-wrap {
+.bookmark-action-menu-anchor {
 	position: relative;
 	display: inline-block;
 	width: 0;
@@ -48,7 +47,7 @@ const emit = defineEmits<{
 	vertical-align: top;
 }
 
-.more-menu {
+.bookmark-action-menu {
 	position: absolute;
 	top: 30px;
 	right: 0;
@@ -65,11 +64,11 @@ const emit = defineEmits<{
 	margin-top: 1px;
 }
 
-.more-menu.folder-offset {
+.bookmark-action-menu--folder-title {
 	margin-top: -3px;
 }
 
-.multiselect__content {
+.bookmark-action-menu-list {
 	display: inline-block;
 	min-width: 100%;
 	margin: 0;
@@ -80,11 +79,11 @@ const emit = defineEmits<{
 	list-style: none;
 }
 
-.multiselect__element {
+.bookmark-action-menu-item {
 	display: block;
 }
 
-.multiselect__option {
+.bookmark-action-menu-button {
 	display: block;
 	width: 100%;
 	height: 30px;
@@ -100,15 +99,14 @@ const emit = defineEmits<{
 	white-space: nowrap;
 }
 
-.multiselect__option:hover:not(:disabled),
-.multiselect__option:focus-visible:not(:disabled) {
+.bookmark-action-menu-button:hover:not(:disabled),
+.bookmark-action-menu-button:focus-visible:not(:disabled) {
 	color: #e2e2e2;
 	background-color: #465260;
 	outline: 0;
 }
 
-.multiselect__option--disabled,
-.multiselect__option:disabled {
+.bookmark-action-menu-button:disabled {
 	color: #777;
 	background-color: #000;
 	cursor: default;

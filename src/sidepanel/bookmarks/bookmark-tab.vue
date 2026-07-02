@@ -183,7 +183,7 @@ function closeMoreMenuOnOutsidePointer(event: MouseEvent): void {
 	if (!openMenu.value) return;
 
 	const target = event.target;
-	if (target instanceof HTMLElement && target.closest(".more-menu")) return;
+	if (target instanceof HTMLElement && target.closest(".bookmark-action-menu")) return;
 
 	closeMoreMenu();
 }
@@ -837,7 +837,10 @@ function isBookmarkDropTarget(bookmark: TradeBookmarkItem, position: "before" | 
 
 function isInteractiveDragSource(event: DragEvent): boolean {
 	const target = event.target;
-	return target instanceof HTMLElement && Boolean(target.closest("button, input, textarea, select, .more-menu"));
+	return (
+		target instanceof HTMLElement
+		&& Boolean(target.closest("button, input, textarea, select, .bookmark-action-menu"))
+	);
 }
 
 function prepareDragEvent(event: DragEvent): void {
