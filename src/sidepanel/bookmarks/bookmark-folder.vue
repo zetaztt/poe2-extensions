@@ -37,10 +37,19 @@ const emit = defineEmits<{
 	"rename-blur": [];
 }>();
 
+function focusRenameInput(element: HTMLInputElement): void {
+	if (element.disabled || document.activeElement === element) return;
+
+	element.focus();
+	element.select();
+}
+
 const vFocus: Directive<HTMLInputElement> = {
 	mounted(element) {
-		element.focus();
-		element.select();
+		focusRenameInput(element);
+	},
+	updated(element) {
+		focusRenameInput(element);
 	},
 };
 
@@ -142,41 +151,41 @@ function onMenuAction(actionId: string): void {
 						:disabled="busy"
 						title="添加文件夹"
 						@click="emit('create-folder')" />
+					<BookmarkIconButton
+						v-if="folder.displayDepth > 0 && folder.canModify"
+						class="secondary-action"
+						icon="/sidepanel/bookmark-rename.png"
+						:disabled="busy"
+						title="重命名文件夹"
+						@click="emit('start-rename')" />
+					<BookmarkIconButton
+						class="bookmark-folder-menu-action"
+						icon="/sidepanel/bookmark-more.png"
+						:disabled="busy"
+						title="更多"
+						@click="emit('toggle-menu')">
+						<BookmarkMenu
+							:open="menuOpen"
+							offset="folder"
+							:menu-style="menuStyle"
+							:actions="
+								folder.displayDepth === 0
+									? [
+											{ id: 'create', label: '添加文件夹' },
+											{ id: 'collapse-all', label: '折叠所有' },
+										]
+									: [
+											{ id: 'add-bookmark', label: '添加当前搜索' },
+											{ id: 'collapse-others', label: '折叠其他文件夹' },
+											{ id: 'rename', label: '重命名', disabled: !folder.canModify },
+											{ id: 'delete', label: '删除', disabled: !folder.canModify },
+										]
+							"
+							@select="onMenuAction" />
+					</BookmarkIconButton>
 				</span>
 			</div>
 		</div>
-		<BookmarkIconButton
-			v-if="folder.displayDepth > 0 && folder.canModify"
-			class="secondary-action"
-			icon="/sidepanel/bookmark-rename.png"
-			:disabled="busy"
-			title="重命名文件夹"
-			@click="emit('start-rename')" />
-		<BookmarkIconButton
-			class="bookmark-folder-menu-action"
-			icon="/sidepanel/bookmark-more.png"
-			:disabled="busy"
-			title="更多"
-			@click="emit('toggle-menu')">
-			<BookmarkMenu
-				:open="menuOpen"
-				offset="folder"
-				:menu-style="menuStyle"
-				:actions="
-					folder.displayDepth === 0
-						? [
-								{ id: 'create', label: '添加文件夹' },
-								{ id: 'collapse-all', label: '折叠所有' },
-							]
-						: [
-								{ id: 'add-bookmark', label: '添加当前搜索' },
-								{ id: 'collapse-others', label: '折叠其他文件夹' },
-								{ id: 'rename', label: '重命名', disabled: !folder.canModify },
-								{ id: 'delete', label: '删除', disabled: !folder.canModify },
-							]
-				"
-				@select="onMenuAction" />
-		</BookmarkIconButton>
 	</div>
 </template>
 
@@ -278,6 +287,7 @@ function onMenuAction(actionId: string): void {
 	position: relative;
 	display: inline-block;
 	margin-bottom: 0;
+	margin-right: -1px;
 	border: 1px solid #000;
 	border-radius: 0;
 	padding: 5px 12px;

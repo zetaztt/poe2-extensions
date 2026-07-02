@@ -31,10 +31,19 @@ const emit = defineEmits<{
 	"rename-blur": [];
 }>();
 
+function focusRenameInput(element: HTMLInputElement): void {
+	if (element.disabled || document.activeElement === element) return;
+
+	element.focus();
+	element.select();
+}
+
 const vFocus: Directive<HTMLInputElement> = {
 	mounted(element) {
-		element.focus();
-		element.select();
+		focusRenameInput(element);
+	},
+	updated(element) {
+		focusRenameInput(element);
 	},
 };
 
