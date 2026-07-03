@@ -99,6 +99,7 @@
 - 保持 `src/manifest.json`、`vite.config.ts` 和实际入口文件一致；新增浏览器运行入口时同步更新 manifest、`additionalInputs` 或 HTML 引用。
 - 新增功能设置应优先集中在 `src/settings/settings.ts`，保持默认值、storage key 和读写函数可复用。
 - sidepanel 的 Vue、DOM、拖拽、菜单和提示状态保留在对应页面目录；存储、校验、计算和可复用业务操作放在 `src/bookmarks/`、`src/settings/` 等功能模块。
+- 书签业务数据以 bookmarks service 的当前状态读取函数和事件订阅为权威来源；页面层保留展开、拖拽、重命名、菜单等交互状态，但书签树显示应订阅 service 数据变化刷新。写操作返回值可以短期兼容既有流程，但不作为长期维护 UI 数据的主要方式。
 - 用户开关设置使用 `browser.storage.sync` 云同步；书签、差价状态、筛选预设、翻译字典缓存等业务或大体积数据继续使用 `browser.storage.local`。
 - content script 与主世界脚本之间只能通过受控消息桥接；新增消息时同步更新类型守卫和消息类型定义。
 - background 返回的翻译字典必须经过结构校验，避免把无效远端或缓存数据传入页面。
@@ -120,6 +121,7 @@
 - 代码格式由 Prettier 统一，配置见 `.prettierrc.json`：Tab 缩进宽度 4、双引号、分号、`bracketSameLine: true`。
 - 遍历数组、NodeList、Map、Set 等集合时优先使用 `for...of`，避免使用 `.forEach(...)`，需要索引时使用 `entries()`。
 - TypeScript 保持模块化、小范围类型守卫，中文日志和用户可见说明可以保留中文。
+- 固定协议值、状态码、事件类型、消息类型、业务操作类型等跨函数或跨模块传递的有限集合优先提炼为 `enum`，避免在业务逻辑中直接比较散落的字符串字面量或裸数字；UI 文案和错误提示不要写进 `enum`，应使用配置表按枚举 key 映射；仅内部使用的状态码优先用数值枚举，需要跨运行环境、存储或消息协议稳定可读时再使用字符串枚举。
 - 功能模块源码文件默认使用“模块路径 + 职责名”的 `kebab-case` 命名，并保留目录结构；例如 `src/trade/stat-preset/trade-stat-preset-modal.ts`。当前已迁移 `src/trade`、`src/bookmarks`，后续新增功能模块按同样规则命名。
 - Vue 单文件组件使用 `kebab-case.vue`；保留 manifest 或 Vite 直接引用的入口文件名如 `src/background.ts`、`src/trade/trade-content.ts`、`src/trade/trade-inject.ts`。
 - Git 提交日志使用中文，保持简短并说明核心变更。

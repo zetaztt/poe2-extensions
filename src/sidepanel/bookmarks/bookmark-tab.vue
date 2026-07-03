@@ -1,18 +1,25 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
 	addCurrentTradeSearchBookmark,
 	createBookmarkFolder,
 	deleteBookmarkFolder,
 	deleteTradeBookmark,
-	getTradeBookmarkRootTree,
+	getCurrentTradeBookmarkTree,
+	getTradeBookmarkServiceErrorCode,
+	getTradeBookmarkServiceErrorMessage,
+	isTradeBookmarkServiceLoading,
+	loadTradeBookmarks,
 	moveBookmarkFolder,
 	moveTradeBookmark,
 	openTradeBookmark,
 	renameBookmarkFolder,
 	renameTradeBookmark,
 	replaceTradeBookmarkWithCurrentSearch,
-} from "../../bookmarks/bookmarks-bookmarks";
+	subscribeTradeBookmarks,
+	TradeBookmarkServiceEventType,
+	type TradeBookmarkServiceEvent,
+} from "../../bookmarks/bookmarks-service";
 import { exportBookmarkFolder, exportBookmarkTree, importBookmarkData } from "../../bookmarks/bookmarks-storage";
 import type { TradeBookmarkItem, TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
 import {
@@ -60,6 +67,7 @@ const skipNextBookmarkRenameBlur = ref(false);
 const dragItem = ref<DragItem | null>(null);
 const dropTarget = ref<DropTarget | null>(null);
 let pendingRenamePromise: Promise<void> | null = null;
+let unsubscribeTradeBookmarks: (() => void) | null = null;
 
 const visibleBookmarkFolders = computed<VisibleBookmarkFolder[]>(() =>
 	bookmarkTree.value ? flattenVisibleBookmarkFolders([bookmarkTree.value]) : [],
@@ -93,14 +101,36 @@ watch(
 );
 
 onMounted(() => {
+	syncTradeBookmarkServiceState();
+	unsubscribeTradeBookmarks = subscribeTradeBookmarks(onTradeBookmarkServiceEvent);
 	void loadBookmarks();
 });
+
+onBeforeUnmount(() => {
+	unsubscribeTradeBookmarks?.();
+	unsubscribeTradeBookmarks = null;
+});
+
+function syncTradeBookmarkServiceState(): void {
+	bookmarkTree.value = getCurrentTradeBookmarkTree();
+	isLoadingBookmarks.value = isTradeBookmarkServiceLoading();
+	statusText.value = getTradeBookmarkServiceErrorMessage(getTradeBookmarkServiceErrorCode());
+}
+
+function onTradeBookmarkServiceEvent(event: TradeBookmarkServiceEvent): void {
+	if (event.type === TradeBookmarkServiceEventType.Loaded || event.type === TradeBookmarkServiceEventType.Changed) {
+		bookmarkTree.value = event.tree;
+		return;
+	}
+
+	statusText.value = getTradeBookmarkServiceErrorMessage(event.code);
+}
 
 async function loadBookmarks(): Promise<void> {
 	isLoadingBookmarks.value = true;
 
 	try {
-		bookmarkTree.value = await getTradeBookmarkRootTree();
+		bookmarkTree.value = await loadTradeBookmarks();
 		emit("initialized", true);
 	} catch (error) {
 		bookmarkTree.value = null;
@@ -357,7 +387,6 @@ async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 		creatingBookmarkId.value = bookmark.id;
 		renamingBookmarkId.value = bookmark.id;
 		renamingBookmarkTitle.value = bookmark.title;
-		await loadBookmarks();
 	} catch (error) {
 		statusText.value = error instanceof Error ? error.message : "添加书签失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 搜索书签添加失败", error);
@@ -381,7 +410,6 @@ async function onCreateFolder(parentId: string): Promise<void> {
 		creatingFolderId.value = folder.id;
 		renamingFolderId.value = folder.id;
 		renamingFolderTitle.value = folder.title;
-		await loadBookmarks();
 	} catch (error) {
 		statusText.value = "新建文件夹失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 书签目录创建失败", error);
@@ -423,7 +451,6 @@ async function cancelCreatedFolder(folderId: string): Promise<void> {
 		await deleteBookmarkFolder(folderId);
 		creatingFolderId.value = "";
 		clearFolderRename();
-		await loadBookmarks();
 	} catch (error) {
 		statusText.value = "取消新建文件夹失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 书签目录取消创建失败", error);
@@ -454,7 +481,6 @@ async function onDeleteFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 	try {
 		await deleteBookmarkFolder(folder.id);
 		removeExpandedFolder(folder.id);
-		await loadBookmarks();
 	} catch (error) {
 		statusText.value = "删除文件夹失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 书签目录删除失败", error);
@@ -495,7 +521,6 @@ async function cancelCreatedBookmark(bookmarkId: string): Promise<void> {
 		await deleteTradeBookmark(bookmarkId);
 		creatingBookmarkId.value = "";
 		clearBookmarkRename();
-		await loadBookmarks();
 	} catch (error) {
 		statusText.value = "取消新建书签失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 书签取消创建失败", error);
@@ -535,7 +560,6 @@ async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	try {
 		await replaceTradeBookmarkWithCurrentSearch(bookmark.id);
 		statusText.value = "书签链接已替换为当前搜索。";
-		await loadBookmarks();
 	} catch (error) {
 		statusText.value = error instanceof Error ? error.message : "替换书签失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 书签替换失败", error);
@@ -556,7 +580,6 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 
 	try {
 		await deleteTradeBookmark(bookmark.id);
-		await loadBookmarks();
 	} catch (error) {
 		statusText.value = "删除书签失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 书签删除失败", error);
@@ -654,8 +677,6 @@ async function onDrop(event: DragEvent): Promise<void> {
 			await moveTradeBookmark(item.id, moveTarget.folderId, moveTarget.index);
 			expandFolder(moveTarget.folderId);
 		}
-
-		await loadBookmarks();
 	} catch (error) {
 		statusText.value = error instanceof Error ? error.message : "移动失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 书签拖拽移动失败", error);
@@ -790,8 +811,7 @@ function queueFolderRename(): Promise<void> | null {
 
 	return queueRename(async () => {
 		try {
-			const folder = await renameBookmarkFolder(folderId, title);
-			updateFolderTitleInTree(folder.id, folder.title);
+			await renameBookmarkFolder(folderId, title);
 		} catch (error) {
 			statusText.value = "重命名文件夹失败，请稍后重试。";
 			console.error("[poe2-extensions] trade 书签目录重命名失败", error);
@@ -811,8 +831,7 @@ function queueBookmarkRename(): Promise<void> | null {
 
 	return queueRename(async () => {
 		try {
-			const bookmark = await renameTradeBookmark(bookmarkId, title);
-			updateBookmarkTitleInTree(bookmark.id, bookmark.title);
+			await renameTradeBookmark(bookmarkId, title);
 		} catch (error) {
 			statusText.value = "重命名书签失败，请稍后重试。";
 			console.error("[poe2-extensions] trade 书签重命名失败", error);
