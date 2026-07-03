@@ -169,7 +169,6 @@ async function onExportBookmarks(folder?: TradeBookmarkTreeNode): Promise<void> 
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMenu();
 
 	try {
 		const data = folder ? await exportBookmarkFolder(folder.id) : await exportBookmarkTree();
@@ -198,7 +197,6 @@ async function onImportBookmarksClick(): Promise<void> {
 	if (isBusy.value) return;
 
 	statusText.value = "";
-	closeMenu();
 	importFileInput.value?.click();
 }
 
@@ -210,7 +208,6 @@ async function onImportBookmarksChange(event: Event): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMenu();
 
 	try {
 		const data: unknown = JSON.parse(await file.text());
@@ -272,13 +269,11 @@ function toggleFolderExpanded(folder: VisibleBookmarkFolder): void {
 }
 function collapseAllFolders(): void {
 	statusText.value = "";
-	closeMenu();
 	expandedFolderIds.value = new Set();
 }
 
 function collapseOtherFolders(folder: VisibleBookmarkFolder): void {
 	statusText.value = "";
-	closeMenu();
 
 	const nextExpandedIds = new Set<string>();
 	let currentFolder: TradeBookmarkTreeNode | null = folder;
@@ -389,7 +384,6 @@ async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMenu();
 
 	try {
 		const bookmark = await addCurrentTradeSearchBookmark(folderId);
@@ -412,7 +406,6 @@ async function onCreateFolder(parentId: string): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMenu();
 
 	try {
 		const folder = await createBookmarkFolder(parentId, "New Folder");
@@ -431,7 +424,6 @@ async function onCreateFolder(parentId: string): Promise<void> {
 async function startRenameFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 	if (!folder.canModify) return;
 	await flushPendingRename();
-	closeMenu();
 	await cancelBookmarkRename();
 	renamingFolderId.value = folder.id;
 	renamingFolderTitle.value = folder.title;
@@ -486,7 +478,6 @@ async function onDeleteFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMenu();
 
 	try {
 		await deleteBookmarkFolder(folder.id);
@@ -501,7 +492,6 @@ async function onDeleteFolder(folder: TradeBookmarkTreeNode): Promise<void> {
 
 async function startRenameBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	await flushPendingRename();
-	closeMenu();
 	await cancelFolderRename();
 	renamingBookmarkId.value = bookmark.id;
 	renamingBookmarkTitle.value = bookmark.title;
@@ -565,7 +555,6 @@ async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMenu();
 
 	try {
 		await replaceTradeBookmarkWithCurrentSearch(bookmark.id);
@@ -586,7 +575,6 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 
 	isBusy.value = true;
 	statusText.value = "";
-	closeMenu();
 
 	try {
 		await deleteTradeBookmark(bookmark.id);
