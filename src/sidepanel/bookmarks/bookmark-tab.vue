@@ -86,8 +86,11 @@ const dropTarget = ref<DropTarget | null>(null);
 let pendingRenamePromise: Promise<void> | null = null;
 let unsubscribeTradeBookmarks: (() => void) | null = null;
 
+const rootBookmarkFolder = computed<VisibleBookmarkFolder | null>(() =>
+	bookmarkTree.value ? { ...bookmarkTree.value, displayDepth: 0 } : null,
+);
 const visibleBookmarkFolders = computed<VisibleBookmarkFolder[]>(() =>
-	bookmarkTree.value ? flattenVisibleBookmarkFolders([bookmarkTree.value]) : [],
+	bookmarkTree.value ? flattenVisibleBookmarkFolders(bookmarkTree.value.children, 1) : [],
 );
 
 watch(
@@ -1017,86 +1020,88 @@ function clearDragState(): void {
 			type="file"
 			accept="application/json,.json"
 			@change="onImportBookmarksChange" />
-		<section class="bookmark-list" aria-live="polite" @click="closeMenu">
-			<p v-if="statusText" class="message">{{ statusText }}</p>
-			<div v-if="isLoadingBookmarks" class="panel muted">读取书签中</div>
-			<div v-else-if="!bookmarkTree" class="panel muted">这个目录下还没有可用的书签目录。</div>
+		<section class="bookmark-list" @click="closeMenu">
+			<BookmarkTreeHeader
+				v-if="rootBookmarkFolder"
+				:folder="rootBookmarkFolder"
+				:busy="isBusy"
+				:drop-class="getFolderDropClass(rootBookmarkFolder)"
+				@create-folder="onCreateFolder(rootBookmarkFolder.id)"
+				@collapse-all="collapseAllFolders"
+				@import-bookmarks="onImportBookmarksClick"
+				@export-bookmarks="onExportBookmarks()"
+				@open-menu="openRootFolderMenu($event, rootBookmarkFolder)"
+				@context-menu="openRootFolderContextMenu($event, rootBookmarkFolder)"
+				@drag-start="onFolderDragStart($event, rootBookmarkFolder)"
+				@drag-over="onFolderDragOver($event, rootBookmarkFolder)"
+				@drop="onDrop"
+				@drag-end="clearDragState" />
 
-			<section v-else class="panel bookmark-tree" @dragover="onPanelDragOver" @drop="onPanelDrop">
-				<div
-					v-for="folder in visibleBookmarkFolders"
-					:key="folder.id"
-					class="bookmark-folder"
-					:style="{ marginLeft: `${Math.max(0, folder.displayDepth - 1) * 8}px` }">
+			<div class="bookmark-tree-viewport">
+				<div v-if="isLoadingBookmarks" class="panel muted">读取书签中</div>
+				<div v-else-if="!bookmarkTree" class="panel muted">这个目录下还没有可用的书签目录。</div>
+
+				<section v-else class="panel bookmark-tree" @dragover="onPanelDragOver" @drop="onPanelDrop">
 					<div
-						class="bookmark-folder-group"
-						:class="{ expanded: hasFolderContent(folder) && isFolderExpanded(folder) }">
-						<BookmarkTreeHeader
-							v-if="folder.displayDepth === 0"
-							:folder="folder"
-							:busy="isBusy"
-							:drop-class="getFolderDropClass(folder)"
-							@create-folder="onCreateFolder(folder.id)"
-							@collapse-all="collapseAllFolders"
-							@import-bookmarks="onImportBookmarksClick"
-							@export-bookmarks="onExportBookmarks()"
-							@open-menu="openRootFolderMenu($event, folder)"
-							@context-menu="openRootFolderContextMenu($event, folder)"
-							@drag-start="onFolderDragStart($event, folder)"
-							@drag-over="onFolderDragOver($event, folder)"
-							@drop="onDrop"
-							@drag-end="clearDragState" />
-						<BookmarkFolder
-							v-else
-							v-model:rename-title="renamingFolderTitle"
-							:folder="folder"
-							:expanded="isFolderExpanded(folder)"
-							:has-content="hasFolderContent(folder)"
-							:busy="isBusy"
-							:renaming="renamingFolderId === folder.id"
-							:drop-class="getFolderDropClass(folder)"
-							@toggle-expanded="toggleFolderExpanded(folder)"
-							@add-bookmark="addCurrentSearchToFolder(folder.id)"
-							@start-rename="startRenameFolder(folder)"
-							@delete-folder="onDeleteFolder(folder)"
-							@collapse-others="collapseOtherFolders(folder)"
-							@export-folder="onExportBookmarks(folder)"
-							@open-menu="openFolderMenu($event, folder)"
-							@context-menu="openFolderContextMenu($event, folder)"
-							@drag-start="onFolderDragStart($event, folder)"
-							@drag-over="onFolderDragOver($event, folder)"
-							@drop="onDrop"
-							@drag-end="clearDragState"
-							@confirm-rename="confirmRenameFolder"
-							@cancel-rename="cancelFolderRename"
-							@rename-blur="onFolderRenameBlur" />
-
-						<div v-show="isFolderExpanded(folder)" class="bookmark-folder-body">
-							<BookmarkItem
-								v-for="bookmark in folder.bookmarks"
-								:key="bookmark.id"
-								v-model:rename-title="renamingBookmarkTitle"
-								:bookmark="bookmark"
+						v-for="folder in visibleBookmarkFolders"
+						:key="folder.id"
+						class="bookmark-folder"
+						:style="{ marginLeft: `${Math.max(0, folder.displayDepth - 1) * 8}px` }">
+						<div
+							class="bookmark-folder-group"
+							:class="{ expanded: hasFolderContent(folder) && isFolderExpanded(folder) }">
+							<BookmarkFolder
+								v-model:rename-title="renamingFolderTitle"
+								:folder="folder"
+								:expanded="isFolderExpanded(folder)"
+								:has-content="hasFolderContent(folder)"
 								:busy="isBusy"
-								:renaming="renamingBookmarkId === bookmark.id"
-								:drop-class="getBookmarkDropClass(bookmark)"
-								@open="onOpenBookmark(bookmark)"
-								@start-rename="startRenameBookmark(bookmark)"
-								@replace="onReplaceBookmark(bookmark)"
-								@delete="onDeleteBookmark(bookmark)"
-								@open-menu="openBookmarkItemMenu($event, bookmark)"
-								@context-menu="openBookmarkContextMenu($event, bookmark)"
-								@drag-start="onBookmarkDragStart($event, bookmark)"
-								@drag-over="onBookmarkDragOver($event, bookmark)"
+								:renaming="renamingFolderId === folder.id"
+								:drop-class="getFolderDropClass(folder)"
+								@toggle-expanded="toggleFolderExpanded(folder)"
+								@add-bookmark="addCurrentSearchToFolder(folder.id)"
+								@start-rename="startRenameFolder(folder)"
+								@delete-folder="onDeleteFolder(folder)"
+								@collapse-others="collapseOtherFolders(folder)"
+								@export-folder="onExportBookmarks(folder)"
+								@open-menu="openFolderMenu($event, folder)"
+								@context-menu="openFolderContextMenu($event, folder)"
+								@drag-start="onFolderDragStart($event, folder)"
+								@drag-over="onFolderDragOver($event, folder)"
 								@drop="onDrop"
 								@drag-end="clearDragState"
-								@confirm-rename="confirmRenameBookmark"
-								@cancel-rename="cancelBookmarkRename"
-								@rename-blur="onBookmarkRenameBlur" />
+								@confirm-rename="confirmRenameFolder"
+								@cancel-rename="cancelFolderRename"
+								@rename-blur="onFolderRenameBlur" />
+
+							<div v-show="isFolderExpanded(folder)" class="bookmark-folder-body">
+								<BookmarkItem
+									v-for="bookmark in folder.bookmarks"
+									:key="bookmark.id"
+									v-model:rename-title="renamingBookmarkTitle"
+									:bookmark="bookmark"
+									:busy="isBusy"
+									:renaming="renamingBookmarkId === bookmark.id"
+									:drop-class="getBookmarkDropClass(bookmark)"
+									@open="onOpenBookmark(bookmark)"
+									@start-rename="startRenameBookmark(bookmark)"
+									@replace="onReplaceBookmark(bookmark)"
+									@delete="onDeleteBookmark(bookmark)"
+									@open-menu="openBookmarkItemMenu($event, bookmark)"
+									@context-menu="openBookmarkContextMenu($event, bookmark)"
+									@drag-start="onBookmarkDragStart($event, bookmark)"
+									@drag-over="onBookmarkDragOver($event, bookmark)"
+									@drop="onDrop"
+									@drag-end="clearDragState"
+									@confirm-rename="confirmRenameBookmark"
+									@cancel-rename="cancelBookmarkRename"
+									@rename-blur="onBookmarkRenameBlur" />
+							</div>
 						</div>
 					</div>
-				</div>
-			</section>
+				</section>
+			</div>
+			<p class="message" :class="{ empty: !statusText }" aria-live="polite">{{ statusText }}</p>
 		</section>
 	</section>
 </template>
@@ -1104,7 +1109,9 @@ function clearDragState(): void {
 <style scoped>
 .tab-content {
 	display: grid;
+	grid-template-rows: minmax(0, 1fr);
 	gap: 0;
+	min-height: 0;
 	padding: 8px;
 	background: #000;
 }
@@ -1133,17 +1140,29 @@ p {
 	line-height: 1.4;
 }
 
+.message.empty {
+	visibility: hidden;
+}
+
 .bookmark-list {
 	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
 	gap: 4px;
+	min-height: 0;
 }
 
 .bookmark-import-input {
 	display: none;
 }
 
+.bookmark-tree-viewport {
+	min-height: 0;
+	overflow: auto;
+}
+
 .bookmark-tree {
 	display: grid;
+	align-content: start;
 	gap: 1px;
 	padding: 0;
 }

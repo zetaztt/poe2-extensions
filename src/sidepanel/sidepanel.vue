@@ -65,6 +65,9 @@ function onBookmarksInitialized(success: boolean): void {
 
 <style scoped>
 .app {
+	display: grid;
+	grid-template-rows: auto auto minmax(0, 1fr);
+	height: 100vh;
 	min-height: 100vh;
 	padding: 0 8px 12px;
 	color: var(--color-text-primary);
