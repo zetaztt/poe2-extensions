@@ -54,11 +54,6 @@ export interface StoredTradeBookmarkTree {
 
 export type TradeBookmarkExportData = TradeBookmarkTreeExportData | TradeBookmarkFolderExportData;
 
-export enum TradeBookmarkImportMode {
-	Append = "append",
-	Replace = "replace",
-}
-
 export enum TradeBookmarkExportContent {
 	Tree = "tree",
 	Folder = "folder",

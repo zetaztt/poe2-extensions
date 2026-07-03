@@ -21,11 +21,7 @@ import {
 	type TradeBookmarkServiceEvent,
 } from "../../bookmarks/bookmarks-service";
 import { exportBookmarkFolder, exportBookmarkTree, importBookmarkData } from "../../bookmarks/bookmarks-storage";
-import {
-	TradeBookmarkImportMode,
-	type TradeBookmarkItem,
-	type TradeBookmarkTreeNode,
-} from "../../bookmarks/bookmarks-types";
+import { type TradeBookmarkItem, type TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
 import {
 	closeMenu,
 	openMenu as openSidepanelMenu,
@@ -215,25 +211,15 @@ async function onImportBookmarksChange(event: Event): Promise<void> {
 
 	try {
 		const data: unknown = JSON.parse(await file.text());
-		const mode = getImportMode();
-		if (!mode) return;
-		await importBookmarkData(data, mode);
+		await importBookmarkData(data);
 		await loadBookmarks();
-		statusText.value = mode === TradeBookmarkImportMode.Append ? "书签 JSON 已添加。" : "书签 JSON 已覆盖导入。";
+		statusText.value = "书签 JSON 已同步。";
 	} catch (error) {
 		statusText.value = error instanceof Error ? error.message : "导入书签失败，请确认 JSON 文件有效。";
 		console.error("[poe2-extensions] trade 书签导入失败", error);
 	} finally {
 		isBusy.value = false;
 	}
-}
-
-function getImportMode(): TradeBookmarkImportMode | null {
-	if (window.confirm("导入 JSON 默认会添加到当前书签后面。\n\n点击“确定”添加，点击“取消”选择覆盖或放弃。")) {
-		return TradeBookmarkImportMode.Append;
-	}
-
-	return window.confirm("确定覆盖当前所有 trade 书签吗？") ? TradeBookmarkImportMode.Replace : null;
 }
 
 function getBookmarkExportFileName(data: { exportedAt: number }, folder: TradeBookmarkTreeNode | undefined): string {

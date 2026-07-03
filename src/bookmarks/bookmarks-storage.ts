@@ -1,7 +1,6 @@
 import browser from "webextension-polyfill";
 import {
 	TradeBookmarkExportContent,
-	TradeBookmarkImportMode,
 	type StoredTradeBookmark,
 	type StoredTradeBookmarkFolder,
 	type StoredTradeBookmarkTree,
@@ -58,20 +57,12 @@ export async function exportBookmarkFolder(folderId: string): Promise<TradeBookm
 	};
 }
 
-export async function importBookmarkData(value: unknown, mode: TradeBookmarkImportMode): Promise<void> {
+export async function importBookmarkData(value: unknown): Promise<void> {
 	const data = getImportBookmarkData(value);
 	if (!data) throw new Error("导入文件不是有效的 trade2 书签备份。");
 
-	if (mode === TradeBookmarkImportMode.Replace) {
-		await saveBookmarkTree(createReplacementBookmarkTree(data));
-		return;
-	}
-
 	const tree = await getBookmarkTree();
-	const importedFolders = getImportFolders(data).map((folder) => cloneFolderForParent(folder, rootFolderId));
-	const now = Date.now();
-	tree.root.children.push(...importedFolders);
-	tree.root.updatedAt = now;
+	syncImportFolders(tree, getImportFolders(data));
 	await saveBookmarkTree(tree);
 }
 
@@ -90,17 +81,58 @@ function createDefaultBookmarkTree(): StoredTradeBookmarkTree {
 	};
 }
 
-function createReplacementBookmarkTree(data: BookmarkImportData): StoredTradeBookmarkTree {
-	if (data.content === TradeBookmarkExportContent.Tree) return structuredClone(data.tree);
-
-	const tree = createDefaultBookmarkTree();
-	tree.root.children = [cloneFolderForParent(data.folder, rootFolderId)];
-	tree.root.updatedAt = Date.now();
-	return tree;
-}
-
 function getImportFolders(data: BookmarkImportData): StoredTradeBookmarkFolder[] {
 	return data.content === TradeBookmarkExportContent.Tree ? data.tree.root.children : [data.folder];
+}
+
+function syncImportFolders(tree: StoredTradeBookmarkTree, importedFolders: StoredTradeBookmarkFolder[]): void {
+	const now = Date.now();
+	let hasChanged = false;
+
+	for (const importedFolder of importedFolders) {
+		const existingFolder = tree.root.children.find((folder) => folder.id === importedFolder.id);
+		const targetFolder = existingFolder ?? createImportFolder(tree.root, importedFolder);
+		if (!existingFolder) hasChanged = true;
+
+		for (const importedBookmark of importedFolder.bookmarks) {
+			const existingBookmark = findBookmarkWithParent(tree.root, importedBookmark.id);
+			if (existingBookmark) {
+				if (
+					existingBookmark.bookmark.url !== importedBookmark.url
+					|| existingBookmark.bookmark.updatedAt !== importedBookmark.updatedAt
+				) {
+					existingBookmark.bookmark.url = importedBookmark.url;
+					existingBookmark.bookmark.updatedAt = importedBookmark.updatedAt;
+					existingBookmark.parent.updatedAt = now;
+					hasChanged = true;
+				}
+				continue;
+			}
+
+			targetFolder.bookmarks.push({
+				...structuredClone(importedBookmark),
+				parentId: targetFolder.id,
+			});
+			targetFolder.updatedAt = now;
+			hasChanged = true;
+		}
+	}
+
+	if (hasChanged) tree.root.updatedAt = now;
+}
+
+function createImportFolder(
+	root: StoredTradeBookmarkFolder,
+	importedFolder: StoredTradeBookmarkFolder,
+): StoredTradeBookmarkFolder {
+	const folder: StoredTradeBookmarkFolder = {
+		...structuredClone(importedFolder),
+		parentId: rootFolderId,
+		children: [],
+		bookmarks: [],
+	};
+	root.children.push(folder);
+	return folder;
 }
 
 function getImportBookmarkData(value: unknown): BookmarkImportData | null {
@@ -125,29 +157,27 @@ function getImportBookmarkData(value: unknown): BookmarkImportData | null {
 	return null;
 }
 
-function cloneFolderForParent(
-	folder: StoredTradeBookmarkFolder,
-	parentId: string | undefined,
-): StoredTradeBookmarkFolder {
-	const folderId = createId("folder");
-	return {
-		...structuredClone(folder),
-		id: folderId,
-		parentId,
-		children: folder.children.map((child) => cloneFolderForParent(child, folderId)),
-		bookmarks: folder.bookmarks.map((bookmark) => ({
-			...bookmark,
-			id: createId("bookmark"),
-			parentId: folderId,
-		})),
-	};
-}
-
 function findFolder(folder: StoredTradeBookmarkFolder, folderId: string): StoredTradeBookmarkFolder | null {
 	if (folder.id === folderId) return folder;
 
 	for (const child of folder.children) {
 		const match = findFolder(child, folderId);
+		if (match) return match;
+	}
+
+	return null;
+}
+
+function findBookmarkWithParent(
+	folder: StoredTradeBookmarkFolder,
+	bookmarkId: string,
+): { bookmark: StoredTradeBookmark; parent: StoredTradeBookmarkFolder } | null {
+	for (const bookmark of folder.bookmarks) {
+		if (bookmark.id === bookmarkId) return { bookmark, parent: folder };
+	}
+
+	for (const child of folder.children) {
+		const match = findBookmarkWithParent(child, bookmarkId);
 		if (match) return match;
 	}
 
@@ -203,12 +233,6 @@ function isTrade2Url(url: string): boolean {
 	} catch {
 		return false;
 	}
-}
-
-function createId(prefix: "folder" | "bookmark"): string {
-	const randomId =
-		globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-	return `${prefix}-${randomId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
