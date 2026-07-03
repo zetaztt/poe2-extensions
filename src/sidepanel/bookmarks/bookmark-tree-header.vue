@@ -2,48 +2,45 @@
 import type { TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
 
-defineProps<{
+const props = defineProps<{
 	folder: TradeBookmarkTreeNode;
 	busy: boolean;
 	dropClass: Record<string, boolean>;
-}>();
-
-const emit = defineEmits<{
-	"create-folder": [];
-	"open-menu": [event: MouseEvent];
-	"context-menu": [event: MouseEvent];
-	"drag-start": [event: DragEvent];
-	"drag-over": [event: DragEvent];
-	drop: [event: DragEvent];
-	"drag-end": [];
+	onCreateFolder?: () => void;
+	onOpenMenu?: (event: MouseEvent) => void;
+	onContextMenu?: (event: MouseEvent) => void;
+	onDragStart?: (event: DragEvent) => void;
+	onDragOver?: (event: DragEvent) => void;
+	onDrop?: (event: DragEvent) => void;
+	onDragEnd?: () => void;
 }>();
 
 function createFolder(): void {
-	emit("create-folder");
+	props.onCreateFolder?.();
 }
 
 function openMenu(event: MouseEvent): void {
-	emit("open-menu", event);
+	props.onOpenMenu?.(event);
 }
 
 function openContextMenu(event: MouseEvent): void {
-	emit("context-menu", event);
+	props.onContextMenu?.(event);
 }
 
 function onDragStart(event: DragEvent): void {
-	emit("drag-start", event);
+	props.onDragStart?.(event);
 }
 
 function onDragOver(event: DragEvent): void {
-	emit("drag-over", event);
+	props.onDragOver?.(event);
 }
 
 function onDrop(event: DragEvent): void {
-	emit("drop", event);
+	props.onDrop?.(event);
 }
 
 function onDragEnd(): void {
-	emit("drag-end");
+	props.onDragEnd?.();
 }
 </script>
 
@@ -68,13 +65,13 @@ function onDragEnd(): void {
 						icon="/sidepanel/bookmark-folder-add.png"
 						:disabled="busy"
 						title="添加文件夹"
-						@click="createFolder" />
+						:on-click="createFolder" />
 					<BookmarkIconButton
 						class="bookmark-tree-header-action bookmark-tree-header-menu-action"
 						icon="/sidepanel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
-						@click="openMenu" />
+						:on-click="openMenu" />
 				</span>
 			</div>
 		</div>

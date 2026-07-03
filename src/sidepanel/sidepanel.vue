@@ -55,7 +55,7 @@ function onBookmarksInitialized(success: boolean): void {
 		<BookmarkTab
 			v-show="activeTab === 'bookmarks'"
 			:active="activeTab === 'bookmarks'"
-			@initialized="onBookmarksInitialized" />
+			:on-initialized="onBookmarksInitialized" />
 
 		<DictionaryTab v-show="activeTab === 'dictionary'" :active="activeTab === 'dictionary'" />
 

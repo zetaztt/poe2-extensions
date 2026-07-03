@@ -3,28 +3,25 @@ import type { Directive } from "vue";
 import type { TradeBookmarkItem } from "../../bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
 
-defineProps<{
+const props = defineProps<{
 	bookmark: TradeBookmarkItem;
 	busy: boolean;
 	renaming: boolean;
 	dropClass: Record<string, boolean>;
+	onOpen?: () => void;
+	onStartRename?: () => void;
+	onOpenMenu?: (event: MouseEvent) => void;
+	onContextMenu?: (event: MouseEvent) => void;
+	onDragStart?: (event: DragEvent) => void;
+	onDragOver?: (event: DragEvent) => void;
+	onDrop?: (event: DragEvent) => void;
+	onDragEnd?: () => void;
+	onConfirmRename?: () => void;
+	onCancelRename?: () => void;
+	onRenameBlur?: () => void;
 }>();
 
 const renameTitle = defineModel<string>("renameTitle", { required: true });
-
-const emit = defineEmits<{
-	open: [];
-	"start-rename": [];
-	"open-menu": [event: MouseEvent];
-	"context-menu": [event: MouseEvent];
-	"drag-start": [event: DragEvent];
-	"drag-over": [event: DragEvent];
-	drop: [event: DragEvent];
-	"drag-end": [];
-	"confirm-rename": [];
-	"cancel-rename": [];
-	"rename-blur": [];
-}>();
 
 function focusRenameInput(element: HTMLInputElement): void {
 	if (element.disabled || document.activeElement === element) return;
@@ -43,47 +40,47 @@ const vFocus: Directive<HTMLInputElement> = {
 };
 
 function openBookmark(): void {
-	emit("open");
+	props.onOpen?.();
 }
 
 function startRename(): void {
-	emit("start-rename");
+	props.onStartRename?.();
 }
 
 function openMenu(event: MouseEvent): void {
-	emit("open-menu", event);
+	props.onOpenMenu?.(event);
 }
 
 function openContextMenu(event: MouseEvent): void {
-	emit("context-menu", event);
+	props.onContextMenu?.(event);
 }
 
 function onDragStart(event: DragEvent): void {
-	emit("drag-start", event);
+	props.onDragStart?.(event);
 }
 
 function onDragOver(event: DragEvent): void {
-	emit("drag-over", event);
+	props.onDragOver?.(event);
 }
 
 function onDrop(event: DragEvent): void {
-	emit("drop", event);
+	props.onDrop?.(event);
 }
 
 function onDragEnd(): void {
-	emit("drag-end");
+	props.onDragEnd?.();
 }
 
 function confirmRename(): void {
-	emit("confirm-rename");
+	props.onConfirmRename?.();
 }
 
 function cancelRename(): void {
-	emit("cancel-rename");
+	props.onCancelRename?.();
 }
 
 function onRenameBlur(): void {
-	emit("rename-blur");
+	props.onRenameBlur?.();
 }
 </script>
 
@@ -125,13 +122,13 @@ function onRenameBlur(): void {
 			icon="/sidepanel/bookmark-rename.png"
 			:disabled="busy"
 			title="重命名书签"
-			@click="startRename" />
+			:on-click="startRename" />
 		<BookmarkIconButton
 			class="bookmark-item-row-action"
 			icon="/sidepanel/bookmark-more.png"
 			:disabled="busy"
 			title="更多"
-			@click="openMenu" />
+			:on-click="openMenu" />
 	</div>
 </template>
 

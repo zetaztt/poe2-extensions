@@ -3,20 +3,17 @@ import { useAttrs } from "vue";
 
 defineOptions({ inheritAttrs: false });
 
-defineProps<{
+const props = defineProps<{
 	icon: string;
 	title: string;
 	disabled?: boolean;
+	onClick?: (event: MouseEvent) => void;
 }>();
 
 const attrs = useAttrs();
 
-const emit = defineEmits<{
-	click: [event: MouseEvent];
-}>();
-
 function onClick(event: MouseEvent): void {
-	emit("click", event);
+	props.onClick?.(event);
 }
 </script>
 

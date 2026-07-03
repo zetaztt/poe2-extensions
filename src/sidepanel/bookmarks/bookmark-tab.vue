@@ -59,12 +59,9 @@ type DropTarget =
 			position: BookmarkDropPosition.Before | BookmarkDropPosition.After;
 	  };
 
-const emit = defineEmits<{
-	initialized: [success: boolean];
-}>();
-
 const props = defineProps<{
 	active: boolean;
+	onInitialized?: (success: boolean) => void;
 }>();
 
 const bookmarkTree = ref<TradeBookmarkTreeNode | null>(null);
@@ -151,11 +148,11 @@ async function loadBookmarks(): Promise<void> {
 
 	try {
 		bookmarkTree.value = await loadTradeBookmarks();
-		emit("initialized", true);
+		props.onInitialized?.(true);
 	} catch (error) {
 		bookmarkTree.value = null;
 		statusText.value = "本地书签读取失败，请稍后重试。";
-		emit("initialized", false);
+		props.onInitialized?.(false);
 		console.error("[poe2-extensions] trade 书签读取失败", error);
 	} finally {
 		isLoadingBookmarks.value = false;
@@ -1012,13 +1009,13 @@ function clearDragState(): void {
 				:folder="rootBookmarkFolder"
 				:busy="isBusy"
 				:drop-class="getFolderDropClass(rootBookmarkFolder)"
-				@create-folder="onCreateFolder(rootBookmarkFolder.id)"
-				@open-menu="openRootFolderMenu($event, rootBookmarkFolder)"
-				@context-menu="openRootFolderContextMenu($event, rootBookmarkFolder)"
-				@drag-start="onFolderDragStart($event, rootBookmarkFolder)"
-				@drag-over="onFolderDragOver($event, rootBookmarkFolder)"
-				@drop="onDrop"
-				@drag-end="clearDragState" />
+				:on-create-folder="() => rootBookmarkFolder && onCreateFolder(rootBookmarkFolder.id)"
+				:on-open-menu="(event) => rootBookmarkFolder && openRootFolderMenu(event, rootBookmarkFolder)"
+				:on-context-menu="(event) => rootBookmarkFolder && openRootFolderContextMenu(event, rootBookmarkFolder)"
+				:on-drag-start="(event) => rootBookmarkFolder && onFolderDragStart(event, rootBookmarkFolder)"
+				:on-drag-over="(event) => rootBookmarkFolder && onFolderDragOver(event, rootBookmarkFolder)"
+				:on-drop="onDrop"
+				:on-drag-end="clearDragState" />
 
 			<div class="bookmark-tree-viewport">
 				<div v-if="isLoadingBookmarks" class="panel muted">读取书签中</div>
@@ -1041,18 +1038,18 @@ function clearDragState(): void {
 								:busy="isBusy"
 								:renaming="renamingFolderId === folder.id"
 								:drop-class="getFolderDropClass(folder)"
-								@toggle-expanded="toggleFolderExpanded(folder)"
-								@add-bookmark="addCurrentSearchToFolder(folder.id)"
-								@start-rename="startRenameFolder(folder)"
-								@open-menu="openFolderMenu($event, folder)"
-								@context-menu="openFolderContextMenu($event, folder)"
-								@drag-start="onFolderDragStart($event, folder)"
-								@drag-over="onFolderDragOver($event, folder)"
-								@drop="onDrop"
-								@drag-end="clearDragState"
-								@confirm-rename="confirmRenameFolder"
-								@cancel-rename="cancelFolderRename"
-								@rename-blur="onFolderRenameBlur" />
+								:on-toggle-expanded="() => toggleFolderExpanded(folder)"
+								:on-add-bookmark="() => addCurrentSearchToFolder(folder.id)"
+								:on-start-rename="() => startRenameFolder(folder)"
+								:on-open-menu="(event) => openFolderMenu(event, folder)"
+								:on-context-menu="(event) => openFolderContextMenu(event, folder)"
+								:on-drag-start="(event) => onFolderDragStart(event, folder)"
+								:on-drag-over="(event) => onFolderDragOver(event, folder)"
+								:on-drop="onDrop"
+								:on-drag-end="clearDragState"
+								:on-confirm-rename="confirmRenameFolder"
+								:on-cancel-rename="cancelFolderRename"
+								:on-rename-blur="onFolderRenameBlur" />
 
 							<div v-show="isFolderExpanded(folder)" class="bookmark-folder-body">
 								<BookmarkItem
@@ -1063,17 +1060,17 @@ function clearDragState(): void {
 									:busy="isBusy"
 									:renaming="renamingBookmarkId === bookmark.id"
 									:drop-class="getBookmarkDropClass(bookmark)"
-									@open="onOpenBookmark(bookmark)"
-									@start-rename="startRenameBookmark(bookmark)"
-									@open-menu="openBookmarkItemMenu($event, bookmark)"
-									@context-menu="openBookmarkContextMenu($event, bookmark)"
-									@drag-start="onBookmarkDragStart($event, bookmark)"
-									@drag-over="onBookmarkDragOver($event, bookmark)"
-									@drop="onDrop"
-									@drag-end="clearDragState"
-									@confirm-rename="confirmRenameBookmark"
-									@cancel-rename="cancelBookmarkRename"
-									@rename-blur="onBookmarkRenameBlur" />
+									:on-open="() => onOpenBookmark(bookmark)"
+									:on-start-rename="() => startRenameBookmark(bookmark)"
+									:on-open-menu="(event) => openBookmarkItemMenu(event, bookmark)"
+									:on-context-menu="(event) => openBookmarkContextMenu(event, bookmark)"
+									:on-drag-start="(event) => onBookmarkDragStart(event, bookmark)"
+									:on-drag-over="(event) => onBookmarkDragOver(event, bookmark)"
+									:on-drop="onDrop"
+									:on-drag-end="clearDragState"
+									:on-confirm-rename="confirmRenameBookmark"
+									:on-cancel-rename="cancelBookmarkRename"
+									:on-rename-blur="onBookmarkRenameBlur" />
 							</div>
 						</div>
 					</div>
