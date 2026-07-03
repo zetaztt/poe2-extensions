@@ -15,8 +15,6 @@ const renameTitle = defineModel<string>("renameTitle", { required: true });
 const emit = defineEmits<{
 	open: [];
 	"start-rename": [];
-	replace: [];
-	delete: [];
 	"open-menu": [event: MouseEvent];
 	"context-menu": [event: MouseEvent];
 	"drag-start": [event: DragEvent];
@@ -44,16 +42,48 @@ const vFocus: Directive<HTMLInputElement> = {
 	},
 };
 
+function openBookmark(): void {
+	emit("open");
+}
+
 function startRename(): void {
 	emit("start-rename");
 }
 
-function replaceBookmark(): void {
-	emit("replace");
+function openMenu(event: MouseEvent): void {
+	emit("open-menu", event);
 }
 
-function deleteBookmark(): void {
-	emit("delete");
+function openContextMenu(event: MouseEvent): void {
+	emit("context-menu", event);
+}
+
+function onDragStart(event: DragEvent): void {
+	emit("drag-start", event);
+}
+
+function onDragOver(event: DragEvent): void {
+	emit("drag-over", event);
+}
+
+function onDrop(event: DragEvent): void {
+	emit("drop", event);
+}
+
+function onDragEnd(): void {
+	emit("drag-end");
+}
+
+function confirmRename(): void {
+	emit("confirm-rename");
+}
+
+function cancelRename(): void {
+	emit("cancel-rename");
+}
+
+function onRenameBlur(): void {
+	emit("rename-blur");
 }
 </script>
 
@@ -62,18 +92,18 @@ function deleteBookmark(): void {
 		class="bookmark-item-row"
 		:class="[dropClass, { 'is-renaming': renaming }]"
 		:draggable="!renaming && !busy"
-		@dragstart="emit('drag-start', $event)"
-		@dragover="emit('drag-over', $event)"
-		@drop="emit('drop', $event)"
-		@dragend="emit('drag-end')"
-		@contextmenu="emit('context-menu', $event)">
+		@dragstart="onDragStart"
+		@dragover="onDragOver"
+		@drop="onDrop"
+		@dragend="onDragEnd"
+		@contextmenu="openContextMenu">
 		<span class="bookmark-item-content">
 			<button
 				v-if="!renaming"
 				class="bookmark-item-title-button"
 				type="button"
 				:title="bookmark.url"
-				@click="emit('open')">
+				@click="openBookmark">
 				<span class="bookmark-item-title-text">{{ bookmark.title }}</span>
 			</button>
 			<span v-else class="bookmark-item-rename-control">
@@ -84,9 +114,9 @@ function deleteBookmark(): void {
 						class="bookmark-rename-input"
 						type="text"
 						:disabled="busy"
-						@keydown.enter.prevent="emit('confirm-rename')"
-						@keydown.esc.prevent="emit('cancel-rename')"
-						@blur="emit('rename-blur')" />
+						@keydown.enter.prevent="confirmRename"
+						@keydown.esc.prevent="cancelRename"
+						@blur="onRenameBlur" />
 				</span>
 			</span>
 		</span>
@@ -101,7 +131,7 @@ function deleteBookmark(): void {
 			icon="/sidepanel/bookmark-more.png"
 			:disabled="busy"
 			title="更多"
-			@click="emit('open-menu', $event)" />
+			@click="openMenu" />
 	</div>
 </template>
 

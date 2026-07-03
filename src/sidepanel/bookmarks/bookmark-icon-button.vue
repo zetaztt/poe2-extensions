@@ -14,6 +14,10 @@ const attrs = useAttrs();
 const emit = defineEmits<{
 	click: [event: MouseEvent];
 }>();
+
+function onClick(event: MouseEvent): void {
+	emit("click", event);
+}
 </script>
 
 <template>
@@ -24,7 +28,7 @@ const emit = defineEmits<{
 			:disabled="disabled"
 			:title="title"
 			:aria-label="title"
-			@click.stop="emit('click', $event)">
+			@click.stop="onClick">
 			<span class="bookmark-icon-button-icon" :style="{ backgroundImage: `url(${icon})` }"></span>
 		</button>
 		<slot></slot>

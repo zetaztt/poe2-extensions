@@ -18,9 +18,6 @@ const emit = defineEmits<{
 	"toggle-expanded": [];
 	"add-bookmark": [];
 	"start-rename": [];
-	"delete-folder": [];
-	"collapse-others": [];
-	"export-folder": [];
 	"open-menu": [event: MouseEvent];
 	"context-menu": [event: MouseEvent];
 	"drag-start": [event: DragEvent];
@@ -60,16 +57,40 @@ function startRename(): void {
 	emit("start-rename");
 }
 
-function deleteFolder(): void {
-	emit("delete-folder");
+function openMenu(event: MouseEvent): void {
+	emit("open-menu", event);
 }
 
-function collapseOthers(): void {
-	emit("collapse-others");
+function openContextMenu(event: MouseEvent): void {
+	emit("context-menu", event);
 }
 
-function exportFolder(): void {
-	emit("export-folder");
+function onDragStart(event: DragEvent): void {
+	emit("drag-start", event);
+}
+
+function onDragOver(event: DragEvent): void {
+	emit("drag-over", event);
+}
+
+function onDrop(event: DragEvent): void {
+	emit("drop", event);
+}
+
+function onDragEnd(): void {
+	emit("drag-end");
+}
+
+function confirmRename(): void {
+	emit("confirm-rename");
+}
+
+function cancelRename(): void {
+	emit("cancel-rename");
+}
+
+function onRenameBlur(): void {
+	emit("rename-blur");
 }
 </script>
 
@@ -78,11 +99,11 @@ function exportFolder(): void {
 		class="bookmark-folder-header"
 		:class="[{ 'is-renaming': renaming }, dropClass]"
 		:draggable="folder.canModify && !renaming && !busy"
-		@dragstart="emit('drag-start', $event)"
-		@dragover="emit('drag-over', $event)"
-		@drop="emit('drop', $event)"
-		@dragend="emit('drag-end')"
-		@contextmenu="emit('context-menu', $event)">
+		@dragstart="onDragStart"
+		@dragover="onDragOver"
+		@drop="onDrop"
+		@dragend="onDragEnd"
+		@contextmenu="openContextMenu">
 		<div class="bookmark-folder-title-bar">
 			<div class="bookmark-folder-title-layout">
 				<span class="bookmark-folder-toggle-cell">
@@ -114,9 +135,9 @@ function exportFolder(): void {
 								:disabled="busy"
 								@click.stop
 								@dblclick.stop
-								@keydown.enter.prevent="emit('confirm-rename')"
-								@keydown.esc.prevent="emit('cancel-rename')"
-								@blur="emit('rename-blur')" />
+								@keydown.enter.prevent="confirmRename"
+								@keydown.esc.prevent="cancelRename"
+								@blur="onRenameBlur" />
 						</span>
 					</span>
 					<span v-else class="bookmark-folder-title" @click.stop="toggleFolderExpanded" @dblclick.stop>
@@ -141,7 +162,7 @@ function exportFolder(): void {
 						icon="/sidepanel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
-						@click="emit('open-menu', $event)" />
+						@click="openMenu" />
 				</span>
 			</div>
 		</div>

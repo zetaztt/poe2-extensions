@@ -10,9 +10,6 @@ defineProps<{
 
 const emit = defineEmits<{
 	"create-folder": [];
-	"collapse-all": [];
-	"import-bookmarks": [];
-	"export-bookmarks": [];
 	"open-menu": [event: MouseEvent];
 	"context-menu": [event: MouseEvent];
 	"drag-start": [event: DragEvent];
@@ -25,16 +22,28 @@ function createFolder(): void {
 	emit("create-folder");
 }
 
-function importBookmarks(): void {
-	emit("import-bookmarks");
+function openMenu(event: MouseEvent): void {
+	emit("open-menu", event);
 }
 
-function exportBookmarks(): void {
-	emit("export-bookmarks");
+function openContextMenu(event: MouseEvent): void {
+	emit("context-menu", event);
 }
 
-function collapseAll(): void {
-	emit("collapse-all");
+function onDragStart(event: DragEvent): void {
+	emit("drag-start", event);
+}
+
+function onDragOver(event: DragEvent): void {
+	emit("drag-over", event);
+}
+
+function onDrop(event: DragEvent): void {
+	emit("drop", event);
+}
+
+function onDragEnd(): void {
+	emit("drag-end");
 }
 </script>
 
@@ -43,11 +52,11 @@ function collapseAll(): void {
 		class="bookmark-tree-header"
 		:class="dropClass"
 		:draggable="folder.canModify && !busy"
-		@dragstart="emit('drag-start', $event)"
-		@dragover="emit('drag-over', $event)"
-		@drop="emit('drop', $event)"
-		@dragend="emit('drag-end')"
-		@contextmenu="emit('context-menu', $event)">
+		@dragstart="onDragStart"
+		@dragover="onDragOver"
+		@drop="onDrop"
+		@dragend="onDragEnd"
+		@contextmenu="openContextMenu">
 		<div class="bookmark-tree-header-title-bar">
 			<div class="bookmark-tree-header-title-layout">
 				<span class="bookmark-tree-header-title-content">
@@ -65,7 +74,7 @@ function collapseAll(): void {
 						icon="/sidepanel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
-						@click="emit('open-menu', $event)" />
+						@click="openMenu" />
 				</span>
 			</div>
 		</div>
