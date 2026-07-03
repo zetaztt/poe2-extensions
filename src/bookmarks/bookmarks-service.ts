@@ -4,16 +4,19 @@ import type {
 	BookmarkFolderOption,
 	StoredTradeBookmark,
 	StoredTradeBookmarkFolder,
+	StoredTradeBookmarkTree,
+	TradeBookmarkFolder,
 	TradeBookmarkGroup,
 	TradeBookmarkItem,
-	TradeBookmarkTreeNode,
+	TradeBookmarkRoot,
 } from "./bookmarks-types";
 
 export type {
 	BookmarkFolderOption,
+	TradeBookmarkFolder,
 	TradeBookmarkGroup,
 	TradeBookmarkItem,
-	TradeBookmarkTreeNode,
+	TradeBookmarkRoot,
 } from "./bookmarks-types";
 
 type ActiveBrowserTab = {
@@ -55,16 +58,16 @@ export enum TradeBookmarkServiceEventType {
 }
 
 export type TradeBookmarkServiceEvent =
-	| { type: TradeBookmarkServiceEventType.Loaded; tree: TradeBookmarkTreeNode }
-	| { type: TradeBookmarkServiceEventType.Changed; tree: TradeBookmarkTreeNode }
+	| { type: TradeBookmarkServiceEventType.Loaded; tree: TradeBookmarkRoot }
+	| { type: TradeBookmarkServiceEventType.Changed; tree: TradeBookmarkRoot }
 	| { type: TradeBookmarkServiceEventType.Error; code: TradeBookmarkServiceErrorCode; error: unknown };
 
-let currentRootTree: TradeBookmarkTreeNode | null = null;
+let currentRootTree: TradeBookmarkRoot | null = null;
 let isBookmarkServiceLoading = false;
 let lastBookmarkServiceErrorCode = TradeBookmarkServiceErrorCode.None;
 const listeners = new Set<(event: TradeBookmarkServiceEvent) => void>();
 
-export function getCurrentTradeBookmarkTree(): TradeBookmarkTreeNode | null {
+export function getCurrentTradeBookmarkTree(): TradeBookmarkRoot | null {
 	return currentRootTree;
 }
 
@@ -83,7 +86,7 @@ export function subscribeTradeBookmarks(listener: (event: TradeBookmarkServiceEv
 	};
 }
 
-export async function loadTradeBookmarks(): Promise<TradeBookmarkTreeNode> {
+export async function loadTradeBookmarks(): Promise<TradeBookmarkRoot> {
 	isBookmarkServiceLoading = true;
 	lastBookmarkServiceErrorCode = TradeBookmarkServiceErrorCode.None;
 
@@ -101,9 +104,9 @@ export async function getTradeBookmarkRootGroups(): Promise<TradeBookmarkGroup[]
 	return getTradeBookmarkGroups(rootFolderId);
 }
 
-export async function getTradeBookmarkRootTree(): Promise<TradeBookmarkTreeNode> {
+export async function getTradeBookmarkRootTree(): Promise<TradeBookmarkRoot> {
 	const tree = await getBookmarkTree();
-	return collectTradeBookmarkTree(tree.root, [tree.root.title]);
+	return collectTradeBookmarkRoot(tree);
 }
 
 export async function createBookmarkFolder(parentId: string, title: string): Promise<BookmarkFolderOption> {
@@ -111,25 +114,21 @@ export async function createBookmarkFolder(parentId: string, title: string): Pro
 		if (parentId !== rootFolderId) throw new Error("只能在顶层创建一级文件夹");
 
 		const tree = await getBookmarkTree();
-		const parent = findFolder(tree.root, parentId);
-		if (!parent) throw new Error("未找到父级书签目录");
-
 		const now = Date.now();
 		const folder: StoredTradeBookmarkFolder = {
 			id: createId("folder"),
 			title: normalizeFolderTitle(title),
 			parentId,
-			children: [],
 			bookmarks: [],
 			createdAt: now,
 			updatedAt: now,
 		};
 
-		parent.children.push(folder);
-		parent.updatedAt = now;
+		tree.root.folders.push(folder);
+		tree.root.updatedAt = now;
 		await saveBookmarkTree(tree);
 
-		const option = await getBookmarkFolderOption(folder.id);
+		const option = toBookmarkFolderOption(folder);
 		await refreshTradeBookmarkServiceTree(TradeBookmarkServiceEventType.Changed);
 		return option;
 	} catch (error) {
@@ -141,7 +140,7 @@ export async function createBookmarkFolder(parentId: string, title: string): Pro
 export async function renameBookmarkFolder(folderId: string, title: string): Promise<BookmarkFolderOption> {
 	try {
 		const tree = await getBookmarkTree();
-		const folder = findFolder(tree.root, folderId);
+		const folder = findFolder(tree, folderId);
 		if (!folder) throw new Error("未找到书签目录");
 		assertModifiableFolder(folder);
 
@@ -149,7 +148,7 @@ export async function renameBookmarkFolder(folderId: string, title: string): Pro
 		folder.updatedAt = Date.now();
 		await saveBookmarkTree(tree);
 
-		const option = await getBookmarkFolderOption(folderId);
+		const option = toBookmarkFolderOption(folder);
 		await refreshTradeBookmarkServiceTree(TradeBookmarkServiceEventType.Changed);
 		return option;
 	} catch (error) {
@@ -161,13 +160,12 @@ export async function renameBookmarkFolder(folderId: string, title: string): Pro
 export async function deleteBookmarkFolder(folderId: string): Promise<void> {
 	try {
 		const tree = await getBookmarkTree();
-		const parent = findParentFolder(tree.root, folderId);
-		const folder = parent?.children.find((child) => child.id === folderId);
-		if (!parent || !folder) throw new Error("未找到书签目录");
+		const folder = findFolder(tree, folderId);
+		if (!folder) throw new Error("未找到书签目录");
 		assertModifiableFolder(folder);
 
-		parent.children = parent.children.filter((child) => child.id !== folderId);
-		parent.updatedAt = Date.now();
+		tree.root.folders = tree.root.folders.filter((item) => item.id !== folderId);
+		tree.root.updatedAt = Date.now();
 		await saveBookmarkTree(tree);
 		await refreshTradeBookmarkServiceTree(TradeBookmarkServiceEventType.Changed);
 	} catch (error) {
@@ -181,28 +179,16 @@ export async function moveBookmarkFolder(folderId: string, targetParentId: strin
 		if (targetParentId !== rootFolderId) throw new Error("文件夹只能保存在顶层");
 
 		const tree = await getBookmarkTree();
-		const currentParent = findParentFolder(tree.root, folderId);
-		const targetParent = findFolder(tree.root, targetParentId);
-		const folder = currentParent?.children.find((child) => child.id === folderId);
-		if (!currentParent || !targetParent || !folder) throw new Error("未找到书签目录");
-		assertModifiableFolder(folder);
-		if (folder.id === targetParent.id || findFolder(folder, targetParent.id)) {
-			throw new Error("不能将文件夹移动到自身或子文件夹内");
-		}
-
-		const now = Date.now();
-		const currentIndex = currentParent.children.findIndex((child) => child.id === folderId);
+		const currentIndex = tree.root.folders.findIndex((folder) => folder.id === folderId);
 		if (currentIndex < 0) throw new Error("未找到书签目录");
 
-		currentParent.children.splice(currentIndex, 1);
-		const insertionIndex =
-			currentParent.id === targetParent.id && currentIndex < targetIndex ? targetIndex - 1 : targetIndex;
-
-		folder.parentId = targetParent.id;
-		folder.updatedAt = now;
-		targetParent.children.splice(clampInsertionIndex(insertionIndex, targetParent.children.length), 0, folder);
-		currentParent.updatedAt = now;
-		targetParent.updatedAt = now;
+		const [folder] = tree.root.folders.splice(currentIndex, 1);
+		assertModifiableFolder(folder);
+		const insertionIndex = currentIndex < targetIndex ? targetIndex - 1 : targetIndex;
+		folder.parentId = rootFolderId;
+		folder.updatedAt = Date.now();
+		tree.root.folders.splice(clampInsertionIndex(insertionIndex, tree.root.folders.length), 0, folder);
+		tree.root.updatedAt = folder.updatedAt;
 
 		await saveBookmarkTree(tree);
 		await refreshTradeBookmarkServiceTree(TradeBookmarkServiceEventType.Changed);
@@ -214,18 +200,20 @@ export async function moveBookmarkFolder(folderId: string, targetParentId: strin
 
 export async function getTradeBookmarkGroups(folderId: string): Promise<TradeBookmarkGroup[]> {
 	const tree = await getBookmarkTree();
-	const folder = findFolder(tree.root, folderId);
+	if (folderId === rootFolderId) return collectTradeBookmarkGroups(tree.root.folders);
+
+	const folder = findFolder(tree, folderId);
 	if (!folder) return [];
 
-	return collectTradeBookmarkGroups(folder, getFolderPath(tree.root, folderId) ?? [folder.title]);
+	return collectTradeBookmarkGroups([folder]);
 }
 
-export async function getTradeBookmarkTree(folderId: string): Promise<TradeBookmarkTreeNode | null> {
+export async function getTradeBookmarkTree(folderId: string): Promise<TradeBookmarkRoot | TradeBookmarkFolder | null> {
 	const tree = await getBookmarkTree();
-	const folder = findFolder(tree.root, folderId);
-	if (!folder) return null;
+	if (folderId === rootFolderId) return collectTradeBookmarkRoot(tree);
 
-	return collectTradeBookmarkTree(folder, getFolderPath(tree.root, folderId) ?? [folder.title]);
+	const folder = findFolder(tree, folderId);
+	return folder ? collectTradeBookmarkFolder(tree, folder) : null;
 }
 
 export async function addCurrentTradeSearchBookmark(folderId: string): Promise<TradeBookmarkItem> {
@@ -236,7 +224,7 @@ export async function addCurrentTradeSearchBookmark(folderId: string): Promise<T
 		}
 
 		const tree = await getBookmarkTree();
-		const folder = findFolder(tree.root, folderId);
+		const folder = findFolder(tree, folderId);
 		if (!folder) throw new Error("未找到书签目录");
 		assertBookmarkTargetFolder(folder);
 
@@ -266,14 +254,15 @@ export async function addCurrentTradeSearchBookmark(folderId: string): Promise<T
 export async function renameTradeBookmark(bookmarkId: string, title: string): Promise<TradeBookmarkItem> {
 	try {
 		const tree = await getBookmarkTree();
-		const bookmark = findBookmark(tree.root, bookmarkId);
-		if (!bookmark) throw new Error("未找到 trade2 书签");
+		const match = findBookmarkWithParent(tree, bookmarkId);
+		if (!match) throw new Error("未找到 trade2 书签");
 
-		bookmark.title = title.trim() || getTradeBookmarkTitle(undefined, bookmark.url);
-		bookmark.updatedAt = Date.now();
+		match.bookmark.title = title.trim() || getTradeBookmarkTitle(undefined, match.bookmark.url);
+		match.bookmark.updatedAt = Date.now();
+		match.parent.updatedAt = match.bookmark.updatedAt;
 		await saveBookmarkTree(tree);
 
-		const item = toTradeBookmarkItem(bookmark);
+		const item = toTradeBookmarkItem(match.bookmark);
 		await refreshTradeBookmarkServiceTree(TradeBookmarkServiceEventType.Changed);
 		return item;
 	} catch (error) {
@@ -285,7 +274,7 @@ export async function renameTradeBookmark(bookmarkId: string, title: string): Pr
 export async function deleteTradeBookmark(bookmarkId: string): Promise<void> {
 	try {
 		const tree = await getBookmarkTree();
-		const folder = findBookmarkParentFolder(tree.root, bookmarkId);
+		const folder = findBookmarkParentFolder(tree, bookmarkId);
 		if (!folder) throw new Error("未找到 trade2 书签");
 
 		folder.bookmarks = folder.bookmarks.filter((bookmark) => bookmark.id !== bookmarkId);
@@ -305,8 +294,8 @@ export async function moveTradeBookmark(
 ): Promise<void> {
 	try {
 		const tree = await getBookmarkTree();
-		const currentFolder = findBookmarkParentFolder(tree.root, bookmarkId);
-		const targetFolder = findFolder(tree.root, targetFolderId);
+		const currentFolder = findBookmarkParentFolder(tree, bookmarkId);
+		const targetFolder = findFolder(tree, targetFolderId);
 		const bookmark = currentFolder?.bookmarks.find((item) => item.id === bookmarkId);
 		if (!currentFolder || !targetFolder || !bookmark) throw new Error("未找到 trade2 书签");
 		assertBookmarkTargetFolder(targetFolder);
@@ -341,14 +330,15 @@ export async function replaceTradeBookmarkWithCurrentSearch(bookmarkId: string):
 			throw new Error("当前活动标签页不是 trade2 搜索页");
 		}
 
-		const bookmark = findBookmark(tree.root, bookmarkId);
-		if (!bookmark) throw new Error("未找到 trade2 书签");
+		const match = findBookmarkWithParent(tree, bookmarkId);
+		if (!match) throw new Error("未找到 trade2 书签");
 
-		bookmark.url = tab.url;
-		bookmark.updatedAt = Date.now();
+		match.bookmark.url = tab.url;
+		match.bookmark.updatedAt = Date.now();
+		match.parent.updatedAt = match.bookmark.updatedAt;
 		await saveBookmarkTree(tree);
 
-		const item = toTradeBookmarkItem(bookmark);
+		const item = toTradeBookmarkItem(match.bookmark);
 		await refreshTradeBookmarkServiceTree(TradeBookmarkServiceEventType.Changed);
 		return item;
 	} catch (error) {
@@ -381,7 +371,7 @@ export function isTrade2Url(url: string | undefined): boolean {
 
 async function refreshTradeBookmarkServiceTree(
 	type: TradeBookmarkServiceEventType.Loaded | TradeBookmarkServiceEventType.Changed,
-): Promise<TradeBookmarkTreeNode> {
+): Promise<TradeBookmarkRoot> {
 	const tree = await getTradeBookmarkRootTree();
 	currentRootTree = tree;
 	lastBookmarkServiceErrorCode = TradeBookmarkServiceErrorCode.None;
@@ -408,46 +398,48 @@ export function getTradeBookmarkServiceErrorMessage(code: TradeBookmarkServiceEr
 	return tradeBookmarkServiceErrorMessages[code];
 }
 
-function toBookmarkFolderOption(folder: StoredTradeBookmarkFolder, path: string[]): BookmarkFolderOption {
+function toBookmarkFolderOption(folder: StoredTradeBookmarkFolder): BookmarkFolderOption {
 	return {
 		id: folder.id,
 		title: folder.title,
-		path,
-		depth: Math.max(0, path.length - 1),
 		parentId: folder.parentId,
 		canModify: canModifyFolder(folder),
 	};
 }
 
-function collectTradeBookmarkGroups(folder: StoredTradeBookmarkFolder, path: string[]): TradeBookmarkGroup[] {
+function collectTradeBookmarkGroups(folders: StoredTradeBookmarkFolder[]): TradeBookmarkGroup[] {
 	const groups: TradeBookmarkGroup[] = [];
-	const bookmarks = folder.bookmarks.filter((bookmark) => isTrade2Url(bookmark.url)).map(toTradeBookmarkItem);
 
-	if (bookmarks.length > 0) {
+	for (const folder of folders) {
+		const bookmarks = folder.bookmarks.filter((bookmark) => isTrade2Url(bookmark.url)).map(toTradeBookmarkItem);
+		if (bookmarks.length === 0) continue;
+
 		groups.push({
 			id: folder.id,
 			title: folder.title,
-			path,
 			bookmarks,
 		});
-	}
-
-	for (const child of folder.children) {
-		groups.push(...collectTradeBookmarkGroups(child, [...path, child.title]));
 	}
 
 	return groups;
 }
 
-function collectTradeBookmarkTree(folder: StoredTradeBookmarkFolder, path: string[]): TradeBookmarkTreeNode {
+function collectTradeBookmarkRoot(tree: StoredTradeBookmarkTree): TradeBookmarkRoot {
+	return {
+		folders: tree.root.folders.map((folder) => collectTradeBookmarkFolder(tree, folder)),
+	};
+}
+
+function collectTradeBookmarkFolder(
+	tree: StoredTradeBookmarkTree,
+	folder: StoredTradeBookmarkFolder,
+): TradeBookmarkFolder {
 	return {
 		id: folder.id,
 		title: folder.title,
-		path,
 		parentId: folder.parentId,
 		canModify: canModifyFolder(folder),
 		bookmarks: folder.bookmarks.filter((bookmark) => isTrade2Url(bookmark.url)).map(toTradeBookmarkItem),
-		children: folder.children.map((child) => collectTradeBookmarkTree(child, [...path, child.title])),
 	};
 }
 
@@ -483,77 +475,24 @@ async function getActiveTab(): Promise<ActiveBrowserTab | undefined> {
 	return tab;
 }
 
-async function getBookmarkFolderOption(folderId: string): Promise<BookmarkFolderOption> {
-	const tree = await getBookmarkTree();
-	const folder = findFolder(tree.root, folderId);
-	if (!folder) throw new Error("未找到书签目录");
-
-	return toBookmarkFolderOption(folder, getFolderPath(tree.root, folderId) ?? [folder.title]);
+function findFolder(tree: StoredTradeBookmarkTree, folderId: string): StoredTradeBookmarkFolder | null {
+	return tree.root.folders.find((folder) => folder.id === folderId) ?? null;
 }
 
-function findFolder(folder: StoredTradeBookmarkFolder, folderId: string): StoredTradeBookmarkFolder | null {
-	if (folder.id === folderId) return folder;
-
-	for (const child of folder.children) {
-		const match = findFolder(child, folderId);
-		if (match) return match;
-	}
-
-	return null;
-}
-
-function findParentFolder(folder: StoredTradeBookmarkFolder, folderId: string): StoredTradeBookmarkFolder | null {
-	if (folder.children.some((child) => child.id === folderId)) return folder;
-
-	for (const child of folder.children) {
-		const match = findParentFolder(child, folderId);
-		if (match) return match;
-	}
-
-	return null;
-}
-
-function findBookmark(folder: StoredTradeBookmarkFolder, bookmarkId: string): StoredTradeBookmark | null {
-	for (const bookmark of folder.bookmarks) {
-		if (bookmark.id === bookmarkId) return bookmark;
-	}
-
-	for (const child of folder.children) {
-		const match = findBookmark(child, bookmarkId);
-		if (match) return match;
-	}
-
-	return null;
-}
-
-function findBookmarkParentFolder(
-	folder: StoredTradeBookmarkFolder,
+function findBookmarkWithParent(
+	tree: StoredTradeBookmarkTree,
 	bookmarkId: string,
-): StoredTradeBookmarkFolder | null {
-	if (folder.bookmarks.some((bookmark) => bookmark.id === bookmarkId)) return folder;
-
-	for (const child of folder.children) {
-		const match = findBookmarkParentFolder(child, bookmarkId);
-		if (match) return match;
+): { bookmark: StoredTradeBookmark; parent: StoredTradeBookmarkFolder } | null {
+	for (const folder of tree.root.folders) {
+		const bookmark = folder.bookmarks.find((item) => item.id === bookmarkId);
+		if (bookmark) return { bookmark, parent: folder };
 	}
 
 	return null;
 }
 
-function getFolderPath(
-	folder: StoredTradeBookmarkFolder,
-	folderId: string,
-	parentPath: string[] = [],
-): string[] | null {
-	const path = [...parentPath, folder.title];
-	if (folder.id === folderId) return path;
-
-	for (const child of folder.children) {
-		const match = getFolderPath(child, folderId, path);
-		if (match) return match;
-	}
-
-	return null;
+function findBookmarkParentFolder(tree: StoredTradeBookmarkTree, bookmarkId: string): StoredTradeBookmarkFolder | null {
+	return findBookmarkWithParent(tree, bookmarkId)?.parent ?? null;
 }
 
 function assertModifiableFolder(folder: StoredTradeBookmarkFolder): void {

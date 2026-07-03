@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import type { Directive } from "vue";
-import type { TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
+import type { TradeBookmarkFolder } from "../../bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
 
 const props = defineProps<{
-	folder: TradeBookmarkTreeNode;
+	folder: TradeBookmarkFolder;
 	expanded: boolean;
 	hasContent: boolean;
 	busy: boolean;

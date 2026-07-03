@@ -1,8 +1,6 @@
 export interface BookmarkFolderOption {
 	id: string;
 	title: string;
-	path: string[];
-	depth: number;
 	parentId?: string;
 	canModify: boolean;
 }
@@ -18,14 +16,16 @@ export interface TradeBookmarkItem {
 export interface TradeBookmarkGroup {
 	id: string;
 	title: string;
-	path: string[];
 	bookmarks: TradeBookmarkItem[];
 }
 
-export interface TradeBookmarkTreeNode extends TradeBookmarkGroup {
+export interface TradeBookmarkFolder extends TradeBookmarkGroup {
 	parentId?: string;
 	canModify: boolean;
-	children: TradeBookmarkTreeNode[];
+}
+
+export interface TradeBookmarkRoot {
+	folders: TradeBookmarkFolder[];
 }
 
 export interface StoredTradeBookmark {
@@ -40,16 +40,21 @@ export interface StoredTradeBookmark {
 export interface StoredTradeBookmarkFolder {
 	id: string;
 	title: string;
-	parentId?: string;
-	children: StoredTradeBookmarkFolder[];
+	parentId: string;
 	bookmarks: StoredTradeBookmark[];
+	createdAt: number;
+	updatedAt: number;
+}
+
+export interface StoredTradeBookmarkRoot {
+	folders: StoredTradeBookmarkFolder[];
 	createdAt: number;
 	updatedAt: number;
 }
 
 export interface StoredTradeBookmarkTree {
 	version: 1;
-	root: StoredTradeBookmarkFolder;
+	root: StoredTradeBookmarkRoot;
 }
 
 export type TradeBookmarkExportData = TradeBookmarkTreeExportData | TradeBookmarkFolderExportData;

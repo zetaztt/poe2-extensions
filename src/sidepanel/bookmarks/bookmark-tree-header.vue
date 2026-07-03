@@ -1,15 +1,14 @@
 <script lang="ts" setup>
-import type { TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
+import type { TradeBookmarkRoot } from "../../bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
 
 const props = defineProps<{
-	folder: TradeBookmarkTreeNode;
+	folder: TradeBookmarkRoot;
 	busy: boolean;
 	dropClass: Record<string, boolean>;
 	onCreateFolder?: () => void;
 	onOpenMenu?: (event: MouseEvent) => void;
 	onContextMenu?: (event: MouseEvent) => void;
-	onDragStart?: (event: DragEvent) => void;
 	onDragOver?: (event: DragEvent) => void;
 	onDrop?: (event: DragEvent) => void;
 	onDragEnd?: () => void;
@@ -25,10 +24,6 @@ function openMenu(event: MouseEvent): void {
 
 function openContextMenu(event: MouseEvent): void {
 	props.onContextMenu?.(event);
-}
-
-function onDragStart(event: DragEvent): void {
-	props.onDragStart?.(event);
 }
 
 function onDragOver(event: DragEvent): void {
@@ -48,8 +43,7 @@ function onDragEnd(): void {
 	<div
 		class="bookmark-tree-header"
 		:class="dropClass"
-		:draggable="folder.canModify && !busy"
-		@dragstart="onDragStart"
+		:draggable="false"
 		@dragover="onDragOver"
 		@drop="onDrop"
 		@dragend="onDragEnd"
@@ -58,7 +52,7 @@ function onDragEnd(): void {
 			<div class="bookmark-tree-header-title-layout">
 				<span class="bookmark-tree-header-title-content">
 					<span class="bookmark-tree-header-title" @dblclick.stop>
-						<span class="bookmark-tree-header-title-text">{{ folder.title }}</span>
+						<span class="bookmark-tree-header-title-text">Trade 书签</span>
 					</span>
 					<BookmarkIconButton
 						class="bookmark-tree-header-action bookmark-tree-header-add-action"
