@@ -102,11 +102,11 @@ async function requestDictionary(): Promise<TranslateDictionary> {
 		throw new Error("翻译字典响应无效");
 	}
 
-	if (response.type === PoeTranslationMessageType.error) {
+	if (response.type === PoeTranslationMessageType.Error) {
 		throw new Error(response.error.message);
 	}
 
-	if (response.type !== PoeTranslationMessageType.result) {
+	if (response.type !== PoeTranslationMessageType.Result) {
 		throw new Error("翻译字典响应类型无效");
 	}
 

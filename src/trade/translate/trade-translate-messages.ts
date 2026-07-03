@@ -2,28 +2,28 @@ import type { TranslateDictionary } from "../../translate-dictionary";
 
 export const poeTranslationMessageSource = "poe2-extensions:trade:translate";
 
-export const PoeTranslationMessageType = {
-	fetch: "POE_TRANSLATION_FETCH",
-	result: "POE_TRANSLATION_FETCH_RESULT",
-	error: "POE_TRANSLATION_FETCH_ERROR",
-} as const;
+export enum PoeTranslationMessageType {
+	Fetch = 1,
+	Result = 2,
+	Error = 3,
+}
 
 export type PoeTranslationFetchMessage = {
 	source: typeof poeTranslationMessageSource;
-	type: typeof PoeTranslationMessageType.fetch;
+	type: PoeTranslationMessageType.Fetch;
 	requestId: string;
 };
 
 export type PoeTranslationFetchResultMessage = {
 	source: typeof poeTranslationMessageSource;
-	type: typeof PoeTranslationMessageType.result;
+	type: PoeTranslationMessageType.Result;
 	requestId: string;
 	dictionary: TranslateDictionary;
 };
 
 export type PoeTranslationFetchErrorMessage = {
 	source: typeof poeTranslationMessageSource;
-	type: typeof PoeTranslationMessageType.error;
+	type: PoeTranslationMessageType.Error;
 	requestId: string;
 	error: {
 		message: string;
@@ -40,7 +40,7 @@ export type PoeTranslationMessage =
 export function createPoeTranslationFetchMessage(requestId: string): PoeTranslationFetchMessage {
 	return {
 		source: poeTranslationMessageSource,
-		type: PoeTranslationMessageType.fetch,
+		type: PoeTranslationMessageType.Fetch,
 		requestId,
 	};
 }
@@ -52,8 +52,8 @@ export function isPoeTranslationMessage(value: unknown): value is PoeTranslation
 		typeof value === "object"
 		&& value !== null
 		&& (value as { source?: unknown }).source === poeTranslationMessageSource
-		&& (type === PoeTranslationMessageType.fetch
-			|| type === PoeTranslationMessageType.result
-			|| type === PoeTranslationMessageType.error)
+		&& (type === PoeTranslationMessageType.Fetch
+			|| type === PoeTranslationMessageType.Result
+			|| type === PoeTranslationMessageType.Error)
 	);
 }

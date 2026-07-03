@@ -15,6 +15,12 @@ import {
 	createTradeSyncTranslateInjectionMessage,
 } from "../../trade/trade-messages";
 
+enum TradeSettingToggleType {
+	Translate = 1,
+	ItemCopy = 2,
+	StatPreset = 3,
+}
+
 const tradeTranslateEnabled = ref(false);
 const tradeItemCopyEnabled = ref(false);
 const tradeStatPresetEnabled = ref(false);
@@ -48,14 +54,14 @@ async function loadSettings(): Promise<void> {
 	isLoadingSettings.value = false;
 }
 
-function onCheckboxChange(event: Event, type: "translate" | "itemCopy" | "statPreset"): void {
+function onCheckboxChange(event: Event, type: TradeSettingToggleType): void {
 	const input = event.target as HTMLInputElement;
-	if (type === "translate") {
+	if (type === TradeSettingToggleType.Translate) {
 		void onTranslateToggle(input.checked);
 		return;
 	}
 
-	if (type === "itemCopy") {
+	if (type === TradeSettingToggleType.ItemCopy) {
 		void onItemCopyToggle(input.checked);
 		return;
 	}
@@ -190,7 +196,7 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeTranslateEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, 'translate')" />
+					@change="onCheckboxChange($event, TradeSettingToggleType.Translate)" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
@@ -205,7 +211,7 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeItemCopyEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, 'itemCopy')" />
+					@change="onCheckboxChange($event, TradeSettingToggleType.ItemCopy)" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
@@ -220,7 +226,7 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeStatPresetEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, 'statPreset')" />
+					@change="onCheckboxChange($event, TradeSettingToggleType.StatPreset)" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 

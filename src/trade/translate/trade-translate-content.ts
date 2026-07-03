@@ -12,7 +12,7 @@ const backgroundResponseTimeoutMs = 15_000;
 export function installTranslationDictionaryBridge(): void {
 	window.addEventListener("message", async (event: MessageEvent<unknown>) => {
 		if (event.source !== window || !isPoeTranslationMessage(event.data)) return;
-		if (event.data.type !== PoeTranslationMessageType.fetch) return;
+		if (event.data.type !== PoeTranslationMessageType.Fetch) return;
 
 		try {
 			const response = await sendRuntimeMessageWithTimeout(event.data);
@@ -51,7 +51,7 @@ function sendRuntimeMessageWithTimeout(message: PoeTranslationMessage): Promise<
 function createFetchErrorMessage(requestId: string, error: unknown): PoeTranslationFetchErrorMessage {
 	return {
 		source: poeTranslationMessageSource,
-		type: PoeTranslationMessageType.error,
+		type: PoeTranslationMessageType.Error,
 		requestId,
 		error: {
 			message: error instanceof Error ? error.message : String(error),

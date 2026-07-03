@@ -2,48 +2,48 @@ import type { TradeStatPreset, TradeStatPresetQuery } from "../trade-types";
 
 const poeStatPresetMessageSource = "poe2-extensions:trade-stat-preset";
 
-export const PoeStatPresetMessageType = {
-	list: "STAT_PRESET_LIST",
-	save: "STAT_PRESET_SAVE",
-	rename: "STAT_PRESET_RENAME",
-	delete: "STAT_PRESET_DELETE",
-	result: "STAT_PRESET_RESULT",
-	error: "STAT_PRESET_ERROR",
-} as const;
+export enum PoeStatPresetMessageType {
+	List = 1,
+	Save = 2,
+	Rename = 3,
+	Delete = 4,
+	Result = 5,
+	Error = 6,
+}
 
 interface PoeStatPresetBaseMessage {
 	source: typeof poeStatPresetMessageSource;
-	type: string;
+	type: PoeStatPresetMessageType;
 	requestId: string;
 }
 
 interface PoeStatPresetListMessage extends PoeStatPresetBaseMessage {
-	type: typeof PoeStatPresetMessageType.list;
+	type: PoeStatPresetMessageType.List;
 }
 
 interface PoeStatPresetSaveMessage extends PoeStatPresetBaseMessage {
-	type: typeof PoeStatPresetMessageType.save;
+	type: PoeStatPresetMessageType.Save;
 	preset: TradeStatPreset;
 }
 
 interface PoeStatPresetRenameMessage extends PoeStatPresetBaseMessage {
-	type: typeof PoeStatPresetMessageType.rename;
+	type: PoeStatPresetMessageType.Rename;
 	oldName: string;
 	newName: string;
 }
 
 interface PoeStatPresetDeleteMessage extends PoeStatPresetBaseMessage {
-	type: typeof PoeStatPresetMessageType.delete;
+	type: PoeStatPresetMessageType.Delete;
 	name: string;
 }
 
 interface PoeStatPresetResultMessage extends PoeStatPresetBaseMessage {
-	type: typeof PoeStatPresetMessageType.result;
+	type: PoeStatPresetMessageType.Result;
 	presets: TradeStatPreset[];
 }
 
 interface PoeStatPresetErrorMessage extends PoeStatPresetBaseMessage {
-	type: typeof PoeStatPresetMessageType.error;
+	type: PoeStatPresetMessageType.Error;
 	error: {
 		message: string;
 	};
@@ -60,7 +60,7 @@ export type PoeStatPresetResponseMessage = PoeStatPresetResultMessage | PoeStatP
 export function createStatPresetListMessage(requestId: string): PoeStatPresetListMessage {
 	return {
 		source: poeStatPresetMessageSource,
-		type: PoeStatPresetMessageType.list,
+		type: PoeStatPresetMessageType.List,
 		requestId,
 	};
 }
@@ -68,7 +68,7 @@ export function createStatPresetListMessage(requestId: string): PoeStatPresetLis
 export function createStatPresetSaveMessage(requestId: string, preset: TradeStatPreset): PoeStatPresetSaveMessage {
 	return {
 		source: poeStatPresetMessageSource,
-		type: PoeStatPresetMessageType.save,
+		type: PoeStatPresetMessageType.Save,
 		requestId,
 		preset,
 	};
@@ -81,7 +81,7 @@ export function createStatPresetRenameMessage(
 ): PoeStatPresetRenameMessage {
 	return {
 		source: poeStatPresetMessageSource,
-		type: PoeStatPresetMessageType.rename,
+		type: PoeStatPresetMessageType.Rename,
 		requestId,
 		oldName,
 		newName,
@@ -91,7 +91,7 @@ export function createStatPresetRenameMessage(
 export function createStatPresetDeleteMessage(requestId: string, name: string): PoeStatPresetDeleteMessage {
 	return {
 		source: poeStatPresetMessageSource,
-		type: PoeStatPresetMessageType.delete,
+		type: PoeStatPresetMessageType.Delete,
 		requestId,
 		name,
 	};
@@ -103,7 +103,7 @@ export function createStatPresetResultMessage(
 ): PoeStatPresetResultMessage {
 	return {
 		source: poeStatPresetMessageSource,
-		type: PoeStatPresetMessageType.result,
+		type: PoeStatPresetMessageType.Result,
 		requestId,
 		presets,
 	};
@@ -112,7 +112,7 @@ export function createStatPresetResultMessage(
 export function createStatPresetErrorMessage(requestId: string, error: unknown): PoeStatPresetErrorMessage {
 	return {
 		source: poeStatPresetMessageSource,
-		type: PoeStatPresetMessageType.error,
+		type: PoeStatPresetMessageType.Error,
 		requestId,
 		error: {
 			message: error instanceof Error ? error.message : String(error),
@@ -131,12 +131,12 @@ export function isPoeStatPresetRequestMessage(value: unknown): value is PoeStatP
 		newName?: unknown;
 	};
 
-	if (message.type === PoeStatPresetMessageType.list) return true;
-	if (message.type === PoeStatPresetMessageType.save) return isTradeStatPreset(message.preset);
-	if (message.type === PoeStatPresetMessageType.rename) {
+	if (message.type === PoeStatPresetMessageType.List) return true;
+	if (message.type === PoeStatPresetMessageType.Save) return isTradeStatPreset(message.preset);
+	if (message.type === PoeStatPresetMessageType.Rename) {
 		return typeof message.oldName === "string" && typeof message.newName === "string";
 	}
-	if (message.type === PoeStatPresetMessageType.delete) return typeof message.name === "string";
+	if (message.type === PoeStatPresetMessageType.Delete) return typeof message.name === "string";
 
 	return false;
 }
@@ -150,8 +150,8 @@ export function isPoeStatPresetResponseMessage(value: unknown): value is PoeStat
 		error?: unknown;
 	};
 
-	if (message.type === PoeStatPresetMessageType.result) return isTradeStatPresetArray(message.presets);
-	if (message.type === PoeStatPresetMessageType.error) return isStatPresetError(message.error);
+	if (message.type === PoeStatPresetMessageType.Result) return isTradeStatPresetArray(message.presets);
+	if (message.type === PoeStatPresetMessageType.Error) return isStatPresetError(message.error);
 
 	return false;
 }

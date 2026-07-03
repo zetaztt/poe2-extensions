@@ -26,11 +26,11 @@ export function installStatPresetStorageBridge(isStatPresetEnabled: () => boolea
 }
 
 async function handleStatPresetRequest(message: PoeStatPresetRequestMessage): Promise<TradeStatPreset[]> {
-	if (message.type === PoeStatPresetMessageType.list) {
+	if (message.type === PoeStatPresetMessageType.List) {
 		return getStoredTradeStatPresets();
 	}
 
-	if (message.type === PoeStatPresetMessageType.save) {
+	if (message.type === PoeStatPresetMessageType.Save) {
 		const presets = await getStoredTradeStatPresets();
 		const nextPreset = {
 			name: message.preset.name.trim(),
@@ -49,7 +49,7 @@ async function handleStatPresetRequest(message: PoeStatPresetRequestMessage): Pr
 		return presets;
 	}
 
-	if (message.type === PoeStatPresetMessageType.rename) {
+	if (message.type === PoeStatPresetMessageType.Rename) {
 		const presets = await getStoredTradeStatPresets();
 		const oldName = message.oldName.trim();
 		const newName = message.newName.trim();

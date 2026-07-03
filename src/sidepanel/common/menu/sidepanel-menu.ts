@@ -5,10 +5,15 @@ export type SidepanelMenuItem = {
 	run: () => void | Promise<void>;
 };
 
+export enum SidepanelMenuAlign {
+	Start = 1,
+	End = 2,
+}
+
 export type SidepanelMenuOptions = {
 	x: number;
 	y: number;
-	align?: "start" | "end";
+	align?: SidepanelMenuAlign;
 };
 
 type PopoverElement = HTMLElement & {
@@ -86,7 +91,7 @@ function renderMenu(root: HTMLElement, items: SidepanelMenuItem[]): void {
 
 function positionMenu(root: HTMLElement, options: SidepanelMenuOptions): void {
 	root.style.left = `${Math.max(0, options.x)}px`;
-	root.style.transform = options.align === "end" ? "translateX(-100%)" : "";
+	root.style.transform = options.align === SidepanelMenuAlign.End ? "translateX(-100%)" : "";
 	root.style.top = `${Math.max(0, options.y)}px`;
 }
 

@@ -54,18 +54,26 @@ export interface StoredTradeBookmarkTree {
 
 export type TradeBookmarkExportData = TradeBookmarkTreeExportData | TradeBookmarkFolderExportData;
 
-export type TradeBookmarkImportMode = "append" | "replace";
+export enum TradeBookmarkImportMode {
+	Append = "append",
+	Replace = "replace",
+}
+
+export enum TradeBookmarkExportContent {
+	Tree = "tree",
+	Folder = "folder",
+}
 
 export interface TradeBookmarkTreeExportData {
 	source: "poe2-extensions-trade-bookmarks";
 	exportedAt: number;
-	content: "tree";
+	content: TradeBookmarkExportContent.Tree;
 	tree: StoredTradeBookmarkTree;
 }
 
 export interface TradeBookmarkFolderExportData {
 	source: "poe2-extensions-trade-bookmarks";
 	exportedAt: number;
-	content: "folder";
+	content: TradeBookmarkExportContent.Folder;
 	folder: StoredTradeBookmarkFolder;
 }

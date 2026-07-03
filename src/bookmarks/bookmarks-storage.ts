@@ -1,10 +1,11 @@
 import browser from "webextension-polyfill";
-import type {
-	StoredTradeBookmark,
-	StoredTradeBookmarkFolder,
-	StoredTradeBookmarkTree,
-	TradeBookmarkExportData,
+import {
+	TradeBookmarkExportContent,
 	TradeBookmarkImportMode,
+	type StoredTradeBookmark,
+	type StoredTradeBookmarkFolder,
+	type StoredTradeBookmarkTree,
+	type TradeBookmarkExportData,
 } from "./bookmarks-types";
 
 export const rootFolderId = "trade-bookmarks-root";
@@ -15,8 +16,8 @@ const rootFolderTitle = "Trade 书签";
 const storage = browser.storage.local;
 
 type BookmarkImportData =
-	| { content: "tree"; tree: StoredTradeBookmarkTree }
-	| { content: "folder"; folder: StoredTradeBookmarkFolder };
+	| { content: TradeBookmarkExportContent.Tree; tree: StoredTradeBookmarkTree }
+	| { content: TradeBookmarkExportContent.Folder; folder: StoredTradeBookmarkFolder };
 
 export async function getBookmarkTree(): Promise<StoredTradeBookmarkTree> {
 	const values = await storage.get(tradeBookmarkTreeStorageKey);
@@ -39,7 +40,7 @@ export async function exportBookmarkTree(): Promise<TradeBookmarkExportData> {
 	return {
 		source: tradeBookmarkExportSource,
 		exportedAt: Date.now(),
-		content: "tree",
+		content: TradeBookmarkExportContent.Tree,
 		tree: structuredClone(await getBookmarkTree()),
 	};
 }
@@ -52,7 +53,7 @@ export async function exportBookmarkFolder(folderId: string): Promise<TradeBookm
 	return {
 		source: tradeBookmarkExportSource,
 		exportedAt: Date.now(),
-		content: "folder",
+		content: TradeBookmarkExportContent.Folder,
 		folder: structuredClone(folder),
 	};
 }
@@ -61,7 +62,7 @@ export async function importBookmarkData(value: unknown, mode: TradeBookmarkImpo
 	const data = getImportBookmarkData(value);
 	if (!data) throw new Error("导入文件不是有效的 trade2 书签备份。");
 
-	if (mode === "replace") {
+	if (mode === TradeBookmarkImportMode.Replace) {
 		await saveBookmarkTree(createReplacementBookmarkTree(data));
 		return;
 	}
@@ -90,7 +91,7 @@ function createDefaultBookmarkTree(): StoredTradeBookmarkTree {
 }
 
 function createReplacementBookmarkTree(data: BookmarkImportData): StoredTradeBookmarkTree {
-	if (data.content === "tree") return structuredClone(data.tree);
+	if (data.content === TradeBookmarkExportContent.Tree) return structuredClone(data.tree);
 
 	const tree = createDefaultBookmarkTree();
 	tree.root.children = [cloneFolderForParent(data.folder, rootFolderId)];
@@ -99,25 +100,28 @@ function createReplacementBookmarkTree(data: BookmarkImportData): StoredTradeBoo
 }
 
 function getImportFolders(data: BookmarkImportData): StoredTradeBookmarkFolder[] {
-	return data.content === "tree" ? data.tree.root.children : [data.folder];
+	return data.content === TradeBookmarkExportContent.Tree ? data.tree.root.children : [data.folder];
 }
 
 function getImportBookmarkData(value: unknown): BookmarkImportData | null {
 	if (!isRecord(value)) return null;
 
 	if (value.source === tradeBookmarkExportSource && typeof value.exportedAt === "number") {
-		if (value.content === "folder" && isStoredFolder(value.folder, 1, true)) {
-			return { content: "folder", folder: value.folder };
+		if (value.content === TradeBookmarkExportContent.Folder && isStoredFolder(value.folder, 1, true)) {
+			return { content: TradeBookmarkExportContent.Folder, folder: value.folder };
 		}
 
-		if ((value.content === "tree" || value.content === undefined) && isStoredBookmarkTree(value.tree, true)) {
-			return { content: "tree", tree: value.tree };
+		if (
+			(value.content === TradeBookmarkExportContent.Tree || value.content === undefined)
+			&& isStoredBookmarkTree(value.tree, true)
+		) {
+			return { content: TradeBookmarkExportContent.Tree, tree: value.tree };
 		}
 
 		return null;
 	}
 
-	if (isStoredBookmarkTree(value, true)) return { content: "tree", tree: value };
+	if (isStoredBookmarkTree(value, true)) return { content: TradeBookmarkExportContent.Tree, tree: value };
 	return null;
 }
 

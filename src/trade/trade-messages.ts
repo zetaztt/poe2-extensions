@@ -1,26 +1,26 @@
 export const poeTradeMessageSource = "poe2-extensions:trade";
 
-export const PoeTradeMessageType = {
-	itemCopyUpdate: "POE_TRADE_ITEM_COPY_UPDATE",
-	statPresetUpdate: "POE_TRADE_STAT_PRESET_UPDATE",
-	syncTranslateInjection: "POE_TRADE_SYNC_TRANSLATE_INJECTION",
-} as const;
+export enum PoeTradeMessageType {
+	ItemCopyUpdate = 1,
+	StatPresetUpdate = 2,
+	SyncTranslateInjection = 3,
+}
 
 export type PoeTradeItemCopyUpdateMessage = {
 	source: typeof poeTradeMessageSource;
-	type: typeof PoeTradeMessageType.itemCopyUpdate;
+	type: PoeTradeMessageType.ItemCopyUpdate;
 	enabled: boolean;
 };
 
 export type PoeTradeStatPresetUpdateMessage = {
 	source: typeof poeTradeMessageSource;
-	type: typeof PoeTradeMessageType.statPresetUpdate;
+	type: PoeTradeMessageType.StatPresetUpdate;
 	enabled: boolean;
 };
 
 export type PoeTradeSyncTranslateInjectionMessage = {
 	source: typeof poeTradeMessageSource;
-	type: typeof PoeTradeMessageType.syncTranslateInjection;
+	type: PoeTradeMessageType.SyncTranslateInjection;
 };
 
 export type PoeTradeMessage =
@@ -31,7 +31,7 @@ export type PoeTradeMessage =
 export function createTradeItemCopyUpdateMessage(enabled: boolean): PoeTradeItemCopyUpdateMessage {
 	return {
 		source: poeTradeMessageSource,
-		type: PoeTradeMessageType.itemCopyUpdate,
+		type: PoeTradeMessageType.ItemCopyUpdate,
 		enabled,
 	};
 }
@@ -39,7 +39,7 @@ export function createTradeItemCopyUpdateMessage(enabled: boolean): PoeTradeItem
 export function createTradeStatPresetUpdateMessage(enabled: boolean): PoeTradeStatPresetUpdateMessage {
 	return {
 		source: poeTradeMessageSource,
-		type: PoeTradeMessageType.statPresetUpdate,
+		type: PoeTradeMessageType.StatPresetUpdate,
 		enabled,
 	};
 }
@@ -47,7 +47,7 @@ export function createTradeStatPresetUpdateMessage(enabled: boolean): PoeTradeSt
 export function createTradeSyncTranslateInjectionMessage(): PoeTradeSyncTranslateInjectionMessage {
 	return {
 		source: poeTradeMessageSource,
-		type: PoeTradeMessageType.syncTranslateInjection,
+		type: PoeTradeMessageType.SyncTranslateInjection,
 	};
 }
 
@@ -57,24 +57,24 @@ export function isPoeTradeMessage(value: unknown): value is PoeTradeMessage {
 	const message = value as { source?: unknown; type?: unknown; enabled?: unknown };
 	if (message.source !== poeTradeMessageSource) return false;
 
-	if (message.type === PoeTradeMessageType.syncTranslateInjection) return true;
+	if (message.type === PoeTradeMessageType.SyncTranslateInjection) return true;
 
 	return (
-		(message.type === PoeTradeMessageType.itemCopyUpdate || message.type === PoeTradeMessageType.statPresetUpdate)
+		(message.type === PoeTradeMessageType.ItemCopyUpdate || message.type === PoeTradeMessageType.StatPresetUpdate)
 		&& typeof message.enabled === "boolean"
 	);
 }
 
 export function isPoeTradeItemCopyUpdateMessage(value: unknown): value is PoeTradeItemCopyUpdateMessage {
-	return isPoeTradeMessage(value) && value.type === PoeTradeMessageType.itemCopyUpdate;
+	return isPoeTradeMessage(value) && value.type === PoeTradeMessageType.ItemCopyUpdate;
 }
 
 export function isPoeTradeStatPresetUpdateMessage(value: unknown): value is PoeTradeStatPresetUpdateMessage {
-	return isPoeTradeMessage(value) && value.type === PoeTradeMessageType.statPresetUpdate;
+	return isPoeTradeMessage(value) && value.type === PoeTradeMessageType.StatPresetUpdate;
 }
 
 export function isPoeTradeSyncTranslateInjectionMessage(
 	value: unknown,
 ): value is PoeTradeSyncTranslateInjectionMessage {
-	return isPoeTradeMessage(value) && value.type === PoeTradeMessageType.syncTranslateInjection;
+	return isPoeTradeMessage(value) && value.type === PoeTradeMessageType.SyncTranslateInjection;
 }

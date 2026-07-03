@@ -21,10 +21,15 @@ import {
 	type TradeBookmarkServiceEvent,
 } from "../../bookmarks/bookmarks-service";
 import { exportBookmarkFolder, exportBookmarkTree, importBookmarkData } from "../../bookmarks/bookmarks-storage";
-import type { TradeBookmarkItem, TradeBookmarkTreeNode } from "../../bookmarks/bookmarks-types";
+import {
+	TradeBookmarkImportMode,
+	type TradeBookmarkItem,
+	type TradeBookmarkTreeNode,
+} from "../../bookmarks/bookmarks-types";
 import {
 	closeMenu,
 	openMenu as openSidepanelMenu,
+	SidepanelMenuAlign,
 	type SidepanelMenuItem,
 	type SidepanelMenuOptions,
 } from "../common/menu/sidepanel-menu";
@@ -36,11 +41,27 @@ type VisibleBookmarkFolder = TradeBookmarkTreeNode & {
 	displayDepth: number;
 };
 
-type DragItem = { type: "folder"; id: string } | { type: "bookmark"; id: string };
+enum BookmarkDragItemType {
+	Folder = 1,
+	Bookmark = 2,
+}
+
+enum BookmarkDropPosition {
+	Before = 1,
+	Inside = 2,
+	After = 3,
+}
+
+type DragItem = { type: BookmarkDragItemType.Folder; id: string } | { type: BookmarkDragItemType.Bookmark; id: string };
 
 type DropTarget =
-	| { type: "folder"; id: string; position: "before" | "inside" | "after" }
-	| { type: "bookmark"; id: string; folderId: string; position: "before" | "after" };
+	| { type: BookmarkDragItemType.Folder; id: string; position: BookmarkDropPosition }
+	| {
+			type: BookmarkDragItemType.Bookmark;
+			id: string;
+			folderId: string;
+			position: BookmarkDropPosition.Before | BookmarkDropPosition.After;
+	  };
 
 const emit = defineEmits<{
 	initialized: [success: boolean];
@@ -198,7 +219,7 @@ async function onImportBookmarksChange(event: Event): Promise<void> {
 		if (!mode) return;
 		await importBookmarkData(data, mode);
 		await loadBookmarks();
-		statusText.value = mode === "append" ? "书签 JSON 已添加。" : "书签 JSON 已覆盖导入。";
+		statusText.value = mode === TradeBookmarkImportMode.Append ? "书签 JSON 已添加。" : "书签 JSON 已覆盖导入。";
 	} catch (error) {
 		statusText.value = error instanceof Error ? error.message : "导入书签失败，请确认 JSON 文件有效。";
 		console.error("[poe2-extensions] trade 书签导入失败", error);
@@ -207,12 +228,12 @@ async function onImportBookmarksChange(event: Event): Promise<void> {
 	}
 }
 
-function getImportMode(): "append" | "replace" | null {
+function getImportMode(): TradeBookmarkImportMode | null {
 	if (window.confirm("导入 JSON 默认会添加到当前书签后面。\n\n点击“确定”添加，点击“取消”选择覆盖或放弃。")) {
-		return "append";
+		return TradeBookmarkImportMode.Append;
 	}
 
-	return window.confirm("确定覆盖当前所有 trade 书签吗？") ? "replace" : null;
+	return window.confirm("确定覆盖当前所有 trade 书签吗？") ? TradeBookmarkImportMode.Replace : null;
 }
 
 function getBookmarkExportFileName(data: { exportedAt: number }, folder: TradeBookmarkTreeNode | undefined): string {
@@ -331,7 +352,7 @@ function getButtonMenuPosition(event: MouseEvent): SidepanelMenuOptions {
 	return {
 		x: rect.right,
 		y: rect.bottom + 1,
-		align: "end",
+		align: SidepanelMenuAlign.End,
 	};
 }
 
@@ -600,7 +621,7 @@ function onFolderDragStart(event: DragEvent, folder: VisibleBookmarkFolder): voi
 		return;
 	}
 
-	dragItem.value = { type: "folder", id: folder.id };
+	dragItem.value = { type: BookmarkDragItemType.Folder, id: folder.id };
 	prepareDragEvent(event);
 	closeMenu();
 }
@@ -617,7 +638,7 @@ function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): voi
 		return;
 	}
 
-	dragItem.value = { type: "bookmark", id: bookmark.id };
+	dragItem.value = { type: BookmarkDragItemType.Bookmark, id: bookmark.id };
 	prepareDragEvent(event);
 	closeMenu();
 }
@@ -664,12 +685,13 @@ async function onDrop(event: DragEvent): Promise<void> {
 	statusText.value = "";
 
 	try {
-		if (item.type === "folder") {
+		if (item.type === BookmarkDragItemType.Folder) {
 			const moveTarget = getFolderMoveTarget(item.id, target);
 			if (!moveTarget) return;
 
 			await moveBookmarkFolder(item.id, moveTarget.parentId, moveTarget.index);
-			if (target.type === "folder" && target.position === "inside") expandFolder(target.id);
+			if (target.type === BookmarkDragItemType.Folder && target.position === BookmarkDropPosition.Inside)
+				expandFolder(target.id);
 		} else {
 			const moveTarget = getBookmarkMoveTarget(item.id, target);
 			if (!moveTarget) return;
@@ -698,18 +720,18 @@ function onPanelDrop(event: DragEvent): void {
 
 function getFolderDropClass(folder: VisibleBookmarkFolder): Record<string, boolean> {
 	return {
-		"dragging-source": dragItem.value?.type === "folder" && dragItem.value.id === folder.id,
-		"drop-before": isFolderDropTarget(folder, "before"),
-		"drop-inside": isFolderDropTarget(folder, "inside"),
-		"drop-after": isFolderDropTarget(folder, "after"),
+		"dragging-source": dragItem.value?.type === BookmarkDragItemType.Folder && dragItem.value.id === folder.id,
+		"drop-before": isFolderDropTarget(folder, BookmarkDropPosition.Before),
+		"drop-inside": isFolderDropTarget(folder, BookmarkDropPosition.Inside),
+		"drop-after": isFolderDropTarget(folder, BookmarkDropPosition.After),
 	};
 }
 
 function getBookmarkDropClass(bookmark: TradeBookmarkItem): Record<string, boolean> {
 	return {
-		"dragging-source": dragItem.value?.type === "bookmark" && dragItem.value.id === bookmark.id,
-		"drop-before": isBookmarkDropTarget(bookmark, "before"),
-		"drop-after": isBookmarkDropTarget(bookmark, "after"),
+		"dragging-source": dragItem.value?.type === BookmarkDragItemType.Bookmark && dragItem.value.id === bookmark.id,
+		"drop-before": isBookmarkDropTarget(bookmark, BookmarkDropPosition.Before),
+		"drop-after": isBookmarkDropTarget(bookmark, BookmarkDropPosition.After),
 	};
 }
 
@@ -717,26 +739,27 @@ function getFolderDropTarget(event: DragEvent, folder: VisibleBookmarkFolder): D
 	const item = dragItem.value;
 	if (!item) return null;
 
-	if (item.type === "bookmark") {
+	if (item.type === BookmarkDragItemType.Bookmark) {
 		if (folder.displayDepth === 0) return null;
-		return { type: "folder", id: folder.id, position: "inside" };
+		return { type: BookmarkDragItemType.Folder, id: folder.id, position: BookmarkDropPosition.Inside };
 	}
 
 	if (item.id === folder.id || isFolderDescendant(item.id, folder.id)) return null;
 
 	if (folder.displayDepth === 0) {
-		return { type: "folder", id: folder.id, position: "inside" };
+		return { type: BookmarkDragItemType.Folder, id: folder.id, position: BookmarkDropPosition.Inside };
 	}
 
-	return { type: "folder", id: folder.id, position: getHalfDropPosition(event) };
+	return { type: BookmarkDragItemType.Folder, id: folder.id, position: getHalfDropPosition(event) };
 }
 
 function getBookmarkDropTarget(event: DragEvent, bookmark: TradeBookmarkItem): DropTarget | null {
 	const item = dragItem.value;
-	if (!item || item.type !== "bookmark" || item.id === bookmark.id || !bookmark.parentId) return null;
+	if (!item || item.type !== BookmarkDragItemType.Bookmark || item.id === bookmark.id || !bookmark.parentId)
+		return null;
 
 	return {
-		type: "bookmark",
+		type: BookmarkDragItemType.Bookmark,
 		id: bookmark.id,
 		folderId: bookmark.parentId,
 		position: getHalfDropPosition(event),
@@ -744,9 +767,9 @@ function getBookmarkDropTarget(event: DragEvent, bookmark: TradeBookmarkItem): D
 }
 
 function getFolderMoveTarget(folderId: string, target: DropTarget): { parentId: string; index: number } | null {
-	if (target.type === "bookmark" || !bookmarkTree.value) return null;
+	if (target.type === BookmarkDragItemType.Bookmark || !bookmarkTree.value) return null;
 
-	if (target.position === "inside") {
+	if (target.position === BookmarkDropPosition.Inside) {
 		const targetFolder = findFolderInTree(bookmarkTree.value, target.id);
 		if (!targetFolder || targetFolder.parentId) return null;
 		return {
@@ -763,7 +786,7 @@ function getFolderMoveTarget(folderId: string, target: DropTarget): { parentId: 
 	const targetIndex = parent.children.findIndex((folder) => folder.id === target.id);
 	if (targetIndex < 0) return null;
 
-	const index = target.position === "after" ? targetIndex + 1 : targetIndex;
+	const index = target.position === BookmarkDropPosition.After ? targetIndex + 1 : targetIndex;
 	const currentIndex = parent.children.findIndex((folder) => folder.id === folderId);
 	if (currentIndex === index || currentIndex + 1 === index) return null;
 
@@ -776,7 +799,7 @@ function getFolderMoveTarget(folderId: string, target: DropTarget): { parentId: 
 function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folderId: string; index: number } | null {
 	if (!bookmarkTree.value) return null;
 
-	if (target.type === "folder") {
+	if (target.type === BookmarkDragItemType.Folder) {
 		const folder = findFolderInTree(bookmarkTree.value, target.id);
 		if (!folder?.parentId) return null;
 		return {
@@ -790,7 +813,7 @@ function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folder
 	const targetIndex = folder.bookmarks.findIndex((bookmark) => bookmark.id === target.id);
 	if (targetIndex < 0) return null;
 
-	const index = target.position === "after" ? targetIndex + 1 : targetIndex;
+	const index = target.position === BookmarkDropPosition.After ? targetIndex + 1 : targetIndex;
 	const currentIndex = folder.bookmarks.findIndex((bookmark) => bookmark.id === bookmarkId);
 	if (currentIndex === index || currentIndex + 1 === index) return null;
 
@@ -961,22 +984,25 @@ function isFolderDescendant(parentFolderId: string, possibleDescendantId: string
 	return Boolean(parent && parent.id !== possibleDescendantId && findFolderInTree(parent, possibleDescendantId));
 }
 
-function getHalfDropPosition(event: DragEvent): "before" | "after" {
+function getHalfDropPosition(event: DragEvent): BookmarkDropPosition.Before | BookmarkDropPosition.After {
 	const element = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-	if (!element) return "after";
+	if (!element) return BookmarkDropPosition.After;
 
 	const rect = element.getBoundingClientRect();
-	return event.clientY - rect.top < rect.height / 2 ? "before" : "after";
+	return event.clientY - rect.top < rect.height / 2 ? BookmarkDropPosition.Before : BookmarkDropPosition.After;
 }
 
-function isFolderDropTarget(folder: VisibleBookmarkFolder, position: "before" | "inside" | "after"): boolean {
+function isFolderDropTarget(folder: VisibleBookmarkFolder, position: BookmarkDropPosition): boolean {
 	const target = dropTarget.value;
-	return target?.type === "folder" && target.id === folder.id && target.position === position;
+	return target?.type === BookmarkDragItemType.Folder && target.id === folder.id && target.position === position;
 }
 
-function isBookmarkDropTarget(bookmark: TradeBookmarkItem, position: "before" | "after"): boolean {
+function isBookmarkDropTarget(
+	bookmark: TradeBookmarkItem,
+	position: BookmarkDropPosition.Before | BookmarkDropPosition.After,
+): boolean {
 	const target = dropTarget.value;
-	return target?.type === "bookmark" && target.id === bookmark.id && target.position === position;
+	return target?.type === BookmarkDragItemType.Bookmark && target.id === bookmark.id && target.position === position;
 }
 
 function isInteractiveDragSource(event: DragEvent): boolean {

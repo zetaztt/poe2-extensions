@@ -44,13 +44,13 @@ function requestTranslateDictionaryFromBackground(): Promise<TranslateDictionary
 			if (event.source !== window || !isPoeTranslationMessage(event.data)) return;
 			if (event.data.requestId !== requestId) return;
 
-			if (event.data.type === PoeTranslationMessageType.result) {
+			if (event.data.type === PoeTranslationMessageType.Result) {
 				cleanup();
 				resolve((event.data as PoeTranslationFetchResultMessage).dictionary);
 				return;
 			}
 
-			if (event.data.type === PoeTranslationMessageType.error) {
+			if (event.data.type === PoeTranslationMessageType.Error) {
 				cleanup();
 				const { error } = event.data as PoeTranslationFetchErrorMessage;
 				reject(
@@ -70,7 +70,7 @@ function requestTranslateDictionaryFromBackground(): Promise<TranslateDictionary
 		window.postMessage(
 			{
 				source: poeTranslationMessageSource,
-				type: PoeTranslationMessageType.fetch,
+				type: PoeTranslationMessageType.Fetch,
 				requestId,
 			},
 			window.location.origin,

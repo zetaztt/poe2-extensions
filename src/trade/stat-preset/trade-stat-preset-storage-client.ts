@@ -72,7 +72,7 @@ function sendStorageRequest(
 
 		pendingRequests.set(message.requestId, {
 			resolve: (response) => {
-				if (response.type === PoeStatPresetMessageType.error) {
+				if (response.type === PoeStatPresetMessageType.Error) {
 					reject(new Error(response.error.message));
 					return;
 				}

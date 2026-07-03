@@ -45,7 +45,7 @@ browser.runtime.onMessage.addListener((message: unknown) => {
 	}
 
 	if (!isPoeTranslationMessage(message)) return;
-	if (message.type !== PoeTranslationMessageType.fetch) return;
+	if (message.type !== PoeTranslationMessageType.Fetch) return;
 
 	return fetchTranslateDictionary(message);
 });
@@ -185,7 +185,7 @@ async function fetchTranslateDictionary(
 
 	return {
 		source: poeTranslationMessageSource,
-		type: PoeTranslationMessageType.result,
+		type: PoeTranslationMessageType.Result,
 		requestId: message.requestId,
 		dictionary: current.dictionary,
 	};
@@ -199,7 +199,7 @@ function createFetchErrorMessage(
 ): PoeTranslationFetchErrorMessage {
 	return {
 		source: poeTranslationMessageSource,
-		type: PoeTranslationMessageType.error,
+		type: PoeTranslationMessageType.Error,
 		requestId,
 		error: {
 			message,
