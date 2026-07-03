@@ -1,15 +1,11 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { SidepanelMenuAlign, type SidepanelMenuState } from "./sidepanel-menu-types";
 
 type PopoverElement = HTMLElement & {
 	popover: string | null;
 	showPopover: () => void;
 	hidePopover: () => void;
-};
-
-type PopoverToggleEvent = Event & {
-	newState?: string;
 };
 
 const props = defineProps<{
@@ -44,9 +40,34 @@ watch(
 	{ immediate: true },
 );
 
-function onMenuToggle(event: Event): void {
-	const toggleEvent = event as PopoverToggleEvent;
-	if (toggleEvent.newState === "closed") props.closeMenu();
+onMounted(() => {
+	window.addEventListener("pointerdown", onGlobalPointerDown, true);
+	window.addEventListener("keydown", onGlobalKeyDown, true);
+	window.addEventListener("dragstart", onGlobalDragStart, true);
+});
+
+onBeforeUnmount(() => {
+	window.removeEventListener("pointerdown", onGlobalPointerDown, true);
+	window.removeEventListener("keydown", onGlobalKeyDown, true);
+	window.removeEventListener("dragstart", onGlobalDragStart, true);
+});
+
+function onGlobalPointerDown(event: PointerEvent): void {
+	if (!props.state.open) return;
+
+	const root = menuRoot.value;
+	const target = event.target;
+	if (root && target instanceof Node && root.contains(target)) return;
+
+	props.closeMenu();
+}
+
+function onGlobalKeyDown(event: KeyboardEvent): void {
+	if (props.state.open && event.key === "Escape") props.closeMenu();
+}
+
+function onGlobalDragStart(): void {
+	if (props.state.open) props.closeMenu();
 }
 
 async function runMenuItem(item: SidepanelMenuState["items"][number], event: MouseEvent): Promise<void> {
@@ -62,14 +83,7 @@ async function runMenuItem(item: SidepanelMenuState["items"][number], event: Mou
 </script>
 
 <template>
-	<div
-		ref="menuRoot"
-		class="sidepanel-menu"
-		popover="auto"
-		:style="menuStyle"
-		@click.stop
-		@contextmenu.stop
-		@toggle="onMenuToggle">
+	<div ref="menuRoot" class="sidepanel-menu" popover="manual" :style="menuStyle" @click.stop @contextmenu.stop>
 		<ul class="sidepanel-menu-list">
 			<li v-for="item in state.items" :key="item.id" class="sidepanel-menu-item">
 				<button

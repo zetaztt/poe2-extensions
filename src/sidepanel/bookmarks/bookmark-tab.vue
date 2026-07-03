@@ -600,7 +600,6 @@ function onFolderDragStart(event: DragEvent, folder: VisibleBookmarkFolder): voi
 
 	dragItem.value = { type: BookmarkDragItemType.Folder, id: folder.id };
 	prepareDragEvent(event);
-	closeMenu();
 }
 
 function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): void {
@@ -617,7 +616,6 @@ function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): voi
 
 	dragItem.value = { type: BookmarkDragItemType.Bookmark, id: bookmark.id };
 	prepareDragEvent(event);
-	closeMenu();
 }
 
 function onFolderDragOver(event: DragEvent, folder: VisibleBookmarkFolder): void {
