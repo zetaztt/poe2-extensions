@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {
 	TradeItemsDataResponse,
 	TradeStatsResponse,
@@ -7,18 +8,149 @@ import {
 	TradeFiltersDataResponse,
 } from "../../src/trade/trade-types";
 import { isUniqueItem } from "../../src/trade/trade-utils";
-import { clearTranslateChangesLog, type TextData, writeNeedCheckTexts, writeTexts } from "./utils";
-
-clearTranslateChangesLog("pull-translate");
+import {
+	createTextItem,
+	getTextKey,
+	getTextOriginal,
+	getTextTranslate,
+	readTexts,
+	setTextSource,
+	setTextTranslate,
+	type TextData,
+	writeTexts,
+} from "./utils";
 
 const poe2TwHref = "www.pathofexile.tw";
 const poe2Href = "www.pathofexile.com";
 
-const texts = new Map<string, TextData>();
-const needCheckTexts = new Map<string, TextData>();
-const words = new Map<string, string>();
+const translateChangeLogPaths = {
+	"pull-translate": "./tmp/pull-translate-changes.log",
+} as const;
+
+type TranslateChangeLogSource = keyof typeof translateChangeLogPaths;
+
+interface PullTradeTextsContext {
+	texts: Map<string, TextData>;
+	needCheckTexts: Map<string, TextData>;
+	words: Map<string, string>;
+}
+
+function createPullTradeTextsContext(): PullTradeTextsContext {
+	return {
+		texts: new Map<string, TextData>(),
+		needCheckTexts: new Map<string, TextData>(),
+		words: new Map<string, string>(),
+	};
+}
+
+function formatLogText(text: string | undefined): string {
+	return text ? `"${text}"` : "(empty)";
+}
+
+function formatTextSummary(text: TextData): string {
+	return [
+		`original=${formatLogText(getTextOriginal(text))}`,
+		`translate=${formatLogText(getTextTranslate(text))}`,
+	].join(", ");
+}
+
+function clearTranslateChangesLog(source: TranslateChangeLogSource): void {
+	fs.mkdirSync("./tmp", { recursive: true });
+	fs.writeFileSync(translateChangeLogPaths[source], "");
+}
+
+function writeTranslateChangeLogs(source: TranslateChangeLogSource, logs: string[]): void {
+	if (!logs.length) {
+		return;
+	}
+
+	const logPath = translateChangeLogPaths[source];
+	fs.mkdirSync("./tmp", { recursive: true });
+	fs.appendFileSync(logPath, logs.map((log) => `[${source}] ${log}`).join("\n") + "\n");
+	console.log(`[${source}] ${logs.length} text changes logged to ${logPath}`);
+}
+
+function logTextChanges(
+	source: TranslateChangeLogSource,
+	beforeTexts: Record<string, TextData>,
+	afterTexts: TextData[],
+): void {
+	const afterTextsMap = new Map(afterTexts.map((text) => [getTextKey(text), text]));
+	const logs: string[] = [];
+
+	for (const text of afterTexts) {
+		const key = getTextKey(text);
+		if (!key) {
+			continue;
+		}
+
+		const beforeText = beforeTexts[key];
+		if (!beforeText) {
+			logs.push(`text added: ${key}, ${formatTextSummary(text)}`);
+			continue;
+		}
+
+		const changes: string[] = [];
+		if (getTextOriginal(beforeText) !== getTextOriginal(text)) {
+			changes.push(
+				`original ${formatLogText(getTextOriginal(beforeText))} -> ${formatLogText(getTextOriginal(text))}`,
+			);
+		}
+		if (getTextTranslate(beforeText) !== getTextTranslate(text)) {
+			changes.push(
+				`translate ${formatLogText(getTextTranslate(beforeText))} -> ${formatLogText(getTextTranslate(text))}`,
+			);
+		}
+
+		if (changes.length) {
+			logs.push(`text changed: ${key}, ${changes.join(", ")}`);
+		}
+	}
+
+	for (const text of Object.values(beforeTexts)) {
+		const key = getTextKey(text);
+		if (key && !afterTextsMap.has(key)) {
+			logs.push(`text removed: ${key}, ${formatTextSummary(text)}`);
+		}
+	}
+
+	writeTranslateChangeLogs(source, logs);
+}
+
+function mergeTranslateTexts(texts: TextData[], beforeTexts = readTexts()): TextData[] {
+	return texts.map((text) => {
+		if (getTextTranslate(text)) {
+			return text;
+		}
+
+		const key = getTextKey(text);
+		const beforeText = key ? beforeTexts[key] : undefined;
+		if (beforeText) {
+			beforeText.msgctxt = key;
+			beforeText.msgid = getTextOriginal(text);
+			return beforeText;
+		}
+
+		return text;
+	});
+}
+
+function writePulledTexts(texts: TextData[]) {
+	const beforeTexts = readTexts();
+	const mergedTexts = mergeTranslateTexts(texts, beforeTexts);
+	logTextChanges("pull-translate", beforeTexts, mergedTexts);
+	writeTexts(mergedTexts);
+}
+
+function writeNeedCheckTexts(texts: TextData[]) {
+	writeTranslateChangeLogs(
+		"pull-translate",
+		texts.map((text) => `need check: ${getTextKey(text) ?? ""}, ${formatTextSummary(text)}`),
+	);
+}
 
 function setText(
+	context: PullTradeTextsContext,
 	key: string,
 	original: string,
 	translate?: string,
@@ -33,7 +165,7 @@ function setText(
 
 	const { needCheck, muteMultiWarn } = options ?? {};
 
-	if (texts.has(key)) {
+	if (context.texts.has(key)) {
 		if (!muteMultiWarn) {
 			console.error("Could not set text map for key '" + key + "'");
 		}
@@ -42,23 +174,16 @@ function setText(
 
 	if (needCheck) {
 		console.warn("text need check '" + key + "'", translate);
-		needCheckTexts.set(key, {
-			key,
-			original,
-			translate,
-		});
+		context.needCheckTexts.set(key, createTextItem(key, original));
 		translate = undefined;
 	}
 
-	texts.set(key, {
-		key,
-		original,
-		translate,
-	});
-
+	const text = createTextItem(key, original, translate);
 	if (translate) {
-		words.set(original, translate);
+		setTextSource(text, "official");
+		context.words.set(original, translate);
 	}
+	context.texts.set(key, text);
 }
 
 async function fetchPoe2TradeData<T>(href: string, type: string): Promise<T> {
@@ -71,7 +196,7 @@ async function fetchPoe2TradeData<T>(href: string, type: string): Promise<T> {
 	return response.json();
 }
 
-async function pullItemTexts() {
+async function pullItemTexts(context: PullTradeTextsContext) {
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeItemsDataResponse>(poe2Href, "items"),
 		fetchPoe2TradeData<TradeItemsDataResponse>(poe2TwHref, "items"),
@@ -81,23 +206,23 @@ async function pullItemTexts() {
 
 		const twGroup = twData.result.find((g) => g.id === group.id);
 
-		setText(groupTextKey, group.label, twGroup?.label);
+		setText(context, groupTextKey, group.label, twGroup?.label);
 
 		for (const entry of group.entries) {
 			if (isUniqueItem(entry)) {
-				setText(`${groupTextKey}/${entry.name}`, entry.name, "", {
+				setText(context, `${groupTextKey}/${entry.name}`, entry.name, "", {
 					muteMultiWarn: true,
 				});
 			}
 
-			setText(`${groupTextKey}/${entry.type}`, entry.type, "", {
+			setText(context, `${groupTextKey}/${entry.type}`, entry.type, "", {
 				muteMultiWarn: true,
 			});
 		}
 	}
 }
 
-async function pullStatsTexts() {
+async function pullStatsTexts(context: PullTradeTextsContext) {
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeStatsResponse>(poe2Href, "stats"),
 		fetchPoe2TradeData<TradeStatsResponse>(poe2TwHref, "stats"),
@@ -108,7 +233,7 @@ async function pullStatsTexts() {
 
 		const twGroup = twData.result.find((g) => g.id === group.id);
 
-		setText(groupTextKey, group.label, twGroup?.label);
+		setText(context, groupTextKey, group.label, twGroup?.label);
 
 		const statsMap = new Map<string, TradeStatConfig[]>();
 		const twStatsMap = new Map<string, TradeStatConfig[]>();
@@ -137,7 +262,7 @@ async function pullStatsTexts() {
 				const entryTextKey = `${groupTextKey}/${id}/${stat.text}`;
 
 				const translateText = twStats?.[i]?.text;
-				setText(entryTextKey, stat.text, translateText, {
+				setText(context, entryTextKey, stat.text, translateText, {
 					needCheck: stats.length !== twStats?.length && stats.length > 1,
 				});
 			}
@@ -145,7 +270,7 @@ async function pullStatsTexts() {
 	}
 }
 
-async function pullStaticTexts() {
+async function pullStaticTexts(context: PullTradeTextsContext) {
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeStaticsDataResponse>(poe2Href, "static"),
 		fetchPoe2TradeData<TradeStaticsDataResponse>(poe2TwHref, "static"),
@@ -156,7 +281,7 @@ async function pullStaticTexts() {
 
 		const twGroup = twData.result.find((g) => g.id === group.id);
 
-		setText(groupTextKey, group.label, twGroup?.label);
+		setText(context, groupTextKey, group.label, twGroup?.label);
 
 		const staticsMap = new Map<string, TradeStaticConfig[]>();
 		const twStaticsMap = new Map<string, TradeStaticConfig[]>();
@@ -188,7 +313,7 @@ async function pullStaticTexts() {
 				const entryTextKey = `${groupTextKey}/${id}/${staticConfig.text}`;
 
 				const translateText = twStaticConfigs?.[i]?.text;
-				setText(entryTextKey, staticConfig.text, translateText, {
+				setText(context, entryTextKey, staticConfig.text, translateText, {
 					needCheck: staticConfigs.length !== twStaticConfigs?.length && staticConfigs.length > 1,
 				});
 			}
@@ -196,7 +321,7 @@ async function pullStaticTexts() {
 	}
 }
 
-async function pullFilterTexts() {
+async function pullFilterTexts(context: PullTradeTextsContext) {
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeFiltersDataResponse>(poe2Href, "filters"),
 		fetchPoe2TradeData<TradeFiltersDataResponse>(poe2TwHref, "filters"),
@@ -206,43 +331,59 @@ async function pullFilterTexts() {
 		const groupTextKey = `filters/${group.id}`;
 		const twGroup = twData.result.find((g) => g.id === group.id);
 		if (group.title) {
-			setText(groupTextKey, group.title, twGroup?.title);
+			setText(context, groupTextKey, group.title, twGroup?.title);
 		}
 		for (const entry of group.filters) {
 			const entryTextKey = `${groupTextKey}/${entry.id}`;
 			const twEntry = twGroup?.filters.find((e) => e.id === entry.id);
 			if (entry.text) {
-				setText(entryTextKey, entry.text, twEntry?.text);
+				setText(context, entryTextKey, entry.text, twEntry?.text);
 			}
 
 			if (entry.tip) {
-				setText(`${entryTextKey}/tip`, entry.tip, twEntry?.tip);
+				setText(context, `${entryTextKey}/tip`, entry.tip, twEntry?.tip);
 			}
 
 			if (entry.option) {
 				for (const option of entry.option.options) {
 					const optionTextKey = `${entryTextKey}/${option.id}`;
 					const twOption = twEntry?.option?.options.find((o) => o.id === option.id);
-					setText(optionTextKey, option.text, twOption?.text);
+					setText(context, optionTextKey, option.text, twOption?.text);
 				}
 			}
 		}
 	}
 }
 
-function mergeTexts() {
-	for (const text of texts.values()) {
-		if (needCheckTexts.has(text.key)) {
+function mergeTexts(context: PullTradeTextsContext) {
+	for (const text of context.texts.values()) {
+		const key = getTextKey(text);
+		const original = getTextOriginal(text);
+		if (key && context.needCheckTexts.has(key)) {
 			continue;
 		}
-		if (!text.translate && words.get(text.original)) {
-			text.translate = words.get(text.original);
+		if (!getTextTranslate(text) && context.words.get(original)) {
+			setTextTranslate(text, context.words.get(original));
+			setTextSource(text, "official");
 		}
 	}
 }
 
-await Promise.all([pullItemTexts(), pullStatsTexts(), pullStaticTexts(), pullFilterTexts()]);
+async function pullTradeTexts() {
+	clearTranslateChangesLog("pull-translate");
 
-mergeTexts();
-writeTexts(Array.from(texts.values()));
-writeNeedCheckTexts(Array.from(needCheckTexts.values()));
+	const context = createPullTradeTextsContext();
+
+	await Promise.all([
+		pullItemTexts(context),
+		pullStatsTexts(context),
+		pullStaticTexts(context),
+		pullFilterTexts(context),
+	]);
+
+	mergeTexts(context);
+	writePulledTexts(Array.from(context.texts.values()));
+	writeNeedCheckTexts(Array.from(context.needCheckTexts.values()));
+}
+
+await pullTradeTexts();

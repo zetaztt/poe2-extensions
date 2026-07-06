@@ -2,30 +2,54 @@ import fs from "node:fs";
 import PO from "pofile";
 
 export const textsPath = "./data/trade-texts.po";
-export const translateChangeLogPaths = {
-	"pull-translate": "./tmp/pull-translate-changes.log",
-	"auto-translate": "./tmp/auto-translate-changes.log",
-} as const;
 
-export type TranslateChangeLogSource = keyof typeof translateChangeLogPaths;
+export type TranslateSource = string;
 
-export type TranslateSource = "official" | "manual" | "auto" | "backfill";
+export type TextData = InstanceType<typeof PO.Item>;
 
-export interface TextData {
-	key: string;
-	original: string;
-	translate: string | undefined;
-	source?: TranslateSource;
+const sourceCommentPattern = /^source:\s*(\S.*)$/;
+
+export function createTextItem(key: string, original: string, translate?: string): TextData {
+	const item = new PO.Item();
+	item.msgctxt = key;
+	item.msgid = original;
+	setTextTranslate(item, translate);
+	return item;
 }
 
-function getSource(comments: string[]): TranslateSource | undefined {
+export function getTextKey(item: TextData): string | undefined {
+	return item.msgctxt || undefined;
+}
+
+export function getTextOriginal(item: TextData): string {
+	return item.msgid;
+}
+
+export function getTextTranslate(item: TextData): string | undefined {
+	return item.msgstr[0] || undefined;
+}
+
+export function setTextTranslate(item: TextData, translate: string | undefined): void {
+	item.msgstr = [translate ?? ""];
+}
+
+export function getTextSource(item: TextData): TranslateSource | undefined {
+	const comments = item.extractedComments ?? [];
 	for (const comment of comments) {
-		const sourceMatch = /^source:\s*(official|manual|auto|backfill)$/.exec(comment);
+		const sourceMatch = sourceCommentPattern.exec(comment);
 		if (sourceMatch) {
-			return sourceMatch[1] as TranslateSource;
+			return sourceMatch[1];
 		}
 	}
 	return undefined;
+}
+
+export function setTextSource(item: TextData, source: TranslateSource | undefined): void {
+	const comments = item.extractedComments ?? [];
+	item.extractedComments = comments.filter((comment) => !sourceCommentPattern.test(comment));
+	if (source) {
+		item.extractedComments.push(`source: ${source}`);
+	}
 }
 
 function createPo(texts: TextData[]): PO {
@@ -36,102 +60,10 @@ function createPo(texts: TextData[]): PO {
 	};
 
 	for (const text of texts) {
-		const item = new PO.Item();
-		item.msgctxt = text.key;
-		item.msgid = text.original;
-		item.msgstr = [text.translate ?? ""];
-		item.extractedComments = text.source ? [`source: ${text.source}`] : [];
-		po.items.push(item);
+		po.items.push(text);
 	}
 
 	return po;
-}
-
-function writePo(path: string, texts: TextData[]): void {
-	texts.sort((a, b) => a.key.localeCompare(b.key));
-	fs.writeFileSync(path, createPo(texts).toString());
-}
-
-function preserveBackfillMarkers(beforeTexts: Record<string, TextData>, afterTexts: TextData[]): TextData[] {
-	return afterTexts.map((text) => {
-		const beforeText = beforeTexts[text.key];
-		if (
-			beforeText?.source === "backfill"
-			&& beforeText.original === text.original
-			&& beforeText.translate === text.translate
-		) {
-			return { ...text, source: "backfill" };
-		}
-		return text;
-	});
-}
-
-function formatLogText(text: string | undefined): string {
-	return text ? `"${text}"` : "(empty)";
-}
-
-function formatTextSummary(text: TextData): string {
-	return [
-		`original=${formatLogText(text.original)}`,
-		`translate=${formatLogText(text.translate)}`,
-		`source=${text.source ?? "(none)"}`,
-	].join(", ");
-}
-
-export function clearTranslateChangesLog(source: TranslateChangeLogSource): void {
-	fs.mkdirSync("./tmp", { recursive: true });
-	fs.writeFileSync(translateChangeLogPaths[source], "");
-}
-
-export function writeTranslateChangeLogs(source: TranslateChangeLogSource, logs: string[]): void {
-	if (!logs.length) {
-		return;
-	}
-
-	const logPath = translateChangeLogPaths[source];
-	fs.mkdirSync("./tmp", { recursive: true });
-	fs.appendFileSync(logPath, logs.map((log) => `[${source}] ${log}`).join("\n") + "\n");
-	console.log(`[${source}] ${logs.length} text changes logged to ${logPath}`);
-}
-
-function logTextChanges(
-	source: TranslateChangeLogSource,
-	beforeTexts: Record<string, TextData>,
-	afterTexts: TextData[],
-): void {
-	const afterTextsMap = new Map(afterTexts.map((text) => [text.key, text]));
-	const logs: string[] = [];
-
-	for (const text of afterTexts) {
-		const beforeText = beforeTexts[text.key];
-		if (!beforeText) {
-			logs.push(`text added: ${text.key}, ${formatTextSummary(text)}`);
-			continue;
-		}
-
-		const changes: string[] = [];
-		if (beforeText.original !== text.original) {
-			changes.push(`original ${formatLogText(beforeText.original)} -> ${formatLogText(text.original)}`);
-		}
-		if (beforeText.translate !== text.translate) {
-			changes.push(`translate ${formatLogText(beforeText.translate)} -> ${formatLogText(text.translate)}`);
-		}
-		if (beforeText.source !== text.source) {
-			changes.push(`source ${beforeText.source ?? "(none)"} -> ${text.source ?? "(none)"}`);
-		}
-
-		if (changes.length) {
-			logs.push(`text changed: ${text.key}, ${changes.join(", ")}`);
-		}
-	}
-
-	for (const text of Object.values(beforeTexts)) {
-		if (!afterTextsMap.has(text.key)) {
-			logs.push(`text removed: ${text.key}, ${formatTextSummary(text)}`);
-		}
-	}
-
-	writeTranslateChangeLogs(source, logs);
 }
 
 export function readTexts(): Record<string, TextData> {
@@ -143,143 +75,17 @@ export function readTexts(): Record<string, TextData> {
 	const texts: Record<string, TextData> = {};
 
 	for (const item of po.items) {
-		if (!item.msgctxt) {
+		const key = getTextKey(item);
+		if (!key) {
 			continue;
 		}
-		texts[item.msgctxt] = {
-			key: item.msgctxt,
-			original: item.msgid,
-			translate: item.msgstr[0] || undefined,
-			source: getSource(item.extractedComments),
-		};
+		texts[key] = item;
 	}
 
 	return texts;
 }
 
-export function readAutoTranslateTexts(): Record<string, string> {
-	const autoTranslateTexts: Record<string, string> = {};
-
-	for (const text of Object.values(readTexts())) {
-		if (text.source === "auto" && text.translate) {
-			autoTranslateTexts[text.original] = text.translate;
-		}
-	}
-
-	return autoTranslateTexts;
-}
-
-export function readManualTranslateTexts(): Record<string, string> {
-	const manualTranslateTexts: Record<string, string> = {};
-
-	for (const text of Object.values(readTexts())) {
-		if (text.source === "manual" && text.translate) {
-			manualTranslateTexts[text.original] = text.translate;
-		}
-	}
-
-	return manualTranslateTexts;
-}
-
-export function mergeTranslateTexts(
-	texts: TextData[],
-	manualTranslateTexts = readManualTranslateTexts(),
-	autoTranslateTexts = readAutoTranslateTexts(),
-): TextData[] {
-	return texts.map((text) => {
-		const manualTranslate = manualTranslateTexts[text.original];
-		if (manualTranslate) {
-			return { ...text, translate: manualTranslate, source: "manual" };
-		}
-
-		if (text.translate) {
-			return { ...text, source: "official" };
-		}
-
-		const autoTranslate = autoTranslateTexts[text.original];
-		if (autoTranslate) {
-			return { ...text, translate: autoTranslate, source: "auto" };
-		}
-
-		return { ...text, translate: undefined, source: undefined };
-	});
-}
-
 export function writeTexts(texts: TextData[]) {
-	const beforeTexts = readTexts();
-	const mergedTexts = preserveBackfillMarkers(beforeTexts, mergeTranslateTexts(texts));
-	logTextChanges("pull-translate", beforeTexts, mergedTexts);
-	writePo(textsPath, mergedTexts);
-}
-
-export function writeNeedCheckTexts(texts: TextData[]) {
-	writeTranslateChangeLogs(
-		"pull-translate",
-		texts.map((text) => `need check: ${text.key}, ${formatTextSummary(text)}`),
-	);
-}
-
-export function updatePoTranslateTexts(updates: Record<string, { translate: string; source: TranslateSource }>) {
-	writePo(
-		textsPath,
-		Object.values(readTexts()).map((text) => {
-			const update = updates[text.original];
-			if (!update) {
-				return text;
-			}
-			return {
-				...text,
-				translate: update.translate,
-				source: update.source,
-			};
-		}),
-	);
-}
-
-export function updatePoTextsByKey(
-	updates: Record<string, { translate: string; source: TranslateSource }>,
-	logSource?: TranslateChangeLogSource,
-) {
-	const beforeTexts = readTexts();
-	const updatedTexts = Object.values(beforeTexts).map((text) => {
-		const update = updates[text.key];
-		if (!update) {
-			return text;
-		}
-		return {
-			...text,
-			translate: update.translate,
-			source: update.source,
-		};
-	});
-	if (logSource) {
-		logTextChanges(logSource, beforeTexts, updatedTexts);
-	}
-	writePo(textsPath, updatedTexts);
-}
-
-export function writeAutoTranslateTexts(texts: [string, string][]) {
-	const beforeTexts = readTexts();
-	const updates = Object.fromEntries(
-		texts.map(([original, translate]) => [original, { translate, source: "auto" }] as const),
-	);
-	const updatedTexts = Object.values(beforeTexts).map((text) => {
-		const update = updates[text.original];
-		if (!update) {
-			return text;
-		}
-		return {
-			...text,
-			translate: update.translate,
-			source: update.source,
-		};
-	});
-	logTextChanges("auto-translate", beforeTexts, updatedTexts);
-	writePo(textsPath, updatedTexts);
-}
-
-export function writeManualTranslateTexts(texts: [string, string][]) {
-	updatePoTranslateTexts(
-		Object.fromEntries(texts.map(([original, translate]) => [original, { translate, source: "manual" }] as const)),
-	);
+	texts.sort((a, b) => (getTextKey(a) ?? "").localeCompare(getTextKey(b) ?? ""));
+	fs.writeFileSync(textsPath, createPo(texts).toString());
 }

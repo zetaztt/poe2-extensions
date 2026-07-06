@@ -21,8 +21,7 @@
 - Vue 3：侧边栏页面。
 - TypeScript：扩展逻辑、注入脚本和翻译数据脚本。
 - Browser Extension APIs：`browser.runtime`、`browser.storage.local`、`browser.storage.sync`、`browser.tabs`、`navigator.clipboard`、Chrome Side Panel API、content script 通信。
-- Crawlee / Playwright：抓取或辅助生成翻译数据。
-- `csv`：读写翻译源数据。
+- `pofile`：读写翻译源数据。
 
 ## 目录说明
 
@@ -42,8 +41,8 @@
     - `item-code/`：接管搜索结果复制按钮，并将 trade 物品数据格式化为 PoB 文本。
     - `stat-preset/`：在高级筛选界面安装预设 UI，并通过 content bridge 和本地存储消息处理完成预设存储操作。
 - `src/translate-dictionary.ts`：主世界脚本侧加载翻译字典的入口，通过 `window.postMessage` 请求 content/background。
-- `scripts/translate/`：翻译数据拉取、自动翻译和字典生成脚本。
-- `data/`：翻译源 CSV 数据。
+- `scripts/translate/`：翻译数据拉取和字典生成脚本。
+- `data/`：翻译源 PO 数据。
 - `assets/`：Vite `publicDir`，包含扩展图标以及生成的 `translate.json` 和 `translate-meta.json`，构建时原样复制到扩展输出目录。
 - `dist/`、`.chrome-profile/`、`node_modules/`、`storage/`：本地生成、开发浏览器配置或依赖目录，不应作为业务源码修改。
 
@@ -54,9 +53,8 @@
 - `npm run compile`：运行 `vue-tsc --noEmit` 做类型检查。
 - `npm run format`：使用 Prettier 格式化纳管文件。
 - `npm run format:check`：检查纳管文件是否符合 Prettier 格式。
-- `npm run pull-translate`：从 POE2 官方英文/繁中 trade 数据接口拉取文本到 `data/trade-texts.csv`。
-- `npm run auto-translate`：通过 poe2db 等来源辅助生成自动翻译数据。
-- `npm run build-translate`：根据 `data/*.csv` 生成 `assets/translate.json` 和 `assets/translate-meta.json`。
+- `npm run pull-translate`：从 POE2 官方英文/繁中 trade 数据接口拉取文本到 `data/trade-texts.po`。
+- `npm run build-translate`：根据 `data/trade-texts.po` 生成 `assets/translate.json` 和 `assets/translate-meta.json`。
 
 ## 扩展运行链路
 
@@ -86,10 +84,8 @@
 
 ## 翻译数据流程
 
-- 优先维护 `data/*.csv` 中的源数据和翻译数据。
-- `data/trade-texts.csv` 是从官方 trade 数据接口整理出的文本清单。
-- `data/trade-texts-atuo-translate.csv` 是自动翻译结果文件；文件名保持现状，不要在普通改动中重命名。
-- `data/trade-texts-manual-translate.csv` 是人工补充翻译结果。
+- 优先维护 `data/trade-texts.po` 中的源数据和翻译数据。
+- `data/trade-texts.po` 是从官方 trade 数据接口整理出的文本清单，同时包含人工补充翻译结果。
 - 生成最终字典时运行 `npm run build-translate`。
 - `assets/translate.json` 和 `assets/translate-meta.json` 是生成产物，同时也是扩展的本地 fallback 资源；可以随翻译数据一起提交，但不要手动随意修改版本号。
 - `translate-meta.json` 的 `version` 在字典内容变化时由脚本使用 `Date.now()` 更新。
@@ -116,7 +112,7 @@
 - 筛选预设消息只能在功能开启时处理，写入前继续校验名称和预设数组结构。
 - 书签和差价数据读取时应继续校验持久化结构，无效数据使用安全默认值或重建默认树。
 - 避免污染官方 trade2 本地缓存；涉及缓存 key 或 storage 改动时确认 `_zh` 隔离策略仍然有效。
-- 修改翻译数据时，优先改 CSV，再运行生成脚本更新 `assets/translate.json` 和 `assets/translate-meta.json`。
+- 修改翻译数据时，优先改 `data/trade-texts.po`，再运行 `npm run build-translate` 更新 `assets/translate.json` 和 `assets/translate-meta.json`。
 - 项目当前没有专门测试框架；较大逻辑变更至少运行类型检查和构建。
 - 代码格式由 Prettier 统一，配置见 `.prettierrc.json`：Tab 缩进宽度 4、双引号、分号、`bracketSameLine: true`。
 - 遍历数组、NodeList、Map、Set 等集合时优先使用 `for...of`，避免使用 `.forEach(...)`，需要索引时使用 `entries()`。
