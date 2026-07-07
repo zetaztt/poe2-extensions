@@ -3291,7 +3291,7 @@ msgstr "宏偉面紗"
 #. source: auto
 msgctxt "items/armour/Grasping Mail"
 msgid "Grasping Mail"
-msgstr "Modifiers Calc"
+msgstr "貪婪鎧甲"
 
 #. source: auto
 msgctxt "items/armour/Gravebind"
@@ -4036,7 +4036,7 @@ msgstr "華麗鎧甲"
 #. source: auto
 msgctxt "items/armour/Ornate Ringmail"
 msgid "Ornate Ringmail"
-msgstr "華貴環甲"
+msgstr "華麗環甲"
 
 #. source: auto
 msgctxt "items/armour/Padded Leggings"
@@ -10089,7 +10089,7 @@ msgstr "心靈符文"
 #. source: official
 msgctxt "items/currency/Mirror of Kalandra"
 msgid "Mirror of Kalandra"
-msgstr "卡蘭德的魔鏡"
+msgstr "卡蘭德魔鏡"
 
 #. source: official
 msgctxt "items/currency/Mystic Alloy"
@@ -11459,12 +11459,12 @@ msgstr "藥劑"
 #. source: auto
 msgctxt "items/flask/Amethyst Charm"
 msgid "Amethyst Charm"
-msgstr "utility_charm_chaos_resistance buff"
+msgstr "紫晶護符"
 
 #. source: auto
 msgctxt "items/flask/Antidote Charm"
 msgid "Antidote Charm"
-msgstr "utility_charm_poison_immunity buff"
+msgstr "解毒護符"
 
 #. source: auto
 msgctxt "items/flask/Arakaali's Gift"
@@ -11499,7 +11499,7 @@ msgstr "高階魔力藥劑"
 #. source: auto
 msgctxt "items/flask/Dousing Charm"
 msgid "Dousing Charm"
-msgstr "utility_charm_burning_immunity buff"
+msgstr "滅火護符"
 
 #. source: auto
 msgctxt "items/flask/For Utopia"
@@ -11534,7 +11534,7 @@ msgstr "巨型魔力藥劑"
 #. source: auto
 msgctxt "items/flask/Golden Charm"
 msgid "Golden Charm"
-msgstr "utility_charm_item_rarity buff"
+msgstr "黃金護符"
 
 #. source: auto
 msgctxt "items/flask/Grand Life Flask"
@@ -11559,7 +11559,7 @@ msgstr "良質魔力藥劑"
 #. source: auto
 msgctxt "items/flask/Grounding Charm"
 msgid "Grounding Charm"
-msgstr "utility_charm_shock_immunity buff"
+msgstr "接地護符"
 
 #. source: auto
 msgctxt "items/flask/Lavianga's Spirits"
@@ -11579,7 +11579,7 @@ msgstr "低階魔力藥劑"
 #. source: auto
 msgctxt "items/flask/Medium Life Flask"
 msgid "Medium Life Flask"
-msgstr "中型生命藥劑"
+msgstr "生命藥劑（中）"
 
 #. source: auto
 msgctxt "items/flask/Medium Mana Flask"
@@ -11619,7 +11619,7 @@ msgstr "儀式通道"
 #. source: auto
 msgctxt "items/flask/Ruby Charm"
 msgid "Ruby Charm"
-msgstr "utility_charm_fire_resistance buff"
+msgstr "紅玉護符"
 
 #. source: auto
 msgctxt "items/flask/Sanguis Heroum"
@@ -11629,27 +11629,27 @@ msgstr "嗜血英雄"
 #. source: auto
 msgctxt "items/flask/Sapphire Charm"
 msgid "Sapphire Charm"
-msgstr "utility_charm_cold_resistance buff"
+msgstr "藍玉護符"
 
 #. source: auto
 msgctxt "items/flask/Silver Charm"
 msgid "Silver Charm"
-msgstr "utility_charm_slow_immunity buff"
+msgstr "白銀護符"
 
 #. source: auto
 msgctxt "items/flask/Staunching Charm"
 msgid "Staunching Charm"
-msgstr "utility_charm_bleeding_immunity buff"
+msgstr "止血護符"
 
 #. source: auto
 msgctxt "items/flask/Stone Charm"
 msgid "Stone Charm"
-msgstr "utility_charm_stun_immunity buff"
+msgstr "岩石護符"
 
 #. source: auto
 msgctxt "items/flask/Thawing Charm"
 msgid "Thawing Charm"
-msgstr "utility_charm_freeze_immunity buff"
+msgstr "解凍護符"
 
 #. source: auto
 msgctxt "items/flask/The Black Cat"
@@ -11664,7 +11664,7 @@ msgstr "斧頭之隕"
 #. source: auto
 msgctxt "items/flask/Topaz Charm"
 msgid "Topaz Charm"
-msgstr "utility_charm_lightning_resistance buff"
+msgstr "黃玉護符"
 
 #. source: auto
 msgctxt "items/flask/Transcendent Life Flask"
@@ -11879,7 +11879,7 @@ msgstr "秘能波動"
 #. source: auto
 msgctxt "items/gem/Archmage"
 msgid "Archmage"
-msgstr "大法師"
+msgstr "魔幻輔助"
 
 #. source: auto
 msgctxt "items/gem/Arctic Armour"
@@ -12009,7 +12009,7 @@ msgstr "木質外膚"
 #. source: auto
 msgctxt "items/gem/Barrage"
 msgid "Barrage"
-msgstr "彈幕"
+msgstr "彈幕輔助"
 
 #. source: auto
 msgctxt "items/gem/Barrier Invocation"
@@ -12079,7 +12079,7 @@ msgstr "苦澀衰亡"
 #. source: auto
 msgctxt "items/gem/Blasphemy"
 msgid "Blasphemy"
-msgstr "瀆神"
+msgstr "詛咒光環輔助"
 
 #. source: auto
 msgctxt "items/gem/Blazing Critical"
@@ -12689,7 +12689,7 @@ msgstr "頂點 II"
 #. source: auto
 msgctxt "items/gem/Cursed Ground"
 msgid "Cursed Ground"
-msgstr "詛咒地面"
+msgstr "詛咒地面輔助"
 
 #. source: auto
 msgctxt "items/gem/Danse Macabre"
@@ -12769,7 +12769,7 @@ msgstr "深度切割 II"
 #. source: auto
 msgctxt "items/gem/Deep Freeze"
 msgid "Deep Freeze"
-msgstr "深度冰凍"
+msgstr "深度冷凍"
 
 #. source: auto
 msgctxt "items/gem/Defiance Banner"
@@ -13399,7 +13399,7 @@ msgstr "鍛造之錘"
 #. source: auto
 msgctxt "items/gem/Fork"
 msgid "Fork"
-msgstr "分岔"
+msgstr "分裂"
 
 #. source: auto
 msgctxt "items/gem/Fortifying Cry"
@@ -13474,7 +13474,7 @@ msgstr "寒霜之鏢"
 #. source: auto
 msgctxt "items/gem/Frost Nexus"
 msgid "Frost Nexus"
-msgstr "冰霜匯聚"
+msgstr "冰霜核心"
 
 #. source: auto
 msgctxt "items/gem/Frost Wall"
@@ -13844,12 +13844,12 @@ msgstr "衝擊震波"
 #. source: auto
 msgctxt "items/gem/Impale"
 msgid "Impale"
-msgstr "穿刺"
+msgstr "穿刺輔助"
 
 #. source: auto
 msgctxt "items/gem/Impending Doom"
 msgid "Impending Doom"
-msgstr "末日厄運"
+msgstr "末日厄運輔助"
 
 #. source: auto
 msgctxt "items/gem/Incendiary Shot"
@@ -13954,7 +13954,7 @@ msgstr "摧命之掌"
 #. source: auto
 msgctxt "items/gem/Knockback"
 msgid "Knockback"
-msgstr "擊退"
+msgstr "擊退輔助"
 
 #. source: official
 msgctxt "items/gem/Kulemak's Dominion"
@@ -14024,7 +14024,7 @@ msgstr "生命偷取 III"
 #. source: auto
 msgctxt "items/gem/Lifetap"
 msgid "Lifetap"
-msgstr "活栓"
+msgstr "活栓輔助"
 
 #. source: auto
 msgctxt "items/gem/Lightning Arrow"
@@ -14159,7 +14159,7 @@ msgstr "增幅光環 II"
 #. source: auto
 msgctxt "items/gem/Maim"
 msgid "Maim"
-msgstr "癱瘓"
+msgstr "癱瘓輔助"
 
 #. source: auto
 msgctxt "items/gem/Malady"
@@ -14264,7 +14264,7 @@ msgstr "召喚物擴散II"
 #. source: auto
 msgctxt "items/gem/Mirage Archer"
 msgid "Mirage Archer"
-msgstr "幻影射手"
+msgstr "幻影射手輔助"
 
 #. source: auto
 msgctxt "items/gem/Mobility"
@@ -14444,7 +14444,7 @@ msgstr "絕對堅毅"
 #. source: auto
 msgctxt "items/gem/Perfection"
 msgid "Perfection"
-msgstr "完美"
+msgstr "完美無瑕"
 
 #. source: auto
 msgctxt "items/gem/Permafrost Bolts"
@@ -15299,7 +15299,7 @@ msgstr "靈體齊射"
 #. source: auto
 msgctxt "items/gem/Spell Cascade"
 msgid "Spell Cascade"
-msgstr "秘能爆發"
+msgstr "秘能爆發輔助"
 
 #. source: auto
 msgctxt "items/gem/Spell Echo"
@@ -15309,7 +15309,7 @@ msgstr "法術迴響"
 #. source: auto
 msgctxt "items/gem/Spell Totem"
 msgid "Spell Totem"
-msgstr "法術圖騰"
+msgstr "法術圖騰輔助"
 
 #. source: auto
 msgctxt "items/gem/Spiral Volley"
@@ -15604,7 +15604,7 @@ msgstr "欺詐者的碎片"
 #. source: auto
 msgctxt "items/gem/Trinity"
 msgid "Trinity"
-msgstr "三相"
+msgstr "三體輔助"
 
 #. source: auto
 msgctxt "items/gem/Triskelion Cascade"
@@ -15909,7 +15909,7 @@ msgstr "精準力量"
 #. source: auto
 msgctxt "items/gem/Unleash"
 msgid "Unleash"
-msgstr "釋放"
+msgstr "釋放輔助"
 
 #. source: auto
 msgctxt "items/gem/Unsteady Tempo"
@@ -16244,12 +16244,12 @@ msgstr "受控的蛻變"
 #. source: auto
 msgctxt "items/jewel/Diamond"
 msgid "Diamond"
-msgstr "Modifiers Calc"
+msgstr "鑽石"
 
 #. source: auto
 msgctxt "items/jewel/Emerald"
 msgid "Emerald"
-msgstr "Modifiers Calc"
+msgstr "綠寶石"
 
 #. source: auto
 msgctxt "items/jewel/Flesh Crucible"
@@ -16289,12 +16289,12 @@ msgstr "信仰棱鏡"
 #. source: auto
 msgctxt "items/jewel/Ruby"
 msgid "Ruby"
-msgstr "Modifiers Calc"
+msgstr "紅寶石"
 
 #. source: auto
 msgctxt "items/jewel/Sapphire"
 msgid "Sapphire"
-msgstr "Modifiers Calc"
+msgstr "藍寶石"
 
 #. source: auto
 msgctxt "items/jewel/Split Personality"
@@ -16309,22 +16309,22 @@ msgstr "朝氣之靈"
 #. source: auto
 msgctxt "items/jewel/Time-Lost Diamond"
 msgid "Time-Lost Diamond"
-msgstr "Modifiers Calc"
+msgstr "時迭鑽石"
 
 #. source: auto
 msgctxt "items/jewel/Time-Lost Emerald"
 msgid "Time-Lost Emerald"
-msgstr "Modifiers Calc"
+msgstr "時迭綠寶石"
 
 #. source: auto
 msgctxt "items/jewel/Time-Lost Ruby"
 msgid "Time-Lost Ruby"
-msgstr "Modifiers Calc"
+msgstr "時迭紅寶石"
 
 #. source: auto
 msgctxt "items/jewel/Time-Lost Sapphire"
 msgid "Time-Lost Sapphire"
-msgstr "Modifiers Calc"
+msgstr "時迭藍寶石"
 
 #. source: auto
 msgctxt "items/jewel/Timeless Jewel"
@@ -16349,7 +16349,7 @@ msgstr "地圖"
 #. source: auto
 msgctxt "items/map/Abyss Tablet"
 msgid "Abyss Tablet"
-msgstr "Modifiers Calc"
+msgstr "深淵碑牌"
 
 #. source: official
 msgctxt "items/map/An Audience with the King"
@@ -16364,7 +16364,7 @@ msgstr "遠古危機碎片"
 #. source: auto
 msgctxt "items/map/Breach Tablet"
 msgid "Breach Tablet"
-msgstr "Modifiers Calc"
+msgstr "裂痕碑牌"
 
 #. source: official
 msgctxt "items/map/Breachlord Sac"
@@ -16404,7 +16404,7 @@ msgstr "致命之運"
 #. source: auto
 msgctxt "items/map/Delirium Tablet"
 msgid "Delirium Tablet"
-msgstr "Modifiers Calc"
+msgstr "譫妄碑牌"
 
 #. source: auto
 msgctxt "items/map/Djinn Barya"
@@ -16419,7 +16419,7 @@ msgstr "探險日誌"
 #. source: auto
 msgctxt "items/map/Expedition Tablet"
 msgid "Expedition Tablet"
-msgstr "Modifiers Calc"
+msgstr "探險碑牌"
 
 #. source: official
 msgctxt "items/map/Faded Crisis Fragment"
@@ -16449,12 +16449,12 @@ msgstr "艾斯祖太之偶"
 #. source: auto
 msgctxt "items/map/Inscribed Ultimatum"
 msgid "Inscribed Ultimatum"
-msgstr "Modifiers Calc"
+msgstr "最後通牒雕刻"
 
 #. source: auto
 msgctxt "items/map/Irradiated Tablet"
 msgid "Irradiated Tablet"
-msgstr "Modifiers Calc"
+msgstr "輻照碑牌"
 
 #. source: official
 msgctxt "items/map/Kulemak's Invitation"
@@ -16484,7 +16484,7 @@ msgstr "原初光輝"
 #. source: auto
 msgctxt "items/map/Overseer Tablet"
 msgid "Overseer Tablet"
-msgstr "Modifiers Calc"
+msgstr "總督碑牌"
 
 #. source: official
 msgctxt "items/map/Primary Calamity Fragment"
@@ -16499,7 +16499,7 @@ msgstr "渡鴉之映"
 #. source: auto
 msgctxt "items/map/Ritual Tablet"
 msgid "Ritual Tablet"
-msgstr "Modifiers Calc"
+msgstr "祭祀碑牌"
 
 #. source: auto
 msgctxt "items/map/Season of the Hunt"
@@ -16519,7 +16519,7 @@ msgstr "幻像異界"
 #. source: auto
 msgctxt "items/map/Temple Tablet"
 msgid "Temple Tablet"
-msgstr "Modifiers Calc"
+msgstr "神廟碑牌"
 
 #. source: official
 msgctxt "items/map/Tertiary Calamity Fragment"
@@ -16669,27 +16669,27 @@ msgstr "聖域"
 #. source: auto
 msgctxt "items/sanctum/Amphora Relic"
 msgid "Amphora Relic"
-msgstr "Modifiers Calc"
+msgstr "陶罐聖物"
 
 #. source: auto
 msgctxt "items/sanctum/Coffer Relic"
 msgid "Coffer Relic"
-msgstr "Modifiers Calc"
+msgstr "寶箱聖物"
 
 #. source: auto
 msgctxt "items/sanctum/Incense Relic"
 msgid "Incense Relic"
-msgstr "Modifiers Calc"
+msgstr "香爐聖物"
 
 #. source: auto
 msgctxt "items/sanctum/Seal Relic"
 msgid "Seal Relic"
-msgstr "Modifiers Calc"
+msgstr "草紙聖物"
 
 #. source: auto
 msgctxt "items/sanctum/Tapestry Relic"
 msgid "Tapestry Relic"
-msgstr "Modifiers Calc"
+msgstr "聖經聖物"
 
 #. source: auto
 msgctxt "items/sanctum/The Burden of Leadership"
@@ -16724,12 +16724,12 @@ msgstr "被銘記的故事"
 #. source: auto
 msgctxt "items/sanctum/Urn Relic"
 msgid "Urn Relic"
-msgstr "Modifiers Calc"
+msgstr "古甕聖物"
 
 #. source: auto
 msgctxt "items/sanctum/Vase Relic"
 msgid "Vase Relic"
-msgstr "Modifiers Calc"
+msgstr "器皿聖物"
 
 #. source: official
 msgctxt "items/weapon"
@@ -17453,7 +17453,7 @@ msgstr "衛者長矛"
 
 msgctxt "items/weapon/Guiding Palm"
 msgid "Guiding Palm"
-msgstr "引導之掌"
+msgstr ""
 
 #. source: auto
 msgctxt "items/weapon/Guiding Palm of the Eye"
@@ -18718,7 +18718,7 @@ msgstr "圖騰巨棍棒"
 #. source: auto
 msgctxt "items/weapon/Trarthan Cannon"
 msgid "Trarthan Cannon"
-msgstr "Modifiers Calc"
+msgstr "特拉特斯巨砲"
 
 #. source: auto
 msgctxt "items/weapon/Treasured Blade"
@@ -19318,7 +19318,7 @@ msgstr "低階工匠石"
 #. source: official
 msgctxt "static/Currency/mirror/Mirror of Kalandra"
 msgid "Mirror of Kalandra"
-msgstr "卡蘭德的魔鏡"
+msgstr "卡蘭德魔鏡"
 
 #. source: official
 msgctxt "static/Currency/perfect-chaos-orb/Perfect Chaos Orb"
@@ -23210,7 +23210,7 @@ msgstr "增加#%閃電傷害"
 #. source: official
 msgctxt "stats/crafted/crafted.stat_2250533757/#% increased Movement Speed"
 msgid "#% increased Movement Speed"
-msgstr "增加#%移動速度"
+msgstr "#% 增加移動速度"
 
 #. source: official
 msgctxt "stats/crafted/crafted.stat_2339757871/#% increased Energy Shield Recharge Rate"
@@ -23658,7 +23658,7 @@ msgstr "配置粉碎裝置"
 #. source: official
 msgctxt "stats/crafted/crafted.stat_2954116742|14258/Allocates Puppet Master chance"
 msgid "Allocates Puppet Master chance"
-msgstr "配置無盡之舞"
+msgstr "配置隱蔽之手"
 
 #. source: official
 msgctxt "stats/crafted/crafted.stat_2954116742|14265/Allocates Pyromancer"
@@ -27213,7 +27213,7 @@ msgstr "配置驚慌失措"
 #. source: official
 msgctxt "stats/crafted/crafted.stat_2954116742|62210/Allocates Puppet Master chance"
 msgid "Allocates Puppet Master chance"
-msgstr "配置無盡之舞"
+msgstr "配置隱蔽之手"
 
 #. source: official
 msgctxt "stats/crafted/crafted.stat_2954116742|62230/Allocates Patient Barrier"
@@ -29480,7 +29480,7 @@ msgstr "增加#%閃電傷害"
 #. source: official
 msgctxt "stats/desecrated/desecrated.stat_2250533757/#% increased Movement Speed"
 msgid "#% increased Movement Speed"
-msgstr "增加#%移動速度"
+msgstr "#% 增加移動速度"
 
 #. source: official
 msgctxt "stats/desecrated/desecrated.stat_2250681686/Grenade Skills have +# Cooldown Use"
@@ -32252,7 +32252,7 @@ msgstr "附加#至#混沌傷害"
 #. source: official
 msgctxt "stats/enchant/enchant.stat_2250533757/#% increased Movement Speed"
 msgid "#% increased Movement Speed"
-msgstr "增加#%移動速度"
+msgstr "#% 增加移動速度"
 
 #. source: official
 msgctxt "stats/enchant/enchant.stat_2254480358/# to Level of all Cold Spell Skills"
@@ -36212,7 +36212,7 @@ msgstr "配置驚慌失措"
 #. source: official
 msgctxt "stats/enchant/enchant.stat_2954116742|62210/Allocates Puppet Master chance"
 msgid "Allocates Puppet Master chance"
-msgstr "配置無盡之舞"
+msgstr "配置隱蔽之手"
 
 #. source: official
 msgctxt "stats/enchant/enchant.stat_2954116742|62230/Allocates Patient Barrier"
@@ -37162,7 +37162,7 @@ msgstr "增加#%存在範圍的範圍效果"
 
 msgctxt "stats/explicit/explicit.stat_1019020209/#% increased Damage per Curse on you"
 msgid "#% increased Damage per Curse on you"
-msgstr "你身上每有一個詛咒，增加#%傷害"
+msgstr ""
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_1022759479/Notable Passive Skills in Radius also grant #% increased Cast Speed"
@@ -37606,7 +37606,7 @@ msgstr "區域中譫妄之霧消散前額外持續#秒"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_1174954559/Delirium Fog in Map lasts # additional seconds before dissipating"
 msgid "Delirium Fog in Map lasts # additional seconds before dissipating"
-msgstr "地圖內的譫妄迷霧在消散前會額外持續#秒"
+msgstr "地圖內含有的譫妄迷霧會在消散前額外持續#秒"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_1175213674/#% of Elemental damage from Hits taken as Chaos damage"
@@ -40096,7 +40096,7 @@ msgstr "每25點敏捷，增加#%攻擊速度"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_2250533757/#% increased Movement Speed"
 msgid "#% increased Movement Speed"
-msgstr "增加#%移動速度"
+msgstr "#% 增加移動速度"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_2250681686/Grenade Skills have +# Cooldown Use"
@@ -42607,7 +42607,7 @@ msgstr "配置粉碎裝置"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_2954116742|14258/Allocates Puppet Master chance"
 msgid "Allocates Puppet Master chance"
-msgstr "配置無盡之舞"
+msgstr "配置隱蔽之手"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_2954116742|14265/Allocates Pyromancer"
@@ -46162,7 +46162,7 @@ msgstr "配置驚慌失措"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_2954116742|62210/Allocates Puppet Master chance"
 msgid "Allocates Puppet Master chance"
-msgstr "配置無盡之舞"
+msgstr "配置隱蔽之手"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_2954116742|62230/Allocates Patient Barrier"
@@ -48729,7 +48729,7 @@ msgstr "範圍內小型天賦也會賦予 增加#%生命偷取量"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3666934677/#% increased Experience gain"
 msgid "#% increased Experience gain"
-msgstr "增加#%獲得的經驗"
+msgstr "增加#%經驗獲得"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3668351662/#% increased Shock Duration"
@@ -49138,22 +49138,22 @@ msgstr "Oasis"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|2/Giant's Blood"
 msgid "Giant's Blood"
-msgstr "Giant's Blood"
+msgstr "巨人之血"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|20/Vaal Pact"
 msgid "Vaal Pact"
-msgstr "Vaal Pact"
+msgstr "瓦爾冥約"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|21/Iron Reflexes"
 msgid "Iron Reflexes"
-msgstr "Iron Reflexes"
+msgstr "霸體"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|22/Glancing Blows"
 msgid "Glancing Blows"
-msgstr "Glancing Blows"
+msgstr "側身之擊"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|23/Elemental Equilibrium"
@@ -49193,7 +49193,7 @@ msgstr "Ritual Cadence"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|3/Unwavering Stance"
 msgid "Unwavering Stance"
-msgstr "Unwavering Stance"
+msgstr "烈士意志"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|30/Scarred Faith"
@@ -49213,7 +49213,7 @@ msgstr "Wildsurge Incantation"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|33/Zealot's Oath"
 msgid "Zealot's Oath"
-msgstr "Zealot's Oath"
+msgstr "狂熱者的誓言"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|4/Avatar of Fire"
@@ -49223,7 +49223,7 @@ msgstr "Avatar of Fire"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|5/Blood Magic"
 msgid "Blood Magic"
-msgstr "Blood Magic"
+msgstr "祭血術"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|6/Resolute Technique"
@@ -49233,7 +49233,7 @@ msgstr "Resolute Technique"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|7/Pain Attunement"
 msgid "Pain Attunement"
-msgstr "Pain Attunement"
+msgstr "苦痛靈曲"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|8/Chaos Inoculation"
@@ -49243,7 +49243,7 @@ msgstr "Chaos Inoculation"
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3831171903|9/Eldritch Battery"
 msgid "Eldritch Battery"
-msgstr "Eldritch Battery"
+msgstr "異能魔力"
 
 #. source: official
 msgctxt "stats/explicit/explicit.stat_3832076641/Used when you release a skill with Perfect Timing"
@@ -53947,7 +53947,7 @@ msgstr "增加#%閃電傷害"
 #. source: official
 msgctxt "stats/fractured/fractured.stat_2250533757/#% increased Movement Speed"
 msgid "#% increased Movement Speed"
-msgstr "增加#%移動速度"
+msgstr "#% 增加移動速度"
 
 #. source: official
 msgctxt "stats/fractured/fractured.stat_2250681686/Grenade Skills have +# Cooldown Use"
@@ -58686,7 +58686,7 @@ msgstr "#%怪物暴擊傷害加成"
 #. source: backfill
 msgctxt "stats/fractured/fractured.stat_57434274/#% increased Experience gain"
 msgid "#% increased Experience gain"
-msgstr "增加#%獲得的經驗"
+msgstr "增加#%經驗獲得"
 
 #. source: backfill
 msgctxt "stats/fractured/fractured.stat_57434274/#% increased Experience gain in Map"
@@ -59341,7 +59341,7 @@ msgstr "增加#%閃電傷害"
 #. source: official
 msgctxt "stats/implicit/implicit.stat_2250533757/#% increased Movement Speed"
 msgid "#% increased Movement Speed"
-msgstr "增加#%移動速度"
+msgstr "#% 增加移動速度"
 
 #. source: official
 msgctxt "stats/implicit/implicit.stat_2251279027/# to Level of all Corrupted Skill Gems"
@@ -60631,7 +60631,7 @@ msgstr "你格擋時恢復#生命"
 #. source: official
 msgctxt "stats/rune/rune.stat_1683578560/Unwavering Stance"
 msgid "Unwavering Stance"
-msgstr "Unwavering Stance"
+msgstr "烈士意志"
 
 #. source: official
 msgctxt "stats/rune/rune.stat_1693515857/Gain #% of Damage as Extra Physical Damage per ten percent missing Mana"
@@ -61022,7 +61022,7 @@ msgstr "命定: 你身上的易爆引爆時，你會重新獲得等量的易爆"
 #. source: official
 msgctxt "stats/rune/rune.stat_2250533757/#% increased Movement Speed"
 msgid "#% increased Movement Speed"
-msgstr "增加#%移動速度"
+msgstr "#% 增加移動速度"
 
 #. source: official
 msgctxt "stats/rune/rune.stat_2269618934/Bonded: Gain #% of maximum Life as Extra maximum Runic Ward"
@@ -62057,7 +62057,7 @@ msgstr "#%至全部技能的品質"
 #. source: official
 msgctxt "stats/rune/rune.stat_3666934677/#% increased Experience gain"
 msgid "#% increased Experience gain"
-msgstr "增加#%獲得的經驗"
+msgstr "增加#%經驗獲得"
 
 #. source: official
 msgctxt "stats/rune/rune.stat_3675300253/Strikes deal Splash Damage"
@@ -63417,7 +63417,7 @@ msgstr "使用 無法觸碰"
 #. source: official
 msgctxt "stats/sanctum/sanctum.stat_1016362888/#% increased Armour, Evasion and Energy Shield"
 msgid "#% increased Armour, Evasion and Energy Shield"
-msgstr "增加#%護甲、閃避、和能量護盾"
+msgstr "增加#%護甲值、閃避和能量護盾"
 
 #. source: official
 msgctxt "stats/sanctum/sanctum.stat_1019656601/Aureus Coins are converted to Tainted Currency upon defeating the Herald of the Scourge"
@@ -63452,7 +63452,7 @@ msgstr "增加#%決心護盾"
 #. source: official
 msgctxt "stats/sanctum/sanctum.stat_1416455556/#% increased Movement Speed"
 msgid "#% increased Movement Speed"
-msgstr "增加#%移動速度"
+msgstr "#% 增加移動速度"
 
 #. source: official
 msgctxt "stats/sanctum/sanctum.stat_142859883/#% Resolve Mitigation from Enemy Hits"
@@ -63667,7 +63667,7 @@ msgstr "#%全部最大抗性"
 #. source: official
 msgctxt "stats/sanctum/sanctum.stat_3470883829/#% additional Physical Damage Reduction"
 msgid "#% additional Physical Damage Reduction"
-msgstr "#%額外物理傷害減免"
+msgstr "額外#%物理傷害減免"
 
 #. source: official
 msgctxt "stats/sanctum/sanctum.stat_3554921410/Traps deal #% increased Damage"

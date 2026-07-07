@@ -10,7 +10,9 @@
 		"compile": "vue-tsc --noEmit",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"pull-translate": "tsx ./scripts/translate/pull-trade-texts.ts",
+		"pull-trade-texts": "tsx ./scripts/translate/pull-trade-texts.ts",
+		"pull-trade-translates": "tsx ./scripts/translate/pull-trade-translates.ts",
+		"pull-translate": "npm run pull-trade-texts && npm run pull-trade-translates",
 		"build-translate": "tsx ./scripts/translate/build-translate.ts"
 	},
 	"dependencies": {
