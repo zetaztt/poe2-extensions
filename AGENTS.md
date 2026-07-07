@@ -116,6 +116,7 @@
 - 修改翻译数据时，优先改 `data/trade-texts.po`，再运行 `npm run build-translate` 更新 `assets/translate.json` 和 `assets/translate-meta.json`。
 - 项目当前没有专门测试框架；较大逻辑变更至少运行类型检查和构建。
 - 代码格式由 Prettier 统一，配置见 `.prettierrc.json`：Tab 缩进宽度 4、双引号、分号、`bracketSameLine: true`。
+- `const` 声明的全局常量、模块级常量和局部常量统一使用 camelCase；环境变量 key 等外部协议名称保持其原始大小写。
 - 遍历数组、NodeList、Map、Set 等集合时优先使用 `for...of`，避免使用 `.forEach(...)`，需要索引时使用 `entries()`。
 - TypeScript 保持模块化、小范围类型守卫，中文日志和用户可见说明可以保留中文。
 - 编写代码时必须添加必要注释：复杂算法、特殊兼容逻辑、非显而易见的副作用、运行环境限制、临时权衡、未来计划，以及重要变量、集合或状态的业务角色/归属，都应说明原因、约束来源或维护风险。
