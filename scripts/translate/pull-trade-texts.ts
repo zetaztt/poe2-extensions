@@ -22,12 +22,8 @@ import {
 
 const poe2TwHref = "www.pathofexile.tw";
 const poe2Href = "www.pathofexile.com";
-
-const translateChangeLogPaths = {
-	"pull-translate": "./tmp/pull-translate-changes.log",
-} as const;
-
-type TranslateChangeLogSource = keyof typeof translateChangeLogPaths;
+const pullTranslateLogPrefix = "pull-translate";
+const pullTranslateChangeLogPath = "./tmp/pull-translate-changes.log";
 
 interface PullTradeTextsContext {
 	texts: Map<string, TextData>;
@@ -54,29 +50,36 @@ function formatTextSummary(text: TextData): string {
 	].join(", ");
 }
 
-function clearTranslateChangesLog(source: TranslateChangeLogSource): void {
-	fs.mkdirSync("./tmp", { recursive: true });
-	fs.writeFileSync(translateChangeLogPaths[source], "");
+function logPullTranslate(message: string): void {
+	console.log(`[${pullTranslateLogPrefix}] ${message}`);
 }
 
-function writeTranslateChangeLogs(source: TranslateChangeLogSource, logs: string[]): void {
+function clearTranslateChangesLog(logPath: string): void {
+	fs.mkdirSync("./tmp", { recursive: true });
+	fs.writeFileSync(logPath, "");
+}
+
+function appendTranslateChangeLog(logPath: string, log: string): void {
+	const message = `[${pullTranslateLogPrefix}] ${log}`;
+	fs.mkdirSync("./tmp", { recursive: true });
+	fs.appendFileSync(logPath, `${message}\n`);
+	console.log(message);
+}
+
+function writeTranslateChangeLogs(logPath: string, logs: string[]): void {
 	if (!logs.length) {
 		return;
 	}
 
-	const logPath = translateChangeLogPaths[source];
-	fs.mkdirSync("./tmp", { recursive: true });
-	fs.appendFileSync(logPath, logs.map((log) => `[${source}] ${log}`).join("\n") + "\n");
-	console.log(`[${source}] ${logs.length} text changes logged to ${logPath}`);
+	for (const log of logs) {
+		appendTranslateChangeLog(logPath, log);
+	}
+	logPullTranslate(`${logs.length} 条文本变更已记录到 ${logPath}`);
 }
 
-function logTextChanges(
-	source: TranslateChangeLogSource,
-	beforeTexts: Record<string, TextData>,
-	afterTexts: TextData[],
-): void {
+function logTextChanges(logPath: string, beforeTexts: Record<string, TextData>, afterTexts: TextData[]): void {
 	const afterTextsMap = new Map(afterTexts.map((text) => [getTextKey(text), text]));
-	const logs: string[] = [];
+	let count = 0;
 
 	for (const text of afterTexts) {
 		const key = getTextKey(text);
@@ -86,7 +89,8 @@ function logTextChanges(
 
 		const beforeText = beforeTexts[key];
 		if (!beforeText) {
-			logs.push(`text added: ${key}, ${formatTextSummary(text)}`);
+			appendTranslateChangeLog(logPath, `text added: ${key}, ${formatTextSummary(text)}`);
+			count++;
 			continue;
 		}
 
@@ -103,18 +107,22 @@ function logTextChanges(
 		}
 
 		if (changes.length) {
-			logs.push(`text changed: ${key}, ${changes.join(", ")}`);
+			appendTranslateChangeLog(logPath, `text changed: ${key}, ${changes.join(", ")}`);
+			count++;
 		}
 	}
 
 	for (const text of Object.values(beforeTexts)) {
 		const key = getTextKey(text);
 		if (key && !afterTextsMap.has(key)) {
-			logs.push(`text removed: ${key}, ${formatTextSummary(text)}`);
+			appendTranslateChangeLog(logPath, `text removed: ${key}, ${formatTextSummary(text)}`);
+			count++;
 		}
 	}
 
-	writeTranslateChangeLogs(source, logs);
+	if (count) {
+		logPullTranslate(`${count} 条文本变更已记录到 ${logPath}`);
+	}
 }
 
 function mergeTranslateTexts(texts: TextData[], beforeTexts = readTexts()): TextData[] {
@@ -136,15 +144,17 @@ function mergeTranslateTexts(texts: TextData[], beforeTexts = readTexts()): Text
 }
 
 function writePulledTexts(texts: TextData[]) {
+	logPullTranslate("开始合并旧翻译并写入 PO 文件");
 	const beforeTexts = readTexts();
 	const mergedTexts = mergeTranslateTexts(texts, beforeTexts);
-	logTextChanges("pull-translate", beforeTexts, mergedTexts);
+	logTextChanges(pullTranslateChangeLogPath, beforeTexts, mergedTexts);
 	writeTexts(mergedTexts);
+	logPullTranslate("PO 文件写入完成");
 }
 
 function writeNeedCheckTexts(texts: TextData[]) {
 	writeTranslateChangeLogs(
-		"pull-translate",
+		pullTranslateChangeLogPath,
 		texts.map((text) => `need check: ${getTextKey(text) ?? ""}, ${formatTextSummary(text)}`),
 	);
 }
@@ -197,6 +207,7 @@ async function fetchPoe2TradeData<T>(href: string, type: string): Promise<T> {
 }
 
 async function pullItemTexts(context: PullTradeTextsContext) {
+	logPullTranslate("开始拉取 items 数据");
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeItemsDataResponse>(poe2Href, "items"),
 		fetchPoe2TradeData<TradeItemsDataResponse>(poe2TwHref, "items"),
@@ -220,9 +231,11 @@ async function pullItemTexts(context: PullTradeTextsContext) {
 			});
 		}
 	}
+	logPullTranslate("items 数据拉取完成");
 }
 
 async function pullStatsTexts(context: PullTradeTextsContext) {
+	logPullTranslate("开始拉取 stats 数据");
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeStatsResponse>(poe2Href, "stats"),
 		fetchPoe2TradeData<TradeStatsResponse>(poe2TwHref, "stats"),
@@ -268,9 +281,11 @@ async function pullStatsTexts(context: PullTradeTextsContext) {
 			}
 		}
 	}
+	logPullTranslate("stats 数据拉取完成");
 }
 
 async function pullStaticTexts(context: PullTradeTextsContext) {
+	logPullTranslate("开始拉取 static 数据");
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeStaticsDataResponse>(poe2Href, "static"),
 		fetchPoe2TradeData<TradeStaticsDataResponse>(poe2TwHref, "static"),
@@ -319,9 +334,11 @@ async function pullStaticTexts(context: PullTradeTextsContext) {
 			}
 		}
 	}
+	logPullTranslate("static 数据拉取完成");
 }
 
 async function pullFilterTexts(context: PullTradeTextsContext) {
+	logPullTranslate("开始拉取 filters 数据");
 	const [data, twData] = await Promise.all([
 		fetchPoe2TradeData<TradeFiltersDataResponse>(poe2Href, "filters"),
 		fetchPoe2TradeData<TradeFiltersDataResponse>(poe2TwHref, "filters"),
@@ -353,6 +370,7 @@ async function pullFilterTexts(context: PullTradeTextsContext) {
 			}
 		}
 	}
+	logPullTranslate("filters 数据拉取完成");
 }
 
 function mergeTexts(context: PullTradeTextsContext) {
@@ -370,7 +388,9 @@ function mergeTexts(context: PullTradeTextsContext) {
 }
 
 async function pullTradeTexts() {
-	clearTranslateChangesLog("pull-translate");
+	logPullTranslate("开始清理旧日志");
+	clearTranslateChangesLog(pullTranslateChangeLogPath);
+	logPullTranslate(`旧日志已清理：${pullTranslateChangeLogPath}`);
 
 	const context = createPullTradeTextsContext();
 
@@ -384,6 +404,7 @@ async function pullTradeTexts() {
 	mergeTexts(context);
 	writePulledTexts(Array.from(context.texts.values()));
 	writeNeedCheckTexts(Array.from(context.needCheckTexts.values()));
+	logPullTranslate(`完成，变更日志见 ${pullTranslateChangeLogPath}`);
 }
 
 await pullTradeTexts();
