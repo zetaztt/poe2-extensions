@@ -11,7 +11,10 @@
 		"isolatedModules": true,
 		"noEmit": true,
 		"strict": true,
-		"jsx": "preserve"
+		"jsx": "preserve",
+		"paths": {
+			"zeta-poe2-trade-translate-tools": ["./packages/trade-translate-tools/src/index.ts"]
+		}
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "vite.config.ts", "scripts/**/*.ts"]
+	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "vite.config.ts", "scripts/**/*.ts", "packages/**/*.ts"]
 }

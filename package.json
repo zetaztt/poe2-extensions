@@ -4,6 +4,9 @@
 	"private": true,
 	"version": "0.0.0",
 	"type": "module",
+	"workspaces": [
+		"packages/trade-translate-tools"
+	],
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
@@ -11,8 +14,7 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"pull-trade-texts": "tsx ./scripts/translate/pull-trade-texts.ts",
-		"pull-trade-translates": "tsx ./scripts/translate/pull-trade-translates.ts",
-		"pull-translate": "npm run pull-trade-texts && npm run pull-trade-translates",
+		"pull-translate": "npm run pull-trade-texts",
 		"build-translate": "tsx ./scripts/translate/build-translate.ts"
 	},
 	"dependencies": {
@@ -24,7 +26,6 @@
 		"@types/node": "^25.9.2",
 		"@types/webextension-polyfill": "^0.12.5",
 		"@vitejs/plugin-vue": "^6.0.7",
-		"pofile": "^1.1.4",
 		"prettier": "^3.8.4",
 		"typescript": "^5.9.3",
 		"vite": "^8.0.16",
