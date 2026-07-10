@@ -13,7 +13,11 @@
 		"strict": true,
 		"jsx": "preserve",
 		"paths": {
-			"zeta-poe2-trade-translate-tools": ["./packages/trade-translate-tools/src/index.ts"]
+			"zeta-poe2-trade-translate-tools": ["./packages/trade-translate-tools/src/index.ts"],
+			"zeta-poe2-trade-translate-tools/translate-texts": [
+				"./packages/trade-translate-tools/src/translate-texts/index.ts"
+			],
+			"zeta-poe2-trade-translate-tools/trade-api": ["./packages/trade-translate-tools/src/trade-api/index.ts"]
 		}
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "vite.config.ts", "scripts/**/*.ts", "packages/**/*.ts"]

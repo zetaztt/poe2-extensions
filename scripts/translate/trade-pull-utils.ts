@@ -1,37 +1,16 @@
-import {
-	appendTranslateChangeLog as appendTranslateChangeLogBase,
-	clearTranslateChangesLog,
-	createPulledTextContext,
-	fetchPoe2TradeData,
-	formatLogText,
-	formatTextSummary,
-	logTextChanges as logTextChangesBase,
-	poe2Href,
-	poe2TwHref,
-	pullFilterTexts as pullFilterTextsBase,
-	pullItemTexts as pullItemTextsBase,
-	pullStaticTexts as pullStaticTextsBase,
-	pullStatsTexts as pullStatsTextsBase,
-	type PulledTextContext,
-	type TextData,
-} from "zeta-poe2-trade-translate-tools";
+import fs from "node:fs";
+
+import { getTextKey, getTextOriginal, getTextTranslate, type TextData } from "./utils";
 
 export {
-	addPulledText,
-	clearTranslateChangesLog,
-	createPulledTextContext,
-	fetchPoe2TradeData,
-	formatLogText,
-	formatTextSummary,
-	poe2Href,
-	poe2TwHref,
-	type PulledTextContext,
-	type TextData,
 	type TradeFiltersDataResponse,
 	type TradeItemsDataResponse,
 	type TradeStaticsDataResponse,
 	type TradeStatsResponse,
-} from "zeta-poe2-trade-translate-tools";
+} from "zeta-poe2-trade-translate-tools/trade-api";
+
+export const poe2Href = "www.pathofexile.com";
+export const poe2TwHref = "www.pathofexile.tw";
 
 export const pullTranslateChangeLogPath = "./tmp/pull-translate-changes.log";
 
@@ -41,11 +20,27 @@ export function logPullTranslate(message: string): void {
 	console.log(`[${pullTranslateLogPrefix}] ${message}`);
 }
 
+export function clearTranslateChangesLog(logPath: string): void {
+	fs.mkdirSync("./tmp", { recursive: true });
+	fs.writeFileSync(logPath, "");
+}
+
 export function appendTranslateChangeLog(logPath: string, log: string): void {
-	appendTranslateChangeLogBase(logPath, log, {
-		prefix: pullTranslateLogPrefix,
-		echo: true,
-	});
+	const message = `[${pullTranslateLogPrefix}] ${log}`;
+	fs.mkdirSync("./tmp", { recursive: true });
+	fs.appendFileSync(logPath, `${message}\n`);
+	console.log(message);
+}
+
+export function formatLogText(text: string | undefined): string {
+	return text ? `"${text}"` : "(empty)";
+}
+
+export function formatTextSummary(text: TextData): string {
+	return [
+		`original=${formatLogText(getTextOriginal(text))}`,
+		`translate=${formatLogText(getTextTranslate(text))}`,
+	].join(", ");
 }
 
 export function writeTranslateChangeLogs(logPath: string, logs: string[]): void {
@@ -60,10 +55,47 @@ export function writeTranslateChangeLogs(logPath: string, logs: string[]): void 
 }
 
 export function logTextChanges(logPath: string, beforeTexts: Record<string, TextData>, afterTexts: TextData[]): void {
-	const count = logTextChangesBase(logPath, beforeTexts, afterTexts, {
-		prefix: pullTranslateLogPrefix,
-		echo: true,
-	});
+	const afterTextsMap = new Map(afterTexts.map((text) => [getTextKey(text), text]));
+	let count = 0;
+
+	for (const text of afterTexts) {
+		const key = getTextKey(text);
+		if (!key) {
+			continue;
+		}
+
+		const beforeText = beforeTexts[key];
+		if (!beforeText) {
+			appendTranslateChangeLog(logPath, `text added: ${key}, ${formatTextSummary(text)}`);
+			count++;
+			continue;
+		}
+
+		const changes: string[] = [];
+		if (getTextOriginal(beforeText) !== getTextOriginal(text)) {
+			changes.push(
+				`original ${formatLogText(getTextOriginal(beforeText))} -> ${formatLogText(getTextOriginal(text))}`,
+			);
+		}
+		if (getTextTranslate(beforeText) !== getTextTranslate(text)) {
+			changes.push(
+				`translate ${formatLogText(getTextTranslate(beforeText))} -> ${formatLogText(getTextTranslate(text))}`,
+			);
+		}
+
+		if (changes.length) {
+			appendTranslateChangeLog(logPath, `text changed: ${key}, ${changes.join(", ")}`);
+			count++;
+		}
+	}
+
+	for (const text of Object.values(beforeTexts)) {
+		const key = getTextKey(text);
+		if (key && !afterTextsMap.has(key)) {
+			appendTranslateChangeLog(logPath, `text removed: ${key}, ${formatTextSummary(text)}`);
+			count++;
+		}
+	}
 
 	if (count) {
 		logPullTranslate(`${count} 条文本变更已记录到 ${logPath}`);
@@ -75,20 +107,4 @@ export function writeNeedCheckTexts(texts: TextData[]): void {
 		pullTranslateChangeLogPath,
 		texts.map((text) => `need check: ${text.msgctxt ?? ""}, ${formatTextSummary(text)}`),
 	);
-}
-
-export function pullItemTexts(context: PulledTextContext, href: string): Promise<void> {
-	return pullItemTextsBase(context, href, { logger: logPullTranslate });
-}
-
-export function pullStatsTexts(context: PulledTextContext, href: string): Promise<void> {
-	return pullStatsTextsBase(context, href, { logger: logPullTranslate });
-}
-
-export function pullStaticTexts(context: PulledTextContext, href: string): Promise<void> {
-	return pullStaticTextsBase(context, href, { logger: logPullTranslate });
-}
-
-export function pullFilterTexts(context: PulledTextContext, href: string): Promise<void> {
-	return pullFilterTextsBase(context, href, { logger: logPullTranslate });
 }

@@ -3,7 +3,9 @@
 	"version": "0.0.0",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./translate-texts": "./src/translate-texts/index.ts",
+		"./trade-api": "./src/trade-api/index.ts"
 	},
 	"dependencies": {
 		"pofile": "^1.1.4"

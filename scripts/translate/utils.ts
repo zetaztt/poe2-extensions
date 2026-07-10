@@ -1,23 +1,35 @@
-import { defaultTradeTextsPath, readTextsFromPo, writeTextsToPo, type TextData } from "zeta-poe2-trade-translate-tools";
+import {
+	createTradeTranslateTextItem,
+	defaultTradeTranslatePoPath,
+	getTradeTranslateTextItemKey,
+	getTradeTranslateTextItemOriginal,
+	getTradeTranslateTextItemSource,
+	getTradeTranslateTextItemTranslation,
+	readTradeTranslateTextItemsFromPo,
+	setTradeTranslateTextItemSource,
+	setTradeTranslateTextItemTranslation,
+	writeTradeTranslateTextItemsToPo,
+	type TradeTranslateSource,
+	type TradeTranslateTextItem,
+} from "zeta-poe2-trade-translate-tools/translate-texts";
 
-export {
-	createTextItem,
-	getTextKey,
-	getTextOriginal,
-	getTextSource,
-	getTextTranslate,
-	setTextSource,
-	setTextTranslate,
-	type TextData,
-	type TranslateSource,
-} from "zeta-poe2-trade-translate-tools";
+export type TextData = TradeTranslateTextItem;
+export type TranslateSource = TradeTranslateSource;
 
-export const textsPath = defaultTradeTextsPath;
+export const createTextItem = createTradeTranslateTextItem;
+export const getTextKey = getTradeTranslateTextItemKey;
+export const getTextOriginal = getTradeTranslateTextItemOriginal;
+export const getTextSource = getTradeTranslateTextItemSource;
+export const getTextTranslate = getTradeTranslateTextItemTranslation;
+export const setTextSource = setTradeTranslateTextItemSource;
+export const setTextTranslate = setTradeTranslateTextItemTranslation;
+
+export const textsPath = defaultTradeTranslatePoPath;
 
 export function readTexts(): Record<string, TextData> {
-	return readTextsFromPo(textsPath);
+	return readTradeTranslateTextItemsFromPo(textsPath);
 }
 
 export function writeTexts(texts: TextData[]): void {
-	writeTextsToPo(texts, textsPath);
+	writeTradeTranslateTextItemsToPo(texts, textsPath);
 }

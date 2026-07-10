@@ -1,0 +1,107 @@
+name: Publish trade translate tools package
+
+on:
+    workflow_dispatch:
+    push:
+        branches:
+            - main
+        paths:
+            - packages/trade-translate-tools/**
+            - .github/workflows/publish-trade-translate-tools.yml
+
+permissions:
+    contents: write
+
+concurrency:
+    group: publish-trade-translate-tools-package
+    cancel-in-progress: false
+
+jobs:
+    publish:
+        name: Publish package branch
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout source
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Type check package
+              run: npx tsc --noEmit -p packages/trade-translate-tools/tsconfig.json
+
+            - name: Prepare package snapshot
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  package_snapshot="$(mktemp -d)"
+                  echo "PACKAGE_SNAPSHOT=${package_snapshot}" >> "${GITHUB_ENV}"
+
+                  cp packages/trade-translate-tools/package.json "${package_snapshot}/package.json"
+                  cp packages/trade-translate-tools/tsconfig.json "${package_snapshot}/tsconfig.json"
+                  cp -R packages/trade-translate-tools/src "${package_snapshot}/src"
+
+                  if [ -f LICENSE ]; then
+                      cp LICENSE "${package_snapshot}/LICENSE"
+                  fi
+
+                  printf '%s\n' \
+                      "# zeta-poe2-trade-translate-tools" \
+                      "" \
+                      'This branch is generated automatically from `packages/trade-translate-tools` on `main`.' \
+                      "Do not edit this branch by hand." \
+                      > "${package_snapshot}/README.md"
+
+            - name: Checkout package branch
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  package_branch="trade-translate-tools-package"
+                  package_worktree="${RUNNER_TEMP}/trade-translate-tools-package"
+
+                  echo "PACKAGE_BRANCH=${package_branch}" >> "${GITHUB_ENV}"
+                  echo "PACKAGE_WORKTREE=${package_worktree}" >> "${GITHUB_ENV}"
+
+                  git fetch origin "${package_branch}" || true
+
+                  if git show-ref --verify --quiet "refs/remotes/origin/${package_branch}"; then
+                      git worktree add --track -B "${package_branch}" "${package_worktree}" "origin/${package_branch}"
+                  else
+                      git worktree add --detach "${package_worktree}"
+                      cd "${package_worktree}"
+                      git switch --orphan "${package_branch}"
+                  fi
+
+            - name: Update package branch contents
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  cd "${PACKAGE_WORKTREE}"
+
+                  find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+                  cp -R "${PACKAGE_SNAPSHOT}/." .
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+                  git add -A
+
+                  if git diff --cached --quiet; then
+                      echo "Package branch is already up to date."
+                      exit 0
+                  fi
+
+                  git commit -m "发布 trade-translate-tools package"
+                  git push origin "HEAD:${PACKAGE_BRANCH}"
