@@ -1,0 +1,17 @@
+{
+	"name": "zeta-poe2-trade-translate-tools",
+	"version": "0.0.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./translate-texts": "./src/translate-texts/index.ts",
+		"./trade-api": "./src/trade-api/index.ts"
+	},
+	"dependencies": {
+		"pofile": "^1.1.4"
+	},
+	"devDependencies": {
+		"@types/node": "^25.9.2",
+		"typescript": "^5.9.3"
+	}
+}
