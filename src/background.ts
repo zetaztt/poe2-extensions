@@ -286,18 +286,8 @@ async function clearCachedTranslateDictionary(): Promise<void> {
 }
 
 async function fetchTranslateMeta(): Promise<TranslateMeta | null> {
-	const meta = await fetchJson(translateDictionaryMetaUrl);
-	return isTranslateMeta(meta) ? meta : null;
-}
-
-async function fetchRemoteTranslateDictionary(): Promise<TranslateDictionary | null> {
-	const dictionary = await fetchJson(translateDictionaryUrl);
-	return isTranslateDictionary(dictionary) ? dictionary : null;
-}
-
-async function fetchJson(url: string): Promise<unknown> {
 	try {
-		const response = await fetch(url, {
+		const response = await fetch(translateDictionaryMetaUrl, {
 			cache: "no-store",
 			headers: {
 				"Cache-Control": "no-cache, no-store, must-revalidate",
@@ -307,7 +297,30 @@ async function fetchJson(url: string): Promise<unknown> {
 		});
 
 		if (!response.ok) return null;
-		return await response.json();
+
+		const meta: unknown = await response.json();
+		return isTranslateMeta(meta) ? meta : null;
+	} catch (error) {
+		console.warn("[poe2-extensions] 翻译字典元数据远端请求失败", error);
+		return null;
+	}
+}
+
+async function fetchRemoteTranslateDictionary(): Promise<TranslateDictionary | null> {
+	try {
+		const response = await fetch(translateDictionaryUrl, {
+			cache: "no-store",
+			headers: {
+				"Cache-Control": "no-cache, no-store, must-revalidate",
+				Pragma: "no-cache",
+				Expires: "0",
+			},
+		});
+
+		if (!response.ok) return null;
+
+		const dictionary: unknown = await response.json();
+		return isTranslateDictionary(dictionary) ? dictionary : null;
 	} catch (error) {
 		console.warn("[poe2-extensions] 翻译字典远端请求失败", error);
 		return null;
