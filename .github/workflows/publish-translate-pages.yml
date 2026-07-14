@@ -1,0 +1,49 @@
+name: Publish translate dictionary
+
+on:
+    workflow_dispatch:
+    push:
+        branches:
+            - main
+        paths:
+            - assets/translate.json
+            - assets/translate-meta.json
+            - .github/workflows/publish-translate-pages.yml
+
+permissions:
+    contents: write
+
+jobs:
+    publish:
+        name: Publish dictionary
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout source
+              uses: actions/checkout@v6
+
+            - name: Prepare Pages contents
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  publish_dir="${RUNNER_TEMP}/translate-pages"
+                  mkdir -p "${publish_dir}"
+                  cp assets/translate.json "${publish_dir}/translate.json"
+                  cp assets/translate-meta.json "${publish_dir}/translate-meta.json"
+                  touch "${publish_dir}/.nojekyll"
+                  printf '%s\n' \
+                      '<!doctype html>' \
+                      '<html lang="zh-CN">' \
+                      '<head><meta charset="utf-8"><title>POE2 Translate Dictionary</title></head>' \
+                      '<body><a href="translate.json">translate.json</a><br><a href="translate-meta.json">translate-meta.json</a></body>' \
+                      '</html>' \
+                      > "${publish_dir}/index.html"
+
+                  echo "PUBLISH_DIR=${publish_dir}" >> "${GITHUB_ENV}"
+
+            - name: Publish
+              uses: peaceiris/actions-gh-pages@v4
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  publish_dir: ${{ env.PUBLISH_DIR }}

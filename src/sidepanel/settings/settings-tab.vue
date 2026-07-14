@@ -242,7 +242,7 @@ function isTrade2Url(url: string | undefined): boolean {
 
 		<section class="panel muted">
 			<h2>字典来源</h2>
-			<a href="https://zetaztt.github.io/poe2/translate.json" target="_blank"> translate.json </a>
+			<a href="https://zetaztt.github.io/poe2-extensions/translate.json" target="_blank"> translate.json </a>
 		</section>
 	</section>
 </template>

@@ -11,8 +11,8 @@ import {
 	type PoeTranslationFetchResultMessage,
 } from "./trade/translate/trade-translate-messages";
 
-export const translateDictionaryUrl = "https://zetaztt.github.io/poe2/translate.json";
-export const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2/translate-meta.json";
+export const translateDictionaryUrl = "https://zetaztt.github.io/poe2-extensions/translate.json";
+export const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2-extensions/translate-meta.json";
 
 const translateDictionaryCacheKey = "translateDictionaryCache";
 const localTranslateDictionaryPath = "/translate.json" as Parameters<typeof browser.runtime.getURL>[0];
