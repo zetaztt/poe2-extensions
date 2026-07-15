@@ -16,6 +16,9 @@ if (process.env.NODE_ENV !== "production") {
 
 export default defineConfig({
 	publicDir: "assets",
+	define: {
+		CHROME: "true",
+	},
 	plugins: [
 		vue(),
 		webExtension({

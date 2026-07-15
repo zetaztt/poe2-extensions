@@ -57,52 +57,20 @@ browser.storage.onChanged.addListener((changes, areaName) => {
 	});
 });
 
-type ChromeSidePanelApi = {
-	setPanelBehavior?: (behavior: { openPanelOnActionClick: boolean }) => Promise<void> | void;
-	open?: (options: { windowId?: number }) => Promise<void> | void;
-};
-
-type ChromeActionApi = {
-	onClicked?: {
-		addListener: (listener: (tab: { windowId?: number }) => void) => void;
-	};
-};
-
-type ChromeRegisteredContentScript = {
-	id: string;
-	matches: string[];
-	js: string[];
-	runAt: "document_start";
-	world: "MAIN";
-	allFrames?: boolean;
-	persistAcrossSessions?: boolean;
-};
-
-type ChromeScriptingApi = {
-	registerContentScripts?: (scripts: ChromeRegisteredContentScript[]) => Promise<void> | void;
-	unregisterContentScripts?: (filter: { ids: string[] }) => Promise<void> | void;
-};
-
-type ChromeApi = {
-	action?: ChromeActionApi;
-	sidePanel?: ChromeSidePanelApi;
-	scripting?: ChromeScriptingApi;
-};
-
 async function enableSidePanelOnActionClick(): Promise<void> {
-	const chromeApi = getChromeApi();
+	if (CHROME) {
+		try {
+			await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+		} catch (error) {
+			console.warn("[poe2-extensions] 侧边栏点击行为设置失败", error);
+		}
 
-	try {
-		await chromeApi?.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: true });
-	} catch (error) {
-		console.warn("[poe2-extensions] 侧边栏点击行为设置失败", error);
-	}
-
-	chromeApi?.action?.onClicked?.addListener((tab) => {
-		void Promise.resolve(chromeApi.sidePanel?.open?.({ windowId: tab.windowId })).catch((error) => {
-			console.warn("[poe2-extensions] 侧边栏打开失败", error);
+		chrome.action.onClicked.addListener((tab) => {
+			void chrome.sidePanel.open({ windowId: tab.windowId }).catch((error) => {
+				console.warn("[poe2-extensions] 侧边栏打开失败", error);
+			});
 		});
-	});
+	}
 }
 
 function queueTradeTranslateInjectionSync(): Promise<void> {
@@ -113,30 +81,20 @@ function queueTradeTranslateInjectionSync(): Promise<void> {
 }
 
 async function syncTradeTranslateInjection(): Promise<void> {
-	const chromeApi = getChromeApi();
-	const scripting = chromeApi?.scripting;
+	if (CHROME) {
+		const enabled = await getTradeTranslateEnabled();
 
-	if (!scripting?.registerContentScripts || !scripting.unregisterContentScripts) {
-		console.warn("[poe2-extensions] 当前浏览器不支持动态注册翻译脚本");
-		return;
-	}
-
-	const enabled = await getTradeTranslateEnabled();
-
-	try {
-		await Promise.resolve(
-			scripting.unregisterContentScripts({
+		try {
+			await chrome.scripting.unregisterContentScripts({
 				ids: [tradeTranslateContentScriptId],
-			}),
-		);
-	} catch {
-		// 未注册时注销可能失败，忽略后继续按当前开关注册。
-	}
+			});
+		} catch {
+			// 未注册时注销可能失败，忽略后继续按当前开关注册。
+		}
 
-	if (!enabled) return;
+		if (!enabled) return;
 
-	await Promise.resolve(
-		scripting.registerContentScripts([
+		await chrome.scripting.registerContentScripts([
 			{
 				id: tradeTranslateContentScriptId,
 				matches: ["https://www.pathofexile.com/trade2*"],
@@ -146,12 +104,10 @@ async function syncTradeTranslateInjection(): Promise<void> {
 				allFrames: false,
 				persistAcrossSessions: true,
 			},
-		]),
-	);
-}
-
-function getChromeApi(): ChromeApi | undefined {
-	return (globalThis as typeof globalThis & { chrome?: ChromeApi }).chrome;
+		]);
+	} else {
+		console.warn("[poe2-extensions] 当前浏览器不支持动态注册翻译脚本");
+	}
 }
 
 async function fetchTranslateDictionary(
