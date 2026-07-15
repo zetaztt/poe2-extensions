@@ -83,13 +83,13 @@ function queueTradeTranslateInjectionSync(): Promise<void> {
 async function syncTradeTranslateInjection(): Promise<void> {
 	if (CHROME) {
 		const enabled = await getTradeTranslateEnabled();
-
-		try {
+		const registeredScripts = await chrome.scripting.getRegisteredContentScripts({
+			ids: [tradeTranslateContentScriptId],
+		});
+		if (registeredScripts.length > 0) {
 			await chrome.scripting.unregisterContentScripts({
 				ids: [tradeTranslateContentScriptId],
 			});
-		} catch {
-			// 未注册时注销可能失败，忽略后继续按当前开关注册。
 		}
 
 		if (!enabled) return;
