@@ -1,4 +1,6 @@
-import { isPoeTradeItemCopyUpdateMessage } from "../trade-messages";
+import { ipcMain, ipcWindow } from "../../ipc/ipc";
+import { createMainWorldIpcMain, createMainWorldIpcWindow } from "../../ipc/main-world-ipc-implementations";
+import { tradeIpcProtocol } from "../trade-ipc-protocol";
 import { getTradeSearchItemById, logPrefix } from "../trade-utils";
 import { formatTradeItemText } from "./trade-item-code-format";
 
@@ -8,18 +10,30 @@ const itemCopyOriginalStyleKey = "poeItemCopyOriginalStyle";
 
 let enabled = false;
 let observer: MutationObserver | null = null;
+// 初始化 RPC 与侧边栏即时通知可能并发；一旦收到通知，就不能再用较旧的初始值覆盖它。
+let hasReceivedItemCopyUpdate = false;
+ipcMain.register(createMainWorldIpcMain);
+ipcWindow.register(createMainWorldIpcWindow);
 
 export function injectTradeItemCopy(): void {
 	if (window.location.hostname !== "www.pathofexile.com" || !window.location.pathname.startsWith("/trade2")) {
 		return;
 	}
 
-	window.addEventListener("message", (event: MessageEvent<unknown>) => {
-		if (event.source !== window) return;
-		if (!isPoeTradeItemCopyUpdateMessage(event.data)) return;
-
-		setTradeItemCopyEnabled(event.data.enabled);
+	ipcWindow.on(tradeIpcProtocol.itemCopyUpdated, ({ enabled }) => {
+		hasReceivedItemCopyUpdate = true;
+		setTradeItemCopyEnabled(enabled);
 	});
+	void initializeTradeItemCopy();
+}
+
+async function initializeTradeItemCopy(): Promise<void> {
+	try {
+		const initialEnabled = await ipcMain.invoke(tradeIpcProtocol.getTradeItemCopyEnabled);
+		if (!hasReceivedItemCopyUpdate) setTradeItemCopyEnabled(initialEnabled);
+	} catch (error) {
+		console.warn(`${logPrefix} 复制物品文本初始状态读取失败`, error);
+	}
 }
 
 export function setTradeItemCopyEnabled(nextEnabled: boolean): void {

@@ -1,5 +1,7 @@
 import { ensureBodyReady } from "../../utils";
-import { isPoeTradeStatPresetUpdateMessage } from "../trade-messages";
+import { ipcMain, ipcWindow } from "../../ipc/ipc";
+import { createMainWorldIpcMain, createMainWorldIpcWindow } from "../../ipc/main-world-ipc-implementations";
+import { tradeIpcProtocol } from "../trade-ipc-protocol";
 import { logPrefix } from "../trade-utils";
 import { resetStatPresetModal } from "./trade-stat-preset-modal";
 import {
@@ -9,22 +11,34 @@ import {
 	renderPresetDropdown,
 } from "./trade-stat-preset-picker";
 import { installSaveButtons, removeSaveButtons } from "./trade-stat-preset-save-buttons";
-import { handleStorageResponse, rejectPendingRequests, requestPresetList } from "./trade-stat-preset-storage-client";
+import { requestPresetList } from "./trade-stat-preset-storage-client";
 import { installStatPresetStyle, removeStatPresetStyle } from "./trade-stat-preset-utils";
 
 let enabled = false;
+// 初始化 RPC 与侧边栏即时通知可能并发；一旦收到通知，就不能再用较旧的初始值覆盖它。
+let hasReceivedStatPresetUpdate = false;
+ipcMain.register(createMainWorldIpcMain);
+ipcWindow.register(createMainWorldIpcWindow);
 
 export function injectTradeStatPreset(): void {
 	if (window.location.hostname !== "www.pathofexile.com" || !window.location.pathname.startsWith("/trade2")) {
 		return;
 	}
 
-	window.addEventListener("message", (event: MessageEvent<unknown>) => {
-		if (event.source !== window) return;
-		if (!isPoeTradeStatPresetUpdateMessage(event.data)) return;
-
-		setTradeStatPresetEnabled(event.data.enabled);
+	ipcWindow.on(tradeIpcProtocol.statPresetUpdated, ({ enabled }) => {
+		hasReceivedStatPresetUpdate = true;
+		setTradeStatPresetEnabled(enabled);
 	});
+	void initializeTradeStatPreset();
+}
+
+async function initializeTradeStatPreset(): Promise<void> {
+	try {
+		const initialEnabled = await ipcMain.invoke(tradeIpcProtocol.getTradeStatPresetEnabled);
+		if (!hasReceivedStatPresetUpdate) setTradeStatPresetEnabled(initialEnabled);
+	} catch (error) {
+		console.warn(`${logPrefix} 筛选预设初始状态读取失败`, error);
+	}
 }
 
 export function setTradeStatPresetEnabled(nextEnabled: boolean): void {
@@ -47,7 +61,6 @@ export function setTradeStatPresetEnabled(nextEnabled: boolean): void {
 }
 
 function installStatPreset(): void {
-	window.addEventListener("message", handleStorageResponse);
 	ensureBodyReady(() => {
 		if (!enabled) return;
 		installStatPresetStyle();
@@ -58,8 +71,6 @@ function installStatPreset(): void {
 }
 
 function uninstallStatPreset(): void {
-	window.removeEventListener("message", handleStorageResponse);
-	rejectPendingRequests(new Error("筛选预设保存已关闭"));
 	removeStatPresetUi();
 }
 

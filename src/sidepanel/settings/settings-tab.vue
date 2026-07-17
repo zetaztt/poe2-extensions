@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import browser from "webextension-polyfill";
+import { ipcMain, ipcWindow } from "../../ipc/ipc";
 import { computed, onMounted, ref } from "vue";
 import {
 	getTradeItemCopyEnabled,
@@ -9,11 +10,7 @@ import {
 	setTradeStatPresetEnabled,
 	setTradeTranslateEnabled,
 } from "../../settings";
-import {
-	createTradeItemCopyUpdateMessage,
-	createTradeStatPresetUpdateMessage,
-	createTradeSyncTranslateInjectionMessage,
-} from "../../trade/trade-messages";
+import { tradeIpcProtocol } from "../../trade/trade-ipc-protocol";
 
 enum TradeSettingToggleType {
 	Translate = 1,
@@ -77,7 +74,7 @@ async function onTranslateToggle(nextValue: boolean): Promise<void> {
 
 	try {
 		await setTradeTranslateEnabled(nextValue);
-		await browser.runtime.sendMessage(createTradeSyncTranslateInjectionMessage());
+		await ipcMain.send(tradeIpcProtocol.syncTranslateInjection);
 		const reloaded = await reloadActiveTradeTab();
 		settingsStatusText.value = reloaded
 			? "设置已保存，trade2 页面已刷新。"
@@ -146,14 +143,22 @@ async function reloadActiveTradeTab(): Promise<boolean> {
 }
 
 async function updateActiveTradeTabItemCopy(): Promise<boolean> {
-	return sendActiveTradeTabMessage(createTradeItemCopyUpdateMessage(tradeItemCopyEnabled.value));
+	return sendActiveTradeTabMessage((tabId) =>
+		ipcWindow.to(tabId).send(tradeIpcProtocol.itemCopyUpdated, {
+			enabled: tradeItemCopyEnabled.value,
+		}),
+	);
 }
 
 async function updateActiveTradeTabStatPreset(): Promise<boolean> {
-	return sendActiveTradeTabMessage(createTradeStatPresetUpdateMessage(tradeStatPresetEnabled.value));
+	return sendActiveTradeTabMessage((tabId) =>
+		ipcWindow.to(tabId).send(tradeIpcProtocol.statPresetUpdated, {
+			enabled: tradeStatPresetEnabled.value,
+		}),
+	);
 }
 
-async function sendActiveTradeTabMessage(message: unknown): Promise<boolean> {
+async function sendActiveTradeTabMessage(send: (tabId: number) => Promise<void>): Promise<boolean> {
 	const [tab] = await browser.tabs.query({
 		active: true,
 		currentWindow: true,
@@ -162,7 +167,7 @@ async function sendActiveTradeTabMessage(message: unknown): Promise<boolean> {
 	if (!tab?.id || !isTrade2Url(tab.url)) return false;
 
 	try {
-		await browser.tabs.sendMessage(tab.id, message);
+		await send(tab.id);
 		return true;
 	} catch (error) {
 		console.warn("[poe2-extensions] trade2 页面设置同步失败", error);

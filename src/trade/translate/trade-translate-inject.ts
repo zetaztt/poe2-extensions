@@ -1,10 +1,14 @@
 import { ensureBodyReady } from "../../utils";
+import { ipcMain } from "../../ipc/ipc";
+import { createMainWorldIpcMain } from "../../ipc/main-world-ipc-implementations";
 import { logPrefix } from "../trade-utils";
 import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./trade-translate-data";
 import { observeItemElement } from "./trade-translate-item-element";
 import { installLocalStorageHook } from "./trade-translate-storage";
 
 export const traditionalChineseScriptUrl = "https://web.poecdn.com/js/translate.zh_TW.js";
+
+ipcMain.register(createMainWorldIpcMain);
 
 export function injectTradeTranslate(): void {
 	ensureBodyReady(function () {

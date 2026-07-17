@@ -2,10 +2,6 @@ import { logPrefix } from "../trade-utils";
 import type { TradeStatPreset, TradeStatPresetQuery } from "../trade-types";
 import statPresetStyle from "./trade-stat-preset-style.css?raw";
 
-export function createRequestId(): string {
-	return globalThis.crypto?.randomUUID?.() ?? `stat-preset-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 export function cloneStatPresetQuery(query: TradeStatPresetQuery): TradeStatPresetQuery {
 	return JSON.parse(JSON.stringify(query)) as TradeStatPresetQuery;
 }

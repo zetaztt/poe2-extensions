@@ -1,12 +1,8 @@
 <script lang="ts" setup>
-import browser from "webextension-polyfill";
+import { ipcMain } from "../../ipc/ipc";
 import { onBeforeUnmount, ref, watch } from "vue";
 import type { TranslateDictionary } from "../../translate-dictionary";
-import {
-	createPoeTranslationFetchMessage,
-	isPoeTranslationMessage,
-	PoeTranslationMessageType,
-} from "../../trade/translate/trade-translate-messages";
+import { tradeIpcProtocol } from "../../trade/trade-ipc-protocol";
 
 interface Props {
 	active: boolean;
@@ -26,7 +22,6 @@ interface DictionarySearchResult {
 }
 
 const props = defineProps<Props>();
-
 const maxResults = 20;
 const searchDebounceMs = 300;
 
@@ -95,22 +90,7 @@ async function loadDictionary(): Promise<void> {
 }
 
 async function requestDictionary(): Promise<TranslateDictionary> {
-	const requestId = createRequestId();
-	const response: unknown = await browser.runtime.sendMessage(createPoeTranslationFetchMessage(requestId));
-
-	if (!isPoeTranslationMessage(response) || response.requestId !== requestId) {
-		throw new Error("翻译字典响应无效");
-	}
-
-	if (response.type === PoeTranslationMessageType.Error) {
-		throw new Error(response.error.message);
-	}
-
-	if (response.type !== PoeTranslationMessageType.Result) {
-		throw new Error("翻译字典响应类型无效");
-	}
-
-	return response.dictionary;
+	return ipcMain.invoke(tradeIpcProtocol.fetchDictionary);
 }
 
 function createSearchIndex(dictionary: TranslateDictionary): DictionarySearchEntry[] {
@@ -189,10 +169,6 @@ function retryLoad(): void {
 	searchIndex = [];
 	results.value = [];
 	void loadDictionary();
-}
-
-function createRequestId(): string {
-	return globalThis.crypto?.randomUUID?.() ?? `dictionary-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 </script>
 

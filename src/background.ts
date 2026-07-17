@@ -1,15 +1,15 @@
 import browser from "webextension-polyfill";
-import { getTradeTranslateEnabled, tradeTranslateEnabledKey } from "./settings";
-import { type TranslateDictionary } from "./translate-dictionary";
-import { isPoeTradeSyncTranslateInjectionMessage } from "./trade/trade-messages";
+import { ipcMain } from "./ipc/ipc";
+import { createBackgroundIpcMain } from "./ipc/ipc-implementations";
 import {
-	isPoeTranslationMessage,
-	poeTranslationMessageSource,
-	PoeTranslationMessageType,
-	type PoeTranslationFetchErrorMessage,
-	type PoeTranslationFetchMessage,
-	type PoeTranslationFetchResultMessage,
-} from "./trade/translate/trade-translate-messages";
+	getTradeItemCopyEnabled,
+	getTradeStatPresetEnabled,
+	getTradeTranslateEnabled,
+	tradeTranslateEnabledKey,
+} from "./settings";
+import { type TranslateDictionary } from "./translate-dictionary";
+import { installTradeStatPresetHandlers } from "./trade/stat-preset/trade-stat-preset-storage";
+import { tradeIpcProtocol } from "./trade/trade-ipc-protocol";
 
 export const translateDictionaryUrl = "https://zetaztt.github.io/poe2-extensions/translate.json";
 export const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2-extensions/translate-meta.json";
@@ -32,6 +32,7 @@ interface CachedTranslateDictionary {
 let localTranslateDictionaryPromise: Promise<TranslateDictionary | null> | null = null;
 let localTranslateMetaPromise: Promise<TranslateMeta | null> | null = null;
 let tradeTranslateInjectionSyncPromise: Promise<void> = Promise.resolve();
+ipcMain.register(createBackgroundIpcMain);
 
 console.debug("[poe2-extensions] background loaded.", { id: browser.runtime.id });
 void enableSidePanelOnActionClick();
@@ -39,16 +40,11 @@ void queueTradeTranslateInjectionSync().catch((error) => {
 	console.warn("[poe2-extensions] 翻译脚本注册同步失败", error);
 });
 
-browser.runtime.onMessage.addListener((message: unknown) => {
-	if (isPoeTradeSyncTranslateInjectionMessage(message)) {
-		return queueTradeTranslateInjectionSync();
-	}
-
-	if (!isPoeTranslationMessage(message)) return;
-	if (message.type !== PoeTranslationMessageType.Fetch) return;
-
-	return fetchTranslateDictionary(message);
-});
+ipcMain.on(tradeIpcProtocol.syncTranslateInjection, () => queueTradeTranslateInjectionSync());
+ipcMain.handle(tradeIpcProtocol.fetchDictionary, fetchTranslateDictionary);
+ipcMain.handle(tradeIpcProtocol.getTradeItemCopyEnabled, getTradeItemCopyEnabled);
+ipcMain.handle(tradeIpcProtocol.getTradeStatPresetEnabled, getTradeStatPresetEnabled);
+installTradeStatPresetHandlers();
 
 browser.storage.onChanged.addListener((changes, areaName) => {
 	if (areaName !== "sync" || !changes[tradeTranslateEnabledKey]) return;
@@ -110,9 +106,7 @@ async function syncTradeTranslateInjection(): Promise<void> {
 	}
 }
 
-async function fetchTranslateDictionary(
-	message: PoeTranslationFetchMessage,
-): Promise<PoeTranslationFetchResultMessage | PoeTranslationFetchErrorMessage> {
+async function fetchTranslateDictionary(): Promise<TranslateDictionary> {
 	let current = await getLocalTranslateDictionary();
 	const cached = await getCachedTranslateDictionary();
 
@@ -124,7 +118,7 @@ async function fetchTranslateDictionary(
 		}
 	}
 
-	if (!current) return createFetchErrorMessage(message.requestId, "本地翻译字典格式无效");
+	if (!current) throw new Error("本地翻译字典格式无效");
 
 	const remoteMeta = await fetchTranslateMeta();
 	if (remoteMeta && remoteMeta.version > current.version) {
@@ -139,30 +133,7 @@ async function fetchTranslateDictionary(
 		}
 	}
 
-	return {
-		source: poeTranslationMessageSource,
-		type: PoeTranslationMessageType.Result,
-		requestId: message.requestId,
-		dictionary: current.dictionary,
-	};
-}
-
-function createFetchErrorMessage(
-	requestId: string,
-	message: string,
-	status?: number,
-	statusText?: string,
-): PoeTranslationFetchErrorMessage {
-	return {
-		source: poeTranslationMessageSource,
-		type: PoeTranslationMessageType.Error,
-		requestId,
-		error: {
-			message,
-			status,
-			statusText,
-		},
-	};
+	return current.dictionary;
 }
 
 async function getLocalTranslateDictionary(): Promise<CachedTranslateDictionary | null> {
