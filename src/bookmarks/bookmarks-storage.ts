@@ -1,5 +1,6 @@
 import browser from "webextension-polyfill";
 import {
+	rootFolderId,
 	TradeBookmarkExportContent,
 	type StoredTradeBookmark,
 	type StoredTradeBookmarkFolder,
@@ -7,7 +8,7 @@ import {
 	type TradeBookmarkExportData,
 } from "./bookmarks-types";
 
-export const rootFolderId = "trade-bookmarks-root";
+export { rootFolderId };
 
 const tradeBookmarkTreeStorageKey = "tradeBookmarkTree";
 const tradeBookmarkExportSource = "poe2-extensions-trade-bookmarks";
@@ -34,17 +35,16 @@ export async function saveBookmarkTree(tree: StoredTradeBookmarkTree): Promise<v
 	});
 }
 
-export async function exportBookmarkTree(): Promise<TradeBookmarkExportData> {
+export function exportBookmarkTree(tree: StoredTradeBookmarkTree): TradeBookmarkExportData {
 	return {
 		source: tradeBookmarkExportSource,
 		exportedAt: Date.now(),
 		content: TradeBookmarkExportContent.Tree,
-		tree: structuredClone(await getBookmarkTree()),
+		tree: structuredClone(tree),
 	};
 }
 
-export async function exportBookmarkFolder(folderId: string): Promise<TradeBookmarkExportData> {
-	const tree = await getBookmarkTree();
+export function exportBookmarkFolder(tree: StoredTradeBookmarkTree, folderId: string): TradeBookmarkExportData {
 	const folder = findFolder(tree, folderId);
 	if (!folder) throw new Error("未找到可导出的书签文件夹。");
 
@@ -56,13 +56,11 @@ export async function exportBookmarkFolder(folderId: string): Promise<TradeBookm
 	};
 }
 
-export async function importBookmarkData(value: unknown): Promise<void> {
+export function importBookmarkData(tree: StoredTradeBookmarkTree, value: unknown): boolean {
 	const data = getImportBookmarkData(value);
 	if (!data) throw new Error("导入文件不是有效的 trade2 书签备份。");
 
-	const tree = await getBookmarkTree();
-	syncImportFolders(tree, getImportFolders(data));
-	await saveBookmarkTree(tree);
+	return syncImportFolders(tree, getImportFolders(data));
 }
 
 function createDefaultBookmarkTree(): StoredTradeBookmarkTree {
@@ -81,7 +79,7 @@ function getImportFolders(data: BookmarkImportData): StoredTradeBookmarkFolder[]
 	return data.content === TradeBookmarkExportContent.Tree ? data.tree.root.folders : [data.folder];
 }
 
-function syncImportFolders(tree: StoredTradeBookmarkTree, importedFolders: StoredTradeBookmarkFolder[]): void {
+function syncImportFolders(tree: StoredTradeBookmarkTree, importedFolders: StoredTradeBookmarkFolder[]): boolean {
 	const now = Date.now();
 	let hasChanged = false;
 
@@ -115,6 +113,7 @@ function syncImportFolders(tree: StoredTradeBookmarkTree, importedFolders: Store
 	}
 
 	if (hasChanged) tree.root.updatedAt = now;
+	return hasChanged;
 }
 
 function createImportFolder(

@@ -7,7 +7,9 @@ export function createMainWorldIpcMain(): IpcConnectionHub<void> {
 		WindowIpcDirection.MainToContent,
 		WindowIpcDirection.ContentToMain,
 	);
-	return new IpcConnectionHub<void>(() => windowTransport.connection);
+	const hub = new IpcConnectionHub<void>(() => windowTransport.connection);
+	hub.addConnection(windowTransport.connection);
+	return hub;
 }
 
 export function createMainWorldIpcWindow(): IpcConnectionHub<number | undefined> {

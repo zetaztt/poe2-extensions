@@ -54,7 +54,7 @@ class IpcChannel<TAddress> {
 		member: TMember,
 		...args: IpcArguments<NotificationData<TMember>>
 	): Promise<void> {
-		return send(this.registrationKey, this.defaultAddress, member, args);
+		return publish(this.registrationKey, member, args);
 	}
 
 	public handle<TMember extends IpcRpcDefinition<any, any>>(
@@ -122,6 +122,15 @@ function send<TAddress, TMember extends IpcNotificationDefinition<any>>(
 ): Promise<void> {
 	const member = getNotificationMember(descriptor);
 	return getIpcConnectionHub<TAddress>(registrationKey).send(address, member.method, args[0]);
+}
+
+function publish<TMember extends IpcNotificationDefinition<any>>(
+	registrationKey: symbol,
+	descriptor: TMember,
+	args: IpcArguments<NotificationData<TMember>>,
+): Promise<void> {
+	const member = getNotificationMember(descriptor);
+	return getIpcConnectionHub<unknown>(registrationKey).publish(member.method, args[0]);
 }
 
 function handle<TMember extends IpcRpcDefinition<any, any>>(

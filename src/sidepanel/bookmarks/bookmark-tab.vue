@@ -5,10 +5,13 @@ import {
 	createBookmarkFolder,
 	deleteBookmarkFolder,
 	deleteTradeBookmark,
+	exportBookmarkFolder,
+	exportBookmarkTree,
 	getCurrentTradeBookmarkTree,
 	getTradeBookmarkServiceErrorCode,
 	getTradeBookmarkServiceErrorMessage,
 	isTradeBookmarkServiceLoading,
+	importBookmarkData,
 	loadTradeBookmarks,
 	moveBookmarkFolder,
 	moveTradeBookmark,
@@ -16,16 +19,11 @@ import {
 	renameBookmarkFolder,
 	renameTradeBookmark,
 	replaceTradeBookmarkWithCurrentSearch,
+	rootFolderId,
 	subscribeTradeBookmarks,
 	TradeBookmarkServiceEventType,
 	type TradeBookmarkServiceEvent,
 } from "../../bookmarks/bookmarks-service";
-import {
-	exportBookmarkFolder,
-	exportBookmarkTree,
-	importBookmarkData,
-	rootFolderId,
-} from "../../bookmarks/bookmarks-storage";
 import {
 	type TradeBookmarkFolder,
 	type TradeBookmarkItem,
@@ -85,7 +83,6 @@ const skipNextFolderRenameBlur = ref(false);
 const skipNextBookmarkRenameBlur = ref(false);
 const dragItem = ref<DragItem | null>(null);
 const dropTarget = ref<DropTarget | null>(null);
-let pendingRenamePromise: Promise<void> | null = null;
 let unsubscribeTradeBookmarks: (() => void) | null = null;
 
 const rootBookmarkFolder = computed<TradeBookmarkRoot | null>(() => bookmarkTree.value);
@@ -162,8 +159,6 @@ async function loadBookmarks(): Promise<void> {
 
 async function onExportBookmarks(folder?: TradeBookmarkFolder): Promise<void> {
 	if (isBusy.value) return;
-	await flushPendingRename();
-	if (isBusy.value) return;
 
 	isBusy.value = true;
 	statusText.value = "";
@@ -191,8 +186,6 @@ async function onExportBookmarks(folder?: TradeBookmarkFolder): Promise<void> {
 
 async function onImportBookmarksClick(): Promise<void> {
 	if (isBusy.value) return;
-	await flushPendingRename();
-	if (isBusy.value) return;
 
 	statusText.value = "";
 	importFileInput.value?.click();
@@ -210,7 +203,6 @@ async function onImportBookmarksChange(event: Event): Promise<void> {
 	try {
 		const data: unknown = JSON.parse(await file.text());
 		await importBookmarkData(data);
-		await loadBookmarks();
 		statusText.value = "书签 JSON 已同步。";
 	} catch (error) {
 		statusText.value = error instanceof Error ? error.message : "导入书签失败，请确认 JSON 文件有效。";
@@ -308,7 +300,6 @@ async function openBookmarkMenu(
 
 	event.preventDefault();
 	event.stopPropagation();
-	await flushPendingRename();
 	if (isBusy.value) return;
 
 	statusText.value = "";
@@ -368,8 +359,6 @@ function getBookmarkMenuItems(bookmark: TradeBookmarkItem): SidepanelMenuItem[] 
 
 async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 	if (isBusy.value) return;
-	await flushPendingRename();
-	if (isBusy.value) return;
 
 	isBusy.value = true;
 	statusText.value = "";
@@ -389,8 +378,6 @@ async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 }
 
 async function onCreateFolder(parentId: string): Promise<void> {
-	if (isBusy.value) return;
-	await flushPendingRename();
 	if (isBusy.value) return;
 
 	isBusy.value = true;
@@ -412,15 +399,13 @@ async function onCreateFolder(parentId: string): Promise<void> {
 
 async function startRenameFolder(folder: TradeBookmarkFolder): Promise<void> {
 	if (!folder.canModify) return;
-	await flushPendingRename();
 	await cancelBookmarkRename();
 	renamingFolderId.value = folder.id;
 	renamingFolderTitle.value = folder.title;
 }
 
-async function confirmRenameFolder(): Promise<void> {
-	const pendingRename = queueFolderRename();
-	if (pendingRename) await pendingRename;
+function confirmRenameFolder(): void {
+	queueFolderRename();
 }
 
 async function cancelFolderRename(): Promise<void> {
@@ -461,8 +446,6 @@ function onFolderRenameBlur(): void {
 
 async function onDeleteFolder(folder: TradeBookmarkFolder): Promise<void> {
 	if (!folder.canModify || isBusy.value) return;
-	await flushPendingRename();
-	if (isBusy.value) return;
 	if (!window.confirm(`确定删除“${folder.title}”及其所有内容吗？`)) return;
 
 	isBusy.value = true;
@@ -480,15 +463,13 @@ async function onDeleteFolder(folder: TradeBookmarkFolder): Promise<void> {
 }
 
 async function startRenameBookmark(bookmark: TradeBookmarkItem): Promise<void> {
-	await flushPendingRename();
 	await cancelFolderRename();
 	renamingBookmarkId.value = bookmark.id;
 	renamingBookmarkTitle.value = bookmark.title;
 }
 
-async function confirmRenameBookmark(): Promise<void> {
-	const pendingRename = queueBookmarkRename();
-	if (pendingRename) await pendingRename;
+function confirmRenameBookmark(): void {
+	queueBookmarkRename();
 }
 
 async function cancelBookmarkRename(): Promise<void> {
@@ -528,7 +509,6 @@ function onBookmarkRenameBlur(): void {
 }
 
 async function onOpenBookmark(bookmark: TradeBookmarkItem): Promise<void> {
-	await flushPendingRename();
 	try {
 		await openTradeBookmark(bookmark.url);
 	} catch (error) {
@@ -538,8 +518,6 @@ async function onOpenBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 }
 
 async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
-	if (isBusy.value) return;
-	await flushPendingRename();
 	if (isBusy.value) return;
 
 	isBusy.value = true;
@@ -558,8 +536,6 @@ async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 
 async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	if (isBusy.value) return;
-	await flushPendingRename();
-	if (isBusy.value) return;
 	if (!window.confirm(`确定删除“${bookmark.title}”吗？`)) return;
 
 	isBusy.value = true;
@@ -576,12 +552,6 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 }
 
 function onFolderDragStart(event: DragEvent, folder: TradeBookmarkFolder): void {
-	if (pendingRenamePromise) {
-		event.preventDefault();
-		void flushPendingRename();
-		return;
-	}
-
 	if (isBusy.value || !folder.canModify || renamingFolderId.value === folder.id || isInteractiveDragSource(event)) {
 		event.preventDefault();
 		return;
@@ -592,12 +562,6 @@ function onFolderDragStart(event: DragEvent, folder: TradeBookmarkFolder): void 
 }
 
 function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): void {
-	if (pendingRenamePromise) {
-		event.preventDefault();
-		void flushPendingRename();
-		return;
-	}
-
 	if (isBusy.value || renamingBookmarkId.value === bookmark.id || isInteractiveDragSource(event)) {
 		event.preventDefault();
 		return;
@@ -636,7 +600,6 @@ function onBookmarkDragOver(event: DragEvent, bookmark: TradeBookmarkItem): void
 async function onDrop(event: DragEvent): Promise<void> {
 	event.preventDefault();
 	event.stopPropagation();
-	await flushPendingRename();
 
 	const item = dragItem.value;
 	const target = dropTarget.value;
@@ -785,58 +748,36 @@ function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folder
 	};
 }
 
-function queueFolderRename(): Promise<void> | null {
+function queueFolderRename(): void {
 	const folderId = renamingFolderId.value;
-	if (!folderId) return pendingRenamePromise;
+	if (!folderId) return;
 
 	const title = renamingFolderTitle.value;
 	creatingFolderId.value = "";
 	clearFolderRename();
 	updateFolderTitleInTree(folderId, getFolderRenameTitle(title));
 
-	return queueRename(async () => {
-		try {
-			await renameBookmarkFolder(folderId, title);
-		} catch (error) {
-			statusText.value = "重命名文件夹失败，请稍后重试。";
-			console.error("[poe2-extensions] trade 书签目录重命名失败", error);
-			await loadBookmarks();
-		}
+	void renameBookmarkFolder(folderId, title).catch(async (error: unknown) => {
+		statusText.value = "重命名文件夹失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签目录重命名失败", error);
+		await loadBookmarks();
 	});
 }
 
-function queueBookmarkRename(): Promise<void> | null {
+function queueBookmarkRename(): void {
 	const bookmarkId = renamingBookmarkId.value;
-	if (!bookmarkId) return pendingRenamePromise;
+	if (!bookmarkId) return;
 
 	const title = renamingBookmarkTitle.value;
 	creatingBookmarkId.value = "";
 	clearBookmarkRename();
 	updateBookmarkTitleInTree(bookmarkId, getBookmarkRenameTitle(bookmarkId, title));
 
-	return queueRename(async () => {
-		try {
-			await renameTradeBookmark(bookmarkId, title);
-		} catch (error) {
-			statusText.value = "重命名书签失败，请稍后重试。";
-			console.error("[poe2-extensions] trade 书签重命名失败", error);
-			await loadBookmarks();
-		}
+	void renameTradeBookmark(bookmarkId, title).catch(async (error: unknown) => {
+		statusText.value = "重命名书签失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 书签重命名失败", error);
+		await loadBookmarks();
 	});
-}
-
-function queueRename(action: () => Promise<void>): Promise<void> {
-	const pendingRename = (pendingRenamePromise ?? Promise.resolve()).then(action).finally(() => {
-		if (pendingRenamePromise === pendingRename) pendingRenamePromise = null;
-	});
-
-	pendingRenamePromise = pendingRename;
-	return pendingRename;
-}
-
-async function flushPendingRename(): Promise<void> {
-	const pendingRename = pendingRenamePromise;
-	if (pendingRename) await pendingRename;
 }
 
 function updateFolderTitleInTree(folderId: string, title: string): void {

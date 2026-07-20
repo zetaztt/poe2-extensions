@@ -14,6 +14,7 @@ import {
 } from "./jsonrpc-transport";
 
 const jsonRpcChannel = "poe2-extensions:jsonrpc";
+const jsonRpcConnectMethod = "$/ipc/connect";
 
 interface JsonRpcEnvelope {
 	channel: typeof jsonRpcChannel;
@@ -22,9 +23,26 @@ interface JsonRpcEnvelope {
 }
 
 type SendEnvelope = (envelope: JsonRpcEnvelope) => Promise<unknown>;
+type InstallEnvelopeListener = (endpointId: string, accept: (message: JsonRpcMessage) => void) => () => void;
 
 export function createRuntimeJsonRpcClient(): MessageConnection {
-	return createDatagramClient((envelope) => browser.runtime.sendMessage(envelope));
+	return createDatagramClient(
+		(envelope) => browser.runtime.sendMessage(envelope),
+		(endpointId, accept) => {
+			const listener = (value: unknown) => {
+				if (!isJsonRpcEnvelope(value) || value.endpointId !== endpointId) return undefined;
+				accept(value.message);
+				return undefined;
+			};
+			browser.runtime.onMessage.addListener(listener);
+			return () => browser.runtime.onMessage.removeListener(listener);
+		},
+	);
+}
+
+export function announceRuntimeJsonRpcClient(connection: MessageConnection): Promise<void> {
+	// Datagram server 只能从入站消息发现 endpoint；主动握手让纯监听环境也能接收后续发布。
+	return connection.sendNotification(jsonRpcConnectMethod);
 }
 
 export function createTabJsonRpcClient(tabId: number): MessageConnection {
@@ -54,7 +72,10 @@ export function installRuntimeJsonRpcServer(onConnection: (connection: MessageCo
 	};
 }
 
-function createDatagramClient(sendEnvelope: SendEnvelope): MessageConnection {
+function createDatagramClient(
+	sendEnvelope: SendEnvelope,
+	installEnvelopeListener?: InstallEnvelopeListener,
+): MessageConnection {
 	const endpointId = createEndpointId();
 	const reader = new JsonRpcMessageReader();
 	const writer = new JsonRpcMessageWriter(async (message) => {
@@ -67,7 +88,10 @@ function createDatagramClient(sendEnvelope: SendEnvelope): MessageConnection {
 			reader.accept(response.message);
 		}
 	});
-	return createJsonRpcConnection(reader, writer);
+	const connection = createJsonRpcConnection(reader, writer);
+	const removeEnvelopeListener = installEnvelopeListener?.(endpointId, (message) => reader.accept(message));
+	if (removeEnvelopeListener) connection.onDispose(removeEnvelopeListener);
+	return connection;
 }
 
 interface DatagramServerPeer {
@@ -79,9 +103,18 @@ function createDatagramServerPeer(endpointId: string): DatagramServerPeer {
 	const reader = new JsonRpcMessageReader();
 	const pendingResponses = new Map<string | number | null, (response: ResponseMessage) => void>();
 	const writer = new JsonRpcMessageWriter((message) => {
-		if (!Message.isResponse(message)) return;
-		pendingResponses.get(message.id)?.(message);
-		pendingResponses.delete(message.id);
+		if (Message.isResponse(message)) {
+			pendingResponses.get(message.id)?.(message);
+			pendingResponses.delete(message.id);
+			return;
+		}
+
+		if (Message.isNotification(message)) {
+			// runtime RPC 的响应沿原 sendMessage 返回；主动通知必须另发一条定向 endpoint 消息。
+			return browser.runtime
+				.sendMessage({ channel: jsonRpcChannel, endpointId, message } satisfies JsonRpcEnvelope)
+				.then(() => undefined);
+		}
 	});
 	const connection = createJsonRpcConnection(reader, writer);
 

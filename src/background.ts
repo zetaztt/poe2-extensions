@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import { installTradeBookmarkHandlers } from "./bookmarks/bookmarks-background-service";
 import { ipcMain } from "./ipc/ipc";
 import { createBackgroundIpcMain } from "./ipc/ipc-implementations";
 import {
@@ -44,6 +45,7 @@ ipcMain.on(tradeIpcProtocol.syncTranslateInjection, () => queueTradeTranslateInj
 ipcMain.handle(tradeIpcProtocol.fetchDictionary, fetchTranslateDictionary);
 ipcMain.handle(tradeIpcProtocol.getTradeItemCopyEnabled, getTradeItemCopyEnabled);
 ipcMain.handle(tradeIpcProtocol.getTradeStatPresetEnabled, getTradeStatPresetEnabled);
+installTradeBookmarkHandlers();
 installTradeStatPresetHandlers();
 
 browser.storage.onChanged.addListener((changes, areaName) => {
