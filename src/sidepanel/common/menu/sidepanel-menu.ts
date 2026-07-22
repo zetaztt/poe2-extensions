@@ -1,8 +1,6 @@
 import { createVNode, reactive, render, type VNode } from "vue";
+import { SidepanelMenuState, SidepanelMenuItem, SidepanelMenuOptions } from "./sidepanel-menu-types.ts";
 import SidepanelMenu from "./sidepanel-menu.vue";
-import type { SidepanelMenuItem, SidepanelMenuOptions, SidepanelMenuState } from "./sidepanel-menu-types";
-
-export { SidepanelMenuAlign, type SidepanelMenuItem, type SidepanelMenuOptions } from "./sidepanel-menu-types";
 
 const menuState = reactive<SidepanelMenuState>({
 	open: false,

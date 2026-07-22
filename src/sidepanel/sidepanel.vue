@@ -1,23 +1,27 @@
 <script lang="ts" setup>
-import { ref } from "vue";
+import { computed, ref, type Component } from "vue";
 import BookmarkTab from "./bookmarks/bookmark-tab.vue";
+import { closeMenu } from "./common/menu/sidepanel-menu";
 import DictionaryTab from "./dictionary/dictionary-tab.vue";
 import SettingsTab from "./settings/settings-tab.vue";
 
-type ActiveTab = "bookmarks" | "dictionary" | "settings";
-
-const activeTab = ref<ActiveTab>("settings");
-const didInitializeBookmarks = ref(false);
-
-function setActiveTab(tab: ActiveTab): void {
-	activeTab.value = tab;
+enum SidepanelTab {
+	Bookmarks = 1,
+	Dictionary = 2,
+	Settings = 3,
 }
 
-function onBookmarksInitialized(success: boolean): void {
-	if (didInitializeBookmarks.value) return;
+const tabComponents: Record<SidepanelTab, Component> = {
+	[SidepanelTab.Bookmarks]: BookmarkTab,
+	[SidepanelTab.Dictionary]: DictionaryTab,
+	[SidepanelTab.Settings]: SettingsTab,
+};
 
-	didInitializeBookmarks.value = true;
-	activeTab.value = success ? "bookmarks" : "settings";
+const activeTab = ref<SidepanelTab>(SidepanelTab.Bookmarks);
+const activeComponent = computed(() => tabComponents[activeTab.value]);
+
+function setActiveTab(tab: SidepanelTab): void {
+	activeTab.value = tab;
 }
 </script>
 
@@ -31,35 +35,30 @@ function onBookmarksInitialized(success: boolean): void {
 		<nav class="tabs" aria-label="侧边栏页面">
 			<button
 				class="tab-button"
-				:class="{ active: activeTab === 'bookmarks' }"
+				:class="{ active: activeTab === SidepanelTab.Bookmarks }"
 				type="button"
-				@click="setActiveTab('bookmarks')">
+				@click="setActiveTab(SidepanelTab.Bookmarks)">
 				书签
 			</button>
 			<button
 				class="tab-button"
-				:class="{ active: activeTab === 'dictionary' }"
+				:class="{ active: activeTab === SidepanelTab.Dictionary }"
 				type="button"
-				@click="setActiveTab('dictionary')">
+				@click="setActiveTab(SidepanelTab.Dictionary)">
 				词典
 			</button>
 			<button
 				class="tab-button"
-				:class="{ active: activeTab === 'settings' }"
+				:class="{ active: activeTab === SidepanelTab.Settings }"
 				type="button"
-				@click="setActiveTab('settings')">
+				@click="setActiveTab(SidepanelTab.Settings)">
 				设置
 			</button>
 		</nav>
 
-		<BookmarkTab
-			v-show="activeTab === 'bookmarks'"
-			:active="activeTab === 'bookmarks'"
-			:on-initialized="onBookmarksInitialized" />
-
-		<DictionaryTab v-show="activeTab === 'dictionary'" :active="activeTab === 'dictionary'" />
-
-		<SettingsTab v-show="activeTab === 'settings'" />
+		<KeepAlive :max="3">
+			<component :is="activeComponent" :key="activeTab" />
+		</KeepAlive>
 	</main>
 </template>
 

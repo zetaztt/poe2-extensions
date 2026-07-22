@@ -1,12 +1,8 @@
 <script lang="ts" setup>
 import { ipcMain } from "../../ipc/ipc";
-import { onBeforeUnmount, ref, watch } from "vue";
+import { onActivated, onBeforeUnmount, onDeactivated, ref, watch } from "vue";
 import type { TranslateDictionary } from "../../translate-dictionary";
 import { tradeIpcProtocol } from "../../trade/trade-ipc-protocol";
-
-interface Props {
-	active: boolean;
-}
 
 interface DictionarySearchEntry {
 	original: string;
@@ -21,7 +17,6 @@ interface DictionarySearchResult {
 	translated: string;
 }
 
-const props = defineProps<Props>();
 const maxResults = 20;
 const searchDebounceMs = 300;
 
@@ -38,15 +33,15 @@ let searchIndex: DictionarySearchEntry[] = [];
 let searchTimer: number | null = null;
 let copyTimer: number | null = null;
 
-watch(
-	() => props.active,
-	(active) => {
-		if (active && !hasLoaded && !isLoading.value) {
-			void loadDictionary();
-		}
-	},
-	{ immediate: true },
-);
+onActivated(() => {
+	if (!hasLoaded) {
+		if (!isLoading.value) void loadDictionary();
+		return;
+	}
+
+	// 停用时暂停的 debounce 在重新显示页面后立即补算，避免搜索状态永久停留。
+	if (isSearching.value && query.value.trim()) searchDictionary(query.value);
+});
 
 watch(query, (value) => {
 	if (searchTimer !== null) {
@@ -67,10 +62,18 @@ watch(query, (value) => {
 	}, searchDebounceMs);
 });
 
+onDeactivated(clearSearchTimer);
+
 onBeforeUnmount(() => {
-	if (searchTimer !== null) window.clearTimeout(searchTimer);
+	clearSearchTimer();
 	if (copyTimer !== null) window.clearTimeout(copyTimer);
 });
+
+function clearSearchTimer(): void {
+	if (searchTimer === null) return;
+	window.clearTimeout(searchTimer);
+	searchTimer = null;
+}
 
 async function loadDictionary(): Promise<void> {
 	isLoading.value = true;

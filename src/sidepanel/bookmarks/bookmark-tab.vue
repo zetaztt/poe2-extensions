@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onActivated, onDeactivated, ref, watch } from "vue";
 import {
 	addCurrentTradeSearchBookmark,
 	createBookmarkFolder,
@@ -7,38 +7,26 @@ import {
 	deleteTradeBookmark,
 	exportBookmarkFolder,
 	exportBookmarkTree,
-	getCurrentTradeBookmarkTree,
-	getTradeBookmarkServiceErrorCode,
 	getTradeBookmarkServiceErrorMessage,
-	isTradeBookmarkServiceLoading,
 	importBookmarkData,
-	loadTradeBookmarks,
 	moveBookmarkFolder,
 	moveTradeBookmark,
 	openTradeBookmark,
-	renameBookmarkFolder,
-	renameTradeBookmark,
 	replaceTradeBookmarkWithCurrentSearch,
 	rootFolderId,
-	subscribeTradeBookmarks,
-	TradeBookmarkServiceEventType,
-	type TradeBookmarkServiceEvent,
 } from "../../bookmarks/bookmarks-service";
 import {
 	type TradeBookmarkFolder,
 	type TradeBookmarkItem,
 	type TradeBookmarkRoot,
 } from "../../bookmarks/bookmarks-types";
-import {
-	closeMenu,
-	openMenu as openSidepanelMenu,
-	SidepanelMenuAlign,
-	type SidepanelMenuItem,
-	type SidepanelMenuOptions,
-} from "../common/menu/sidepanel-menu";
+import { closeMenu, openMenu as openSidepanelMenu } from "../common/menu/sidepanel-menu";
+import { dismissSnackBar, showSnackBar, SidepanelSnackBarType } from "../common/snack-bar/sidepanel-snack-bar";
 import BookmarkFolder from "./bookmark-folder.vue";
 import BookmarkItem from "./bookmark-item.vue";
+import { useTradeBookmarkStore } from "./bookmark-store";
 import BookmarkTreeHeader from "./bookmark-tree-header.vue";
+import { SidepanelMenuOptions, SidepanelMenuItem, SidepanelMenuAlign } from "../common/menu/sidepanel-menu-types.ts";
 
 enum BookmarkDragItemType {
 	Folder = 1,
@@ -53,6 +41,8 @@ enum BookmarkDropPosition {
 
 type DragItem = { type: BookmarkDragItemType.Folder; id: string } | { type: BookmarkDragItemType.Bookmark; id: string };
 
+type StartRename = () => void;
+
 type DropTarget =
 	| { type: BookmarkDragItemType.Folder; id: string; position: BookmarkDropPosition }
 	| {
@@ -62,28 +52,21 @@ type DropTarget =
 			position: BookmarkDropPosition.Before | BookmarkDropPosition.After;
 	  };
 
-const props = defineProps<{
-	active: boolean;
-	onInitialized?: (success: boolean) => void;
-}>();
-
-const bookmarkTree = ref<TradeBookmarkRoot | null>(null);
-const isLoadingBookmarks = ref(true);
+const {
+	bookmarkTree,
+	isLoadingBookmarks,
+	lastError,
+	loadBookmarks: loadBookmarkStore,
+	renameFolderOptimistically,
+	renameBookmarkOptimistically,
+} = useTradeBookmarkStore();
 const expandedFolderIds = ref<Set<string>>(new Set());
-const renamingFolderId = ref("");
-const renamingFolderTitle = ref("");
-const renamingBookmarkId = ref("");
-const renamingBookmarkTitle = ref("");
 const creatingFolderId = ref("");
 const creatingBookmarkId = ref("");
-const statusText = ref("");
 const isBusy = ref(false);
 const importFileInput = ref<HTMLInputElement | null>(null);
-const skipNextFolderRenameBlur = ref(false);
-const skipNextBookmarkRenameBlur = ref(false);
 const dragItem = ref<DragItem | null>(null);
 const dropTarget = ref<DropTarget | null>(null);
-let unsubscribeTradeBookmarks: (() => void) | null = null;
 
 const rootBookmarkFolder = computed<TradeBookmarkRoot | null>(() => bookmarkTree.value);
 const visibleBookmarkFolders = computed<TradeBookmarkFolder[]>(() => bookmarkTree.value?.folders ?? []);
@@ -109,51 +92,35 @@ watch(
 );
 
 watch(
-	() => props.active,
-	(active) => {
-		if (active) void loadBookmarks();
+	lastError,
+	(error) => {
+		if (error) showBookmarkError(getTradeBookmarkServiceErrorMessage(error.code));
 	},
+	{ immediate: true },
 );
 
-onMounted(() => {
-	syncTradeBookmarkServiceState();
-	unsubscribeTradeBookmarks = subscribeTradeBookmarks(onTradeBookmarkServiceEvent);
-	void loadBookmarks();
+onActivated(() => {
+	if (!bookmarkTree.value && !isLoadingBookmarks.value) void loadBookmarks();
 });
 
-onBeforeUnmount(() => {
-	unsubscribeTradeBookmarks?.();
-	unsubscribeTradeBookmarks = null;
+onDeactivated(() => {
+	closeMenu();
+	clearDragState();
 });
 
-function syncTradeBookmarkServiceState(): void {
-	bookmarkTree.value = getCurrentTradeBookmarkTree();
-	isLoadingBookmarks.value = isTradeBookmarkServiceLoading();
-	statusText.value = getTradeBookmarkServiceErrorMessage(getTradeBookmarkServiceErrorCode());
+function showBookmarkSuccess(message: string): void {
+	showSnackBar(message, SidepanelSnackBarType.Success);
 }
 
-function onTradeBookmarkServiceEvent(event: TradeBookmarkServiceEvent): void {
-	if (event.type === TradeBookmarkServiceEventType.Loaded || event.type === TradeBookmarkServiceEventType.Changed) {
-		bookmarkTree.value = event.tree;
-		return;
-	}
-
-	statusText.value = getTradeBookmarkServiceErrorMessage(event.code);
+function showBookmarkError(message: string): void {
+	if (message) showSnackBar(message, SidepanelSnackBarType.Error);
 }
 
 async function loadBookmarks(): Promise<void> {
-	isLoadingBookmarks.value = true;
-
 	try {
-		bookmarkTree.value = await loadTradeBookmarks();
-		props.onInitialized?.(true);
+		await loadBookmarkStore();
 	} catch (error) {
-		bookmarkTree.value = null;
-		statusText.value = "本地书签读取失败，请稍后重试。";
-		props.onInitialized?.(false);
 		console.error("[poe2-extensions] trade 书签读取失败", error);
-	} finally {
-		isLoadingBookmarks.value = false;
 	}
 }
 
@@ -161,7 +128,7 @@ async function onExportBookmarks(folder?: TradeBookmarkFolder): Promise<void> {
 	if (isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		const data = folder ? await exportBookmarkFolder(folder.id) : await exportBookmarkTree();
@@ -175,9 +142,9 @@ async function onExportBookmarks(folder?: TradeBookmarkFolder): Promise<void> {
 		link.click();
 		link.remove();
 		URL.revokeObjectURL(url);
-		statusText.value = folder ? "文件夹 JSON 已导出。" : "书签 JSON 已导出。";
+		showBookmarkSuccess(folder ? "文件夹 JSON 已导出。" : "书签 JSON 已导出。");
 	} catch (error) {
-		statusText.value = "导出书签失败，请稍后重试。";
+		showBookmarkError("导出书签失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签导出失败", error);
 	} finally {
 		isBusy.value = false;
@@ -187,7 +154,7 @@ async function onExportBookmarks(folder?: TradeBookmarkFolder): Promise<void> {
 async function onImportBookmarksClick(): Promise<void> {
 	if (isBusy.value) return;
 
-	statusText.value = "";
+	dismissSnackBar();
 	importFileInput.value?.click();
 }
 
@@ -198,14 +165,14 @@ async function onImportBookmarksChange(event: Event): Promise<void> {
 	if (!file || isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		const data: unknown = JSON.parse(await file.text());
 		await importBookmarkData(data);
-		statusText.value = "书签 JSON 已同步。";
+		showBookmarkSuccess("书签 JSON 已同步。");
 	} catch (error) {
-		statusText.value = error instanceof Error ? error.message : "导入书签失败，请确认 JSON 文件有效。";
+		showBookmarkError(error instanceof Error ? error.message : "导入书签失败，请确认 JSON 文件有效。");
 		console.error("[poe2-extensions] trade 书签导入失败", error);
 	} finally {
 		isBusy.value = false;
@@ -258,12 +225,10 @@ function toggleFolderExpanded(folder: TradeBookmarkFolder): void {
 	expandedFolderIds.value = nextExpandedIds;
 }
 function collapseAllFolders(): void {
-	statusText.value = "";
 	expandedFolderIds.value = new Set();
 }
 
 function collapseOtherFolders(folder: TradeBookmarkFolder): void {
-	statusText.value = "";
 	expandedFolderIds.value = new Set([folder.id]);
 }
 
@@ -271,24 +236,36 @@ async function openRootFolderMenu(event: MouseEvent, folder: TradeBookmarkRoot):
 	await openBookmarkMenu(event, getButtonMenuPosition(event), getRootFolderMenuItems());
 }
 
-async function openFolderMenu(event: MouseEvent, folder: TradeBookmarkFolder): Promise<void> {
-	await openBookmarkMenu(event, getButtonMenuPosition(event), getFolderMenuItems(folder));
+async function openFolderMenu(event: MouseEvent, folder: TradeBookmarkFolder, startRename: StartRename): Promise<void> {
+	await openBookmarkMenu(event, getButtonMenuPosition(event), getFolderMenuItems(folder, startRename));
 }
 
-async function openBookmarkItemMenu(event: MouseEvent, bookmark: TradeBookmarkItem): Promise<void> {
-	await openBookmarkMenu(event, getButtonMenuPosition(event), getBookmarkMenuItems(bookmark));
+async function openBookmarkItemMenu(
+	event: MouseEvent,
+	bookmark: TradeBookmarkItem,
+	startRename: StartRename,
+): Promise<void> {
+	await openBookmarkMenu(event, getButtonMenuPosition(event), getBookmarkMenuItems(bookmark, startRename));
 }
 
 async function openRootFolderContextMenu(event: MouseEvent, folder: TradeBookmarkRoot): Promise<void> {
 	await openBookmarkMenu(event, { x: event.clientX, y: event.clientY }, getRootFolderMenuItems());
 }
 
-async function openFolderContextMenu(event: MouseEvent, folder: TradeBookmarkFolder): Promise<void> {
-	await openBookmarkMenu(event, { x: event.clientX, y: event.clientY }, getFolderMenuItems(folder));
+async function openFolderContextMenu(
+	event: MouseEvent,
+	folder: TradeBookmarkFolder,
+	startRename: StartRename,
+): Promise<void> {
+	await openBookmarkMenu(event, { x: event.clientX, y: event.clientY }, getFolderMenuItems(folder, startRename));
 }
 
-async function openBookmarkContextMenu(event: MouseEvent, bookmark: TradeBookmarkItem): Promise<void> {
-	await openBookmarkMenu(event, { x: event.clientX, y: event.clientY }, getBookmarkMenuItems(bookmark));
+async function openBookmarkContextMenu(
+	event: MouseEvent,
+	bookmark: TradeBookmarkItem,
+	startRename: StartRename,
+): Promise<void> {
+	await openBookmarkMenu(event, { x: event.clientX, y: event.clientY }, getBookmarkMenuItems(bookmark, startRename));
 }
 
 async function openBookmarkMenu(
@@ -302,7 +279,6 @@ async function openBookmarkMenu(
 	event.stopPropagation();
 	if (isBusy.value) return;
 
-	statusText.value = "";
 	openSidepanelMenu(items, position);
 }
 
@@ -329,7 +305,7 @@ function getRootFolderMenuItems(): SidepanelMenuItem[] {
 	];
 }
 
-function getFolderMenuItems(folder: TradeBookmarkFolder): SidepanelMenuItem[] {
+function getFolderMenuItems(folder: TradeBookmarkFolder, startRename: StartRename): SidepanelMenuItem[] {
 	return [
 		{ id: "add-bookmark", label: "添加当前搜索", run: () => addCurrentSearchToFolder(folder.id) },
 		{ id: "collapse-others", label: "折叠其他文件夹", run: () => collapseOtherFolders(folder) },
@@ -338,7 +314,7 @@ function getFolderMenuItems(folder: TradeBookmarkFolder): SidepanelMenuItem[] {
 			id: "rename",
 			label: "重命名",
 			disabled: !folder.canModify,
-			run: () => startRenameFolder(folder),
+			run: startRename,
 		},
 		{
 			id: "delete",
@@ -349,9 +325,9 @@ function getFolderMenuItems(folder: TradeBookmarkFolder): SidepanelMenuItem[] {
 	];
 }
 
-function getBookmarkMenuItems(bookmark: TradeBookmarkItem): SidepanelMenuItem[] {
+function getBookmarkMenuItems(bookmark: TradeBookmarkItem, startRename: StartRename): SidepanelMenuItem[] {
 	return [
-		{ id: "rename", label: "重命名", run: () => startRenameBookmark(bookmark) },
+		{ id: "rename", label: "重命名", run: startRename },
 		{ id: "replace", label: "用当前搜索替换", run: () => onReplaceBookmark(bookmark) },
 		{ id: "delete", label: "删除", run: () => onDeleteBookmark(bookmark) },
 	];
@@ -361,16 +337,14 @@ async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 	if (isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		const bookmark = await addCurrentTradeSearchBookmark(folderId);
 		expandFolder(folderId);
 		creatingBookmarkId.value = bookmark.id;
-		renamingBookmarkId.value = bookmark.id;
-		renamingBookmarkTitle.value = bookmark.title;
 	} catch (error) {
-		statusText.value = error instanceof Error ? error.message : "添加书签失败，请稍后重试。";
+		showBookmarkError(error instanceof Error ? error.message : "添加书签失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 搜索书签添加失败", error);
 	} finally {
 		isBusy.value = false;
@@ -381,67 +355,37 @@ async function onCreateFolder(parentId: string): Promise<void> {
 	if (isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		const folder = await createBookmarkFolder(parentId, "New Folder");
 		expandFolder(parentId);
 		creatingFolderId.value = folder.id;
-		renamingFolderId.value = folder.id;
-		renamingFolderTitle.value = folder.title;
 	} catch (error) {
-		statusText.value = "新建文件夹失败，请稍后重试。";
+		showBookmarkError("新建文件夹失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签目录创建失败", error);
 	} finally {
 		isBusy.value = false;
 	}
 }
 
-async function startRenameFolder(folder: TradeBookmarkFolder): Promise<void> {
-	if (!folder.canModify) return;
-	await cancelBookmarkRename();
-	renamingFolderId.value = folder.id;
-	renamingFolderTitle.value = folder.title;
-}
-
-function confirmRenameFolder(): void {
-	queueFolderRename();
-}
-
-async function cancelFolderRename(): Promise<void> {
-	const folderId = renamingFolderId.value;
-	if (folderId && folderId === creatingFolderId.value) {
-		await cancelCreatedFolder(folderId);
-		return;
-	}
-
-	clearFolderRename();
+async function cancelFolderRename(folderId: string): Promise<void> {
+	if (folderId === creatingFolderId.value) await cancelCreatedFolder(folderId);
 }
 
 async function cancelCreatedFolder(folderId: string): Promise<void> {
-	skipNextFolderRenameBlur.value = true;
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		await deleteBookmarkFolder(folderId);
 		creatingFolderId.value = "";
-		clearFolderRename();
 	} catch (error) {
-		statusText.value = "取消新建文件夹失败，请稍后重试。";
+		showBookmarkError("取消新建文件夹失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签目录取消创建失败", error);
 	} finally {
 		isBusy.value = false;
 	}
-}
-
-function onFolderRenameBlur(): void {
-	if (skipNextFolderRenameBlur.value) {
-		skipNextFolderRenameBlur.value = false;
-		return;
-	}
-
-	queueFolderRename();
 }
 
 async function onDeleteFolder(folder: TradeBookmarkFolder): Promise<void> {
@@ -449,70 +393,45 @@ async function onDeleteFolder(folder: TradeBookmarkFolder): Promise<void> {
 	if (!window.confirm(`确定删除“${folder.title}”及其所有内容吗？`)) return;
 
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		await deleteBookmarkFolder(folder.id);
 		removeExpandedFolder(folder.id);
 	} catch (error) {
-		statusText.value = "删除文件夹失败，请稍后重试。";
+		showBookmarkError("删除文件夹失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签目录删除失败", error);
 	} finally {
 		isBusy.value = false;
 	}
 }
 
-async function startRenameBookmark(bookmark: TradeBookmarkItem): Promise<void> {
-	await cancelFolderRename();
-	renamingBookmarkId.value = bookmark.id;
-	renamingBookmarkTitle.value = bookmark.title;
-}
-
-function confirmRenameBookmark(): void {
-	queueBookmarkRename();
-}
-
-async function cancelBookmarkRename(): Promise<void> {
-	const bookmarkId = renamingBookmarkId.value;
-	if (bookmarkId && bookmarkId === creatingBookmarkId.value) {
-		await cancelCreatedBookmark(bookmarkId);
-		return;
-	}
-
-	clearBookmarkRename();
+async function cancelBookmarkRename(bookmarkId: string): Promise<void> {
+	if (bookmarkId === creatingBookmarkId.value) await cancelCreatedBookmark(bookmarkId);
 }
 
 async function cancelCreatedBookmark(bookmarkId: string): Promise<void> {
-	skipNextBookmarkRenameBlur.value = true;
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		await deleteTradeBookmark(bookmarkId);
 		creatingBookmarkId.value = "";
-		clearBookmarkRename();
 	} catch (error) {
-		statusText.value = "取消新建书签失败，请稍后重试。";
+		showBookmarkError("取消新建书签失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签取消创建失败", error);
 	} finally {
 		isBusy.value = false;
 	}
 }
 
-function onBookmarkRenameBlur(): void {
-	if (skipNextBookmarkRenameBlur.value) {
-		skipNextBookmarkRenameBlur.value = false;
-		return;
-	}
-
-	queueBookmarkRename();
-}
-
 async function onOpenBookmark(bookmark: TradeBookmarkItem): Promise<void> {
+	dismissSnackBar();
+
 	try {
 		await openTradeBookmark(bookmark.url);
 	} catch (error) {
-		statusText.value = "打开书签失败，请稍后重试。";
+		showBookmarkError("打开书签失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签打开失败", error);
 	}
 }
@@ -521,13 +440,13 @@ async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	if (isBusy.value) return;
 
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		await replaceTradeBookmarkWithCurrentSearch(bookmark.id);
-		statusText.value = "书签链接已替换为当前搜索。";
+		showBookmarkSuccess("书签链接已替换为当前搜索。");
 	} catch (error) {
-		statusText.value = error instanceof Error ? error.message : "替换书签失败，请稍后重试。";
+		showBookmarkError(error instanceof Error ? error.message : "替换书签失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签替换失败", error);
 	} finally {
 		isBusy.value = false;
@@ -539,12 +458,12 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	if (!window.confirm(`确定删除“${bookmark.title}”吗？`)) return;
 
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		await deleteTradeBookmark(bookmark.id);
 	} catch (error) {
-		statusText.value = "删除书签失败，请稍后重试。";
+		showBookmarkError("删除书签失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签删除失败", error);
 	} finally {
 		isBusy.value = false;
@@ -552,7 +471,7 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 }
 
 function onFolderDragStart(event: DragEvent, folder: TradeBookmarkFolder): void {
-	if (isBusy.value || !folder.canModify || renamingFolderId.value === folder.id || isInteractiveDragSource(event)) {
+	if (isBusy.value || !folder.canModify || isInteractiveDragSource(event)) {
 		event.preventDefault();
 		return;
 	}
@@ -562,7 +481,7 @@ function onFolderDragStart(event: DragEvent, folder: TradeBookmarkFolder): void 
 }
 
 function onBookmarkDragStart(event: DragEvent, bookmark: TradeBookmarkItem): void {
-	if (isBusy.value || renamingBookmarkId.value === bookmark.id || isInteractiveDragSource(event)) {
+	if (isBusy.value || isInteractiveDragSource(event)) {
 		event.preventDefault();
 		return;
 	}
@@ -609,7 +528,7 @@ async function onDrop(event: DragEvent): Promise<void> {
 	}
 
 	isBusy.value = true;
-	statusText.value = "";
+	dismissSnackBar();
 
 	try {
 		if (item.type === BookmarkDragItemType.Folder) {
@@ -627,7 +546,7 @@ async function onDrop(event: DragEvent): Promise<void> {
 			expandFolder(moveTarget.folderId);
 		}
 	} catch (error) {
-		statusText.value = error instanceof Error ? error.message : "移动失败，请稍后重试。";
+		showBookmarkError(error instanceof Error ? error.message : "移动失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签拖拽移动失败", error);
 	} finally {
 		isBusy.value = false;
@@ -748,81 +667,22 @@ function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folder
 	};
 }
 
-function queueFolderRename(): void {
-	const folderId = renamingFolderId.value;
-	if (!folderId) return;
+function queueFolderRename(folderId: string, title: string): void {
+	dismissSnackBar();
+	if (creatingFolderId.value === folderId) creatingFolderId.value = "";
 
-	const title = renamingFolderTitle.value;
-	creatingFolderId.value = "";
-	clearFolderRename();
-	updateFolderTitleInTree(folderId, getFolderRenameTitle(title));
-
-	void renameBookmarkFolder(folderId, title).catch(async (error: unknown) => {
-		statusText.value = "重命名文件夹失败，请稍后重试。";
+	void renameFolderOptimistically(folderId, title).catch((error: unknown) => {
 		console.error("[poe2-extensions] trade 书签目录重命名失败", error);
-		await loadBookmarks();
 	});
 }
 
-function queueBookmarkRename(): void {
-	const bookmarkId = renamingBookmarkId.value;
-	if (!bookmarkId) return;
+function queueBookmarkRename(bookmarkId: string, title: string): void {
+	dismissSnackBar();
+	if (creatingBookmarkId.value === bookmarkId) creatingBookmarkId.value = "";
 
-	const title = renamingBookmarkTitle.value;
-	creatingBookmarkId.value = "";
-	clearBookmarkRename();
-	updateBookmarkTitleInTree(bookmarkId, getBookmarkRenameTitle(bookmarkId, title));
-
-	void renameTradeBookmark(bookmarkId, title).catch(async (error: unknown) => {
-		statusText.value = "重命名书签失败，请稍后重试。";
+	void renameBookmarkOptimistically(bookmarkId, title).catch((error: unknown) => {
 		console.error("[poe2-extensions] trade 书签重命名失败", error);
-		await loadBookmarks();
 	});
-}
-
-function updateFolderTitleInTree(folderId: string, title: string): void {
-	const folder = findFolderInTree(folderId);
-	if (folder) folder.title = title;
-}
-
-function updateBookmarkTitleInTree(bookmarkId: string, title: string): void {
-	const bookmark = findBookmarkInTree(bookmarkId);
-	if (bookmark) bookmark.title = title;
-}
-
-function getFolderRenameTitle(title: string): string {
-	return title.trim() || "New Folder";
-}
-
-function getBookmarkRenameTitle(bookmarkId: string, title: string): string {
-	const trimmedTitle = title.trim();
-	if (trimmedTitle) return trimmedTitle;
-
-	const bookmark = findBookmarkInTree(bookmarkId);
-	return bookmark ? getTradeBookmarkTitle(undefined, bookmark.url) : "Trade 搜索";
-}
-
-function getTradeBookmarkTitle(title: string | undefined, url: string): string {
-	const trimmedTitle = title?.trim();
-	if (trimmedTitle) return trimmedTitle;
-
-	try {
-		const parsedUrl = new URL(url);
-		const queryId = parsedUrl.pathname.split("/").filter(Boolean).pop();
-		return queryId ? `Trade 搜索 ${queryId}` : "Trade 搜索";
-	} catch {
-		return "Trade 搜索";
-	}
-}
-
-function clearFolderRename(): void {
-	renamingFolderId.value = "";
-	renamingFolderTitle.value = "";
-}
-
-function clearBookmarkRename(): void {
-	renamingBookmarkId.value = "";
-	renamingBookmarkTitle.value = "";
 }
 
 function removeExpandedFolder(folderId: string): void {
@@ -839,15 +699,6 @@ function expandFolder(folderId: string): void {
 
 function findFolderInTree(folderId: string): TradeBookmarkFolder | null {
 	return bookmarkTree.value?.folders.find((folder) => folder.id === folderId) ?? null;
-}
-
-function findBookmarkInTree(bookmarkId: string): TradeBookmarkItem | null {
-	for (const folder of bookmarkTree.value?.folders ?? []) {
-		const bookmark = folder.bookmarks.find((item) => item.id === bookmarkId);
-		if (bookmark) return bookmark;
-	}
-
-	return null;
 }
 
 function isRootFolder(folder: TradeBookmarkFolder | TradeBookmarkRoot): folder is TradeBookmarkRoot {
@@ -931,52 +782,51 @@ function clearDragState(): void {
 							class="bookmark-folder-group"
 							:class="{ expanded: hasFolderContent(folder) && isFolderExpanded(folder) }">
 							<BookmarkFolder
-								v-model:rename-title="renamingFolderTitle"
 								:folder="folder"
 								:expanded="isFolderExpanded(folder)"
 								:has-content="hasFolderContent(folder)"
 								:busy="isBusy"
-								:renaming="renamingFolderId === folder.id"
+								:creating="creatingFolderId === folder.id"
 								:drop-class="getFolderDropClass(folder)"
 								:on-toggle-expanded="() => toggleFolderExpanded(folder)"
 								:on-add-bookmark="() => addCurrentSearchToFolder(folder.id)"
-								:on-start-rename="() => startRenameFolder(folder)"
-								:on-open-menu="(event) => openFolderMenu(event, folder)"
-								:on-context-menu="(event) => openFolderContextMenu(event, folder)"
+								:on-open-menu="(event, startRename) => openFolderMenu(event, folder, startRename)"
+								:on-context-menu="
+									(event, startRename) => openFolderContextMenu(event, folder, startRename)
+								"
 								:on-drag-start="(event) => onFolderDragStart(event, folder)"
 								:on-drag-over="(event) => onFolderDragOver(event, folder)"
 								:on-drop="onDrop"
 								:on-drag-end="clearDragState"
-								:on-confirm-rename="confirmRenameFolder"
-								:on-cancel-rename="cancelFolderRename"
-								:on-rename-blur="onFolderRenameBlur" />
+								:on-confirm-rename="(title) => queueFolderRename(folder.id, title)"
+								:on-cancel-rename="() => cancelFolderRename(folder.id)" />
 
 							<div v-show="isFolderExpanded(folder)" class="bookmark-folder-body">
 								<BookmarkItem
 									v-for="bookmark in folder.bookmarks"
 									:key="bookmark.id"
-									v-model:rename-title="renamingBookmarkTitle"
 									:bookmark="bookmark"
 									:busy="isBusy"
-									:renaming="renamingBookmarkId === bookmark.id"
+									:creating="creatingBookmarkId === bookmark.id"
 									:drop-class="getBookmarkDropClass(bookmark)"
 									:on-open="() => onOpenBookmark(bookmark)"
-									:on-start-rename="() => startRenameBookmark(bookmark)"
-									:on-open-menu="(event) => openBookmarkItemMenu(event, bookmark)"
-									:on-context-menu="(event) => openBookmarkContextMenu(event, bookmark)"
+									:on-open-menu="
+										(event, startRename) => openBookmarkItemMenu(event, bookmark, startRename)
+									"
+									:on-context-menu="
+										(event, startRename) => openBookmarkContextMenu(event, bookmark, startRename)
+									"
 									:on-drag-start="(event) => onBookmarkDragStart(event, bookmark)"
 									:on-drag-over="(event) => onBookmarkDragOver(event, bookmark)"
 									:on-drop="onDrop"
 									:on-drag-end="clearDragState"
-									:on-confirm-rename="confirmRenameBookmark"
-									:on-cancel-rename="cancelBookmarkRename"
-									:on-rename-blur="onBookmarkRenameBlur" />
+									:on-confirm-rename="(title) => queueBookmarkRename(bookmark.id, title)"
+									:on-cancel-rename="() => cancelBookmarkRename(bookmark.id)" />
 							</div>
 						</div>
 					</div>
 				</section>
 			</div>
-			<p class="message" :class="{ empty: !statusText }" aria-live="polite">{{ statusText }}</p>
 		</section>
 	</section>
 </template>
@@ -1002,26 +852,13 @@ p {
 	margin: 0;
 }
 
-.message,
 .muted {
 	color: var(--color-text);
 }
 
-.message {
-	padding: 7px 9px;
-	border: 1px solid #8a6d3b;
-	background: #101112;
-	font-size: 11px;
-	line-height: 1.4;
-}
-
-.message.empty {
-	visibility: hidden;
-}
-
 .bookmark-list {
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr) auto;
+	grid-template-rows: auto minmax(0, 1fr);
 	gap: 4px;
 	min-height: 0;
 }

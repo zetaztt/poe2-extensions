@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { SidepanelMenuAlign, type SidepanelMenuState } from "./sidepanel-menu-types";
+import { SidepanelMenuState, SidepanelMenuAlign, SidepanelMenuItem } from "./sidepanel-menu-types";
 
 type PopoverElement = HTMLElement & {
 	popover: string | null;
@@ -70,7 +70,7 @@ function onGlobalDragStart(): void {
 	if (props.state.open) props.closeMenu();
 }
 
-async function runMenuItem(item: SidepanelMenuState["items"][number], event: MouseEvent): Promise<void> {
+async function runMenuItem(item: SidepanelMenuItem, event: MouseEvent): Promise<void> {
 	event.stopPropagation();
 	if (item.disabled) return;
 

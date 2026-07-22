@@ -1,27 +1,34 @@
 <script lang="ts" setup>
-import type { Directive } from "vue";
+import { ref, watch, type Directive } from "vue";
 import type { TradeBookmarkItem } from "../../bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
 
 const props = defineProps<{
 	bookmark: TradeBookmarkItem;
 	busy: boolean;
-	renaming: boolean;
+	creating: boolean;
 	dropClass: Record<string, boolean>;
 	onOpen?: () => void;
-	onStartRename?: () => void;
-	onOpenMenu?: (event: MouseEvent) => void;
-	onContextMenu?: (event: MouseEvent) => void;
+	onOpenMenu?: (event: MouseEvent, startRename: () => void) => void;
+	onContextMenu?: (event: MouseEvent, startRename: () => void) => void;
 	onDragStart?: (event: DragEvent) => void;
 	onDragOver?: (event: DragEvent) => void;
 	onDrop?: (event: DragEvent) => void;
 	onDragEnd?: () => void;
-	onConfirmRename?: () => void;
+	onConfirmRename?: (title: string) => void;
 	onCancelRename?: () => void;
-	onRenameBlur?: () => void;
 }>();
 
-const renameTitle = defineModel<string>("renameTitle", { required: true });
+const renaming = ref(false);
+const renameTitle = ref("");
+
+watch(
+	() => props.creating,
+	(creating) => {
+		if (creating) startRename();
+	},
+	{ immediate: true },
+);
 
 function focusRenameInput(element: HTMLInputElement): void {
 	if (element.disabled || document.activeElement === element) return;
@@ -44,15 +51,18 @@ function openBookmark(): void {
 }
 
 function startRename(): void {
-	props.onStartRename?.();
+	if (props.busy) return;
+
+	renameTitle.value = props.bookmark.title;
+	renaming.value = true;
 }
 
 function openMenu(event: MouseEvent): void {
-	props.onOpenMenu?.(event);
+	props.onOpenMenu?.(event, startRename);
 }
 
 function openContextMenu(event: MouseEvent): void {
-	props.onContextMenu?.(event);
+	props.onContextMenu?.(event, startRename);
 }
 
 function onDragStart(event: DragEvent): void {
@@ -72,15 +82,18 @@ function onDragEnd(): void {
 }
 
 function confirmRename(): void {
-	props.onConfirmRename?.();
+	if (!renaming.value) return;
+
+	const title = renameTitle.value;
+	renaming.value = false;
+	props.onConfirmRename?.(title);
 }
 
 function cancelRename(): void {
-	props.onCancelRename?.();
-}
+	if (!renaming.value) return;
 
-function onRenameBlur(): void {
-	props.onRenameBlur?.();
+	renaming.value = false;
+	props.onCancelRename?.();
 }
 </script>
 
@@ -113,7 +126,7 @@ function onRenameBlur(): void {
 						:disabled="busy"
 						@keydown.enter.prevent="confirmRename"
 						@keydown.esc.prevent="cancelRename"
-						@blur="onRenameBlur" />
+						@blur="confirmRename" />
 				</span>
 			</span>
 		</span>
