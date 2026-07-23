@@ -1,4 +1,4 @@
-import { ipcMain } from "../ipc/ipc";
+import { ipcMain } from "../../ipc/ipc";
 import { settingsIpcProtocol } from "./settings-ipc-protocol";
 import {
 	TradeSetting,

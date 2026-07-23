@@ -7,8 +7,8 @@ import {
 	loadDictionary as loadDictionaryFromService,
 	subscribeDictionary,
 	type DictionaryServiceEvent,
-} from "../../dictionary/dictionary-service";
-import type { DictionarySearchResult, TranslateDictionary } from "../../dictionary/dictionary-types";
+} from "../../modules/dictionary/dictionary-service";
+import type { DictionarySearchResult, TranslateDictionary } from "../../modules/dictionary/dictionary-types";
 
 interface DictionarySearchEntry extends DictionarySearchResult {
 	normalizedOriginal: string;
@@ -132,4 +132,4 @@ function createInitialError(): DictionaryStoreError | null {
 	return error ? { sequence: 1, error } : null;
 }
 
-export type { DictionarySearchResult } from "../../dictionary/dictionary-types";
+export type { DictionarySearchResult } from "../../modules/dictionary/dictionary-types";

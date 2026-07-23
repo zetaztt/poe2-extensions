@@ -11,7 +11,7 @@ import {
 	updateSetting as updateSettingFromService,
 	type SettingsServiceEvent,
 	type TradeSettings,
-} from "../../settings/settings-service";
+} from "../../modules/settings/settings-service";
 
 export interface SettingsStoreError {
 	sequence: number;

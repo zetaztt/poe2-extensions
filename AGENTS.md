@@ -2,155 +2,106 @@
 
 ## 项目概览
 
-这是一个面向 Path of Exile 2 trade2 页面的浏览器扩展，用于在 `https://www.pathofexile.com/trade2` 上提供中文化和交易辅助工具。项目基于 Vite、vite-plugin-web-extension、Vue 3 和 TypeScript 构建，核心能力包括：
+本仓库是面向 Path of Exile 2 `trade2` 页面的 Chromium Manifest V3 扩展。代码跨越 background service worker、sidepanel 扩展页面、isolated world content script 和 MAIN world 注入环境；修改前必须确认代码所属环境及跨环境边界。
 
-- 在 trade2 页面加载早期注入主世界脚本。
-- 拦截物品、词缀、静态数据和筛选器相关数据。
-- 使用本地、缓存或远端翻译字典将命中文本显示为中文。
-- 在关键条目后保留英文原文，避免丢失原始语义。
-- 将 trade2 本地缓存重定向到 `_zh` 后缀，避免污染官方英文缓存。
-- 在侧边栏维护 trade2 搜索书签、搜索翻译词典和计算货币或商品差价。
-- 将 trade2 搜索结果中的物品复制为 PoB 可识别文本。
-- 保存、应用、重命名和删除 trade2 高级筛选 stat group 预设。
+## 仓库结构
 
-## 技术栈
+- `src/background.ts`：background composition root，只注册浏览器行为、IPC 实现和业务 handler，不承载业务实现。
+- `src/ipc/`：统一的跨运行环境通信层；协议定义与 transport、connection hub 分离。
+- `src/modules/`：跨运行环境的业务域。模块按需使用 `*-types.ts`、`*-ipc-protocol.ts`、`*-storage.ts`、`*-background-service.ts` 和 `*-service.ts`：types 定义共享数据契约，protocol 定义跨环境接口，storage 负责持久化格式与校验，background service 负责跨环境协调和权威状态，service 向页面提供进程内状态与事件；不为没有实际职责的层创建空文件。
+- `src/sidepanel/`：Vue 侧边栏。组件维护交互状态，`*-store.ts` 连接业务 service，不直接取代 service 或 background 的权威状态。
+- `src/trade/`：trade2 页面集成层；隔离世界入口负责编排 content IPC 和脚本注入，各页面功能在自身目录维护独立的 MAIN world 入口与 DOM 生命周期。
+- `data/trade-texts.po`：翻译人工维护源；`assets/translate.json` 和 `assets/translate-meta.json` 是生成产物及扩展内置 fallback。
+- `scripts/translate/`：拉取 trade 数据和生成字典；`packages/trade-translate-tools/` 是 npm workspace 中供脚本和发布分支复用的源码包。
 
-- Vite：浏览器扩展工程构建、开发服务器和静态资源处理。
-- vite-plugin-web-extension：根据 manifest 和额外入口构建 WebExtension。
-- @vitejs/plugin-vue：Vue 单文件组件编译。
-- Vue 3：侧边栏页面。
-- TypeScript：扩展逻辑、注入脚本和翻译数据脚本。
-- Browser Extension APIs：`browser.runtime`、`browser.storage.local`、`browser.storage.sync`、`browser.tabs`、`navigator.clipboard`、Chrome Side Panel API、content script 通信。
-- `pofile`：读写翻译源数据。
+## 开发流程
 
-## 目录说明
+1. 修改前沿调用链确认运行环境、入口、IPC protocol、权威状态和持久化边界；不要依据旧文档猜测当前结构。
+2. 修改已有功能时，以完成当前任务所需的最小改动为边界；除非任务明确要求或正确实现无法绕开，否则沿用现有架构、命名、IPC、状态管理和目录组织，不夹带无关重构。
+3. 发现任务范围外的架构问题时，先完成并验证当前任务，再在交付说明中提出可独立评审的重构建议；若架构问题直接阻塞正确实现，才允许进行必要且影响范围最小的重构，并说明原因。
+4. 将改动放在现有职责层：组件处理展示和临时交互，store 适配 Vue，service 管理页面侧业务状态，background service 处理跨页面协调和持久化，storage 模块负责序列化与校验。
+5. 新增或调整跨环境能力时，同时检查注册该环境 IPC 实现的入口，以及 protocol、handler、调用方和清理逻辑。
+6. 新增浏览器运行入口时同步检查 `vite.config.ts` 的 `additionalInputs`、`src/manifest.json`、动态 content script 注册和 web accessible resources；仅更新实际需要的配置。
+7. 翻译文本先修改 `data/trade-texts.po`，再运行 `npm run build-translate`；不要手工编辑字典内容或版本号。
+8. 根据改动范围执行验证并检查最终 diff；生成命令产生的文件只有属于当前任务时才保留。
 
-- `vite.config.ts`：Vite 与 `vite-plugin-web-extension` 配置，合并 `package.json` 元信息和 `src/manifest.json`，并通过 `additionalInputs` 构建主世界注入脚本。
-- `src/manifest.json`：扩展 manifest 源文件，声明 background、side panel、content script、权限和 web accessible resources。
-- `src/background.ts`：background service worker 入口，负责侧边栏点击行为、翻译字典的本地 fallback、缓存、远端版本检查和消息响应。
-- `src/sidepanel/`：扩展侧边栏的 Vue 页面和全局样式，包含书签、差价、词典和设置四个标签页。
-- `src/settings/settings.ts`：全项目云同步用户设置入口，包含默认关闭的中文翻译、物品文本复制和筛选预设三个 trade 功能开关。
-- `src/bookmarks/`：扩展自有的 trade2 书签树类型、`browser.storage.local` 存储校验和增删改查业务逻辑；不依赖浏览器书签 API，源码文件使用 `bookmarks-*` 前缀命名。
-- `src/sidepanel/bookmarks/`：书签树、文件夹、条目、菜单、拖拽和当前 trade2 搜索保存交互。
-- `src/sidepanel/dictionary/`：翻译字典中英文搜索和英文原文复制页面。
-- `src/sidepanel/settings/`：三个 trade 功能开关及当前活动 trade2 标签页同步逻辑。
-- `src/trade/`：trade 页面逻辑、功能状态消息、通用类型和工具。
-    - `trade-content.ts`：manifest `content_scripts` 直接声明的 trade content script 编排入口，负责读取三个 trade 功能开关、安装模块 content bridge、注入 `src/trade/trade-inject.js` 并同步功能状态。
-    - `trade-inject.ts`：通过 `vite.config.ts` 的 `additionalInputs` 构建的 trade 主世界脚本入口，负责监听功能状态消息并安装已启用功能。
-    - `translate/`：中文化数据 hook、DOM 翻译、翻译消息、翻译字典 content bridge 和 `_zh` 本地缓存隔离。
-    - `item-code/`：接管搜索结果复制按钮，并将 trade 物品数据格式化为 PoB 文本。
-    - `stat-preset/`：在高级筛选界面安装预设 UI，并通过 content bridge 和本地存储消息处理完成预设存储操作。
-- `src/translate-dictionary.ts`：主世界脚本侧加载翻译字典的入口，通过 `window.postMessage` 请求 content/background。
-- `scripts/translate/`：翻译数据拉取和字典生成脚本。
-- `data/`：翻译源 PO 数据。
-- `assets/`：Vite `publicDir`，包含扩展图标以及生成的 `translate.json` 和 `translate-meta.json`，构建时原样复制到扩展输出目录。
-- `dist/`、`.chrome-profile/`、`node_modules/`、`storage/`：本地生成、开发浏览器配置或依赖目录，不应作为业务源码修改。
+## 架构规则
 
-## 常用命令
+- 跨 background、sidepanel、content 和 MAIN world 的业务通信必须使用 `src/ipc/` 与具名 `*-ipc-protocol.ts`；不要另建裸 `browser.runtime` 消息或 `window.postMessage` 协议。新增协议成员时同步类型、handler 和调用方。
+- 需要跨页面共享可变状态的业务模块由 background service 持有权威状态。跨页面状态同步必须区分 background service worker 生命周期，并拒绝重复、过期或乱序状态；不得退化为组件本地副本或 mutation 返回值驱动的长期状态。
+- sidepanel 的 store 必须订阅 service 事件，并以 service 当前状态恢复；持久化失败、background 重启和多个侧边栏并存都是正常运行场景。
+- `browser.storage.sync` 只用于体积小且需要跨设备同步的用户设置；业务数据、大体积数据和缓存使用 `browser.storage.local`。更改既有 storage key、数据版本或 IPC method 属于兼容性变更，必须同时提供迁移或明确的兼容策略。
+- 翻译通过 background 动态注册 `world: "MAIN"` 的 content script，仅在开启时加载；切换翻译设置通过注册状态同步和刷新活动 trade2 标签页生效。当前 hook 不支持卸载，不得改成无刷新即时切换，除非同时实现完整回滚。
+- 物品复制和筛选预设脚本会预先注入，但必须按设置即时启停。关闭时恢复官方按钮行为，移除或停用扩展事件、观察器、样式、弹窗和插入 DOM；保留的惰性观察器不得继续产生功能副作用或重复绑定。
+- MAIN world hook 的影响范围必须限定在 `https://www.pathofexile.com/trade2`。翻译缓存必须与官方缓存隔离，避免中文数据污染英文缓存；现有 `_zh` namespace 属于持久化兼容约定，变更时必须提供迁移策略。
+- 翻译字典继续按“内置 fallback → 有效本地缓存 → 更高版本远端字典”选择，并在使用或缓存前校验 meta、缓存和字典结构；远端失败不能破坏可用 fallback。
+- 物品和 stat 词条翻译必须保留可见的英文原文，避免中文映射不完整或歧义时丢失原始语义。
+- 书签只接受同源 `https://www.pathofexile.com/trade2` URL，目录模型保持顶层一级结构。打开书签时优先复用当前活动 trade2 标签页；导入、存储读取和 background 写入都必须保留结构与 URL 校验。
+- 筛选预设 RPC 只在功能开启时可用；读取无效持久化数据时回退安全默认值，写入前继续校验名称和预设数组结构。
+- 模块入口只负责编排、生命周期、环境注册和公开 API。DOM 安装、格式化、存储、校验和弹窗等实现放入同功能目录的职责文件。
+- 在同一运行环境且依赖方向自然时直接调用目标模块；不要为形式解耦增加透传回调或中转层。跨运行环境、反向依赖或需要隔离副作用时才使用 protocol、接口或注入点。
 
-- `npm run dev`：启动 Chromium 开发模式。
-- `npm run build`：构建 Chromium 扩展。
-- `npm run compile`：运行 `vue-tsc --noEmit` 做类型检查。
-- `npm run format`：使用 Prettier 格式化纳管文件。
-- `npm run format:check`：检查纳管文件是否符合 Prettier 格式。
-- `npm run pull-translate`：从 POE2 官方英文/繁中 trade 数据接口拉取文本到 `data/trade-texts.po`。
-- `npm run build-translate`：根据 `data/trade-texts.po` 生成 `assets/translate.json` 和 `assets/translate-meta.json`。
+## 编码规范
 
-## 扩展运行链路
+- 新功能源码使用“模块路径 + 职责”的 `kebab-case` 文件名；Vue 单文件组件使用 `kebab-case.vue`。保留 manifest、Vite 或 HTML 直接引用的现有入口文件名。
+- 单文件专用的 selector、DOM id、timeout、storage key 和文案留在该文件；至少两个职责文件共享时再移入同目录工具或现有业务模块，不为少量常量新建中转文件。
+- 集合遍历优先使用 `for...of`，需要索引时使用 `entries()`；模块级和局部 `const` 使用 camelCase，外部协议名称保持原始大小写。
+- 仅为运行环境限制、兼容策略、非显而易见副作用和状态归属添加注释，并说明原因或维护风险；不要用注释复述代码。
+- 页面可见错误和日志可以使用中文；新增状态码或错误类型时沿用所在模块现有 enum 与映射方式，不在协议值中混入 UI 文案。
 
-1. `vite.config.ts` 使用 `webExtension()` 合并 `package.json` 元信息和 `src/manifest.json`，生成扩展 manifest。
-2. `src/manifest.json` 声明 `src/background.ts` 为 service worker，并设置点击扩展图标打开侧边栏。
-3. `src/sidepanel/index.html` 加载侧边栏 Vue 应用；侧边栏包含书签、差价、词典和设置四个标签页；书签初始化成功时默认进入书签页，否则停留在设置页。
-4. 设置页通过 `src/settings/settings.ts` 读写 `browser.storage.sync` 中三个默认关闭的功能开关。
-5. manifest 的 `content_scripts` 匹配 `https://www.pathofexile.com/trade2*`，在 `document_start` 运行 `src/trade/trade-content.ts` 完成 trade content 安装。
-6. content script 始终通过 `browser.runtime.getURL("src/trade/trade-inject.js")` 注入主世界入口，随后使用 trade 功能消息下发当前开关状态。
-7. `src/trade/trade-inject.ts` 构建出的主世界脚本验证域名、路径和站点标识后监听功能状态，只安装已启用功能对应的 hook 或 UI。
-8. 中文翻译启用时，主世界脚本注入官方繁中脚本、安装 trade 数据和 DOM 翻译逻辑，并将指定 localStorage key 重定向到 `_zh` 后缀。
-9. 主世界脚本通过 `src/translate-dictionary.ts` 发出翻译字典请求，content script 仅在翻译开启时将请求转发给 background。
-10. background 在扩展内置字典、`browser.storage.local` 缓存和远端 `https://zetaztt.github.io/poe2/` 字典之间选择可用的最新版本，并在返回前校验结构。
-11. 物品复制启用时，主世界脚本监听搜索结果 DOM，将原复制按钮绑定为 PoB 文本复制；关闭时移除绑定并恢复按钮原状态。
-12. 筛选预设启用时，主世界脚本在高级筛选界面安装保存和选择 UI，通过 `window.postMessage` 向 content script 请求本地预设的读取、保存、重命名和删除。
-13. 翻译开关切换后刷新当前活动 trade2 标签页，以便完整安装或停止不可卸载的翻译 hook；物品复制和筛选预设通过运行时消息即时更新。
-14. 三个功能全部关闭时，入口脚本和桥接仍存在，但不会安装翻译 hook、物品复制绑定或页面 UI。
+## 测试与验证
 
-## 侧边栏与存储
+验证按改动范围和风险由窄到宽逐级执行：
 
-- `browser.storage.sync` 只存放三个体积较小、需要云同步的功能开关。
-- `browser.storage.local` 存放扩展自有书签树、差价工具状态、筛选预设和远端翻译字典缓存。
-- 书签功能只接受 `https://www.pathofexile.com/trade2` 下的 URL；打开书签时优先复用当前活动的 trade2 标签页。
-- 差价工具由用户维护货币、商品和报价，支持货币双向循环及商品跨货币买卖计算；跨货币商品机会只使用直接兑换报价。
-- 词典页直接通过 `browser.runtime.sendMessage` 向 background 请求与页面翻译相同的最新可用字典，不经过 trade2 页面桥接。
-- 筛选预设保存在 `tradeStatPresets` 本地存储项中，content script 必须对消息和存储结构进行校验。
+1. 优先运行能够覆盖本次改动的最小、最快验证。
+2. 只有较窄验证无法覆盖构建、入口或跨运行环境集成风险时，才升级到完整 build。
+3. 不为追求形式上的完整验证，重复运行与改动无关的昂贵流程。
 
-## 翻译数据流程
+按以下规则选择验证：
 
-- 优先维护 `data/trade-texts.po` 中的源数据和翻译数据。
-- `data/trade-texts.po` 是从官方 trade 数据接口整理出的文本清单，同时包含人工补充翻译结果。
-- 生成最终字典时运行 `npm run build-translate`。
-- `assets/translate.json` 和 `assets/translate-meta.json` 是生成产物，同时也是扩展的本地 fallback 资源；可以随翻译数据一起提交，但不要手动随意修改版本号。
-- `translate-meta.json` 的 `version` 在字典内容变化时由脚本使用 `Date.now()` 更新。
+- 仅文档或注释：对改动文件运行 Prettier check；不需要构建。
+- TypeScript 或 Vue：`npm run compile`。
+- manifest、入口、IPC transport、sidepanel 或 trade 注入链路：`npm run compile` 和 `npm run build`。
+- `packages/trade-translate-tools/`：除根类型检查外运行 `npx tsc --noEmit -p packages/trade-translate-tools/tsconfig.json`。
+- 翻译源：运行 `npm run build-translate`，确认两个字典产物同时更新，且内容未变化时 meta version 不应变化。
+- 所有纳管文件的格式检查使用 `npm run format:check`；只检查单个文档可使用 `npx prettier --check <file>`。
 
-## Plan Mode 防误执行规则
+涉及浏览器行为时还需做针对性手工验证：
 
-- 如果当前处于 Plan Mode，无论用户历史消息里是否出现过 `PLEASE IMPLEMENT THIS PLAN`、`implement`、`执行`、`实现` 等字样，都只能进行只读分析、讨论方案和输出计划。
-- 不得把旧消息中的执行授权延续到新的请求；每次是否可以修改文件，必须以当前最新用户消息和当前有效的 collaboration mode 为准。
-- 只有同时满足以下条件时，才可以修改文件：
-    - 当前不处于 Plan Mode。
-    - 当前最新用户消息明确要求实现、修改、应用补丁或执行计划。
-- 在任何文件修改前，必须先自检：
-    - 当前是否处于 Plan Mode。
-    - 当前最新用户消息是否要求实现。
-    - 本次要修改的文件是否属于当前请求。
-    - 是否需要先给计划。
-- 如果当前请求、历史消息和 collaboration mode 之间存在冲突，优先遵守当前 collaboration mode；Plan Mode 下必须停止执行并输出计划。
+- 各 trade 页面功能应能分别启停且互不影响；翻译开启或关闭后刷新生效，字典失败时 fallback 可用，官方缓存仍隔离到 `_zh`。
+- 物品复制和筛选预设可即时启停，动态结果可用，关闭后官方行为和页面 DOM 恢复。
+- 书签覆盖目录增删改、同目录和跨目录拖拽、导入导出、保存或替换当前搜索、活动 trade2 标签页复用，以及重开侧边栏后的持久化。
+- 字典页覆盖中英文搜索、加载失败重试和英文复制；设置页覆盖 background 重启及多个侧边栏同步。
 
-## 开发注意事项
+## 工具与依赖
 
-- 当用户要求先给计划、评审方案，或当前处于 Plan Mode 时，只能进行只读分析并输出计划；不得直接修改文件，也不得运行会改变仓库内容的命令，例如格式化写入、代码生成、迁移、自动修复或构建产物更新。只有用户明确要求实现且当前不在 Plan Mode 时，才执行代码改动。
-- 保持 `src/manifest.json`、`vite.config.ts` 和实际入口文件一致；新增浏览器运行入口时同步更新 manifest、`additionalInputs` 或 HTML 引用。
-- 新增功能设置应优先集中在 `src/settings/settings.ts`，保持默认值、storage key 和读写函数可复用。
-- sidepanel 的 Vue、DOM、拖拽、菜单和提示状态保留在对应页面目录；存储、校验、计算和可复用业务操作放在 `src/bookmarks/`、`src/settings/` 等功能模块。
-- 书签业务数据以 bookmarks service 的当前状态读取函数和事件订阅为权威来源；页面层保留展开、拖拽、重命名、菜单等交互状态，但书签树显示应订阅 service 数据变化刷新。写操作返回值可以短期兼容既有流程，但不作为长期维护 UI 数据的主要方式。
-- 用户开关设置使用 `browser.storage.sync` 云同步；书签、差价状态、筛选预设、翻译字典缓存等业务或大体积数据继续使用 `browser.storage.local`。
-- content script 与主世界脚本之间只能通过受控消息桥接；新增消息时同步更新类型守卫和消息类型定义。
-- background 返回的翻译字典必须经过结构校验，避免把无效远端或缓存数据传入页面。
-- 主世界 hook 会影响 trade2 页面运行时行为，修改 `src/trade/` 时要尽量收窄影响范围。
-- 各模块入口文件优先只负责生命周期、状态切换、功能编排和对外 API；DOM/UI 安装、样式注入、消息请求、存储访问、弹窗、下拉、按钮、格式化、校验、计算等独立逻辑应拆到对应职责脚本。
-- 拆分模块时保持已有对外导入路径、storage key、消息协议和功能开关 API 稳定，除非任务明确要求改动。
-- 优先表达真实依赖；无论是否跨模块，只要调用目的明确、流程稳定、依赖方向自然，就可以直接调用目标函数，避免为了形式上的解耦透传回调、创建中转层或引入 options。
-- 只有存在复用、可替换行为、反向依赖风险、跨运行环境边界、测试替身需求或副作用隔离需求时，再使用回调、接口、options 或消息协议。
-- 只被单个脚本使用的 DOM id、class、selector、timeout、storage key、局部文案等定义放在对应脚本内；两个以上脚本复用的通用函数或定义放到同目录 `utils.ts` 或已有业务工具模块。
-- 只有存在明确跨模块共享需求时才新建 `constants.ts`、`types.ts` 等共享文件，避免为了少量单用常量创建中转文件。
-- 三个 trade 功能开关默认关闭；修改注入链路时确认关闭状态不会安装对应 hook、按钮绑定或页面 UI。
-- 翻译 hook 当前只安装一次且不支持运行时卸载，因此翻译设置继续通过刷新 trade2 页面生效；不要直接改成即时切换，除非同时实现完整卸载。
-- 物品复制和筛选预设支持即时启停；关闭时必须清理事件、观察器、样式和扩展插入的 DOM，并保留官方页面原行为。
-- 筛选预设消息只能在功能开启时处理，写入前继续校验名称和预设数组结构。
-- 书签和差价数据读取时应继续校验持久化结构，无效数据使用安全默认值或重建默认树。
-- 避免污染官方 trade2 本地缓存；涉及缓存 key 或 storage 改动时确认 `_zh` 隔离策略仍然有效。
-- 修改翻译数据时，优先改 `data/trade-texts.po`，再运行 `npm run build-translate` 更新 `assets/translate.json` 和 `assets/translate-meta.json`。
-- 项目当前没有专门测试框架；较大逻辑变更至少运行类型检查和构建。
-- 代码格式由 Prettier 统一，配置见 `.prettierrc.json`：Tab 缩进宽度 4、双引号、分号、`bracketSameLine: true`。
-- `const` 声明的全局常量、模块级常量和局部常量统一使用 camelCase；环境变量 key 等外部协议名称保持其原始大小写。
-- 遍历数组、NodeList、Map、Set 等集合时优先使用 `for...of`，避免使用 `.forEach(...)`，需要索引时使用 `entries()`。
-- TypeScript 保持模块化、小范围类型守卫，中文日志和用户可见说明可以保留中文。
-- 编写代码时必须添加必要注释：复杂算法、特殊兼容逻辑、非显而易见的副作用、运行环境限制、临时权衡、未来计划，以及重要变量、集合或状态的业务角色/归属，都应说明原因、约束来源或维护风险。
-- 注释应解释“为什么这样做”或“它在业务中属于什么角色”，不要复述代码“做了什么”；函数名、变量名、参数类型已经能清楚表达的内容，不要再写重复注释。
-- 如果普通逻辑需要靠注释解释意图，优先通过提炼函数、改进命名或分解复杂条件让代码自解释；复杂分支条件优先提取具名布尔变量或判断函数，仍有业务背景或特殊取舍时再补充注释。
-- 固定协议值、状态码、事件类型、消息类型、业务操作类型等跨函数或跨模块传递的有限集合优先提炼为 `enum`，避免在业务逻辑中直接比较散落的字符串字面量或裸数字；UI 文案和错误提示不要写进 `enum`，应使用配置表按枚举 key 映射；仅内部使用的状态码优先用数值枚举，需要跨运行环境、存储或消息协议稳定可读时再使用字符串枚举。
-- 功能模块源码文件默认使用“模块路径 + 职责名”的 `kebab-case` 命名，并保留目录结构；例如 `src/trade/stat-preset/trade-stat-preset-modal.ts`。当前已迁移 `src/trade`、`src/bookmarks`，后续新增功能模块按同样规则命名。
-- Vue 单文件组件使用 `kebab-case.vue`；保留 manifest 或 Vite 直接引用的入口文件名如 `src/background.ts`、`src/trade/trade-content.ts`、`src/trade/trade-inject.ts`。
-- Git 提交日志使用中文，保持简短并说明核心变更。
+- 使用根 `package-lock.json` 管理 npm workspace 依赖。依赖变更必须同步 lockfile，不要引入第二套包管理器或独立子包 lockfile。
+- Vite 以 `assets/` 为 `publicDir`，构建时原样复制资源；源码入口由 manifest、HTML 或 `additionalInputs` 管理，不能仅创建文件而不接入构建。
+- `packages/trade-translate-tools` 的源码位于 main 分支；`trade-translate-tools-package` 分支由 GitHub Actions 生成，不作为手工维护源。
+- `npm run pull-translate` 会访问外部 trade API 并重写翻译源及变更日志，只在任务明确需要同步上游数据时运行。
 
-## 验证建议
+## Git 与变更管理
 
-- 文档或注释变更通常不需要运行测试。
-- 修改纳管文件后运行 `npm run format`，或至少运行 `npm run format:check` 确认格式。
-- TypeScript 或 Vue 逻辑变更后运行 `npm run compile`。
-- 入口、manifest、侧边栏、注入链路或构建相关改动后运行 `npm run build`，确认 manifest 包含 `side_panel`、`sidePanel` 权限和 `action`，且没有 `action.default_popup`。
-- 翻译数据变更后运行 `npm run build-translate`，确认 `assets/translate.json` 与 `assets/translate-meta.json` 更新符合预期。
-- 书签改动应手动验证目录增删改、跨目录拖拽、保存当前搜索、替换搜索、复用当前 trade2 标签页和本地持久化。
-- 差价工具改动应验证状态恢复、货币循环、商品同币种与跨币种计算、缺失直接兑换提示、利润门槛和排序。
-- 词典页改动应验证中英文搜索、结果上限、失败重试和英文复制。
-- 涉及页面注入、hook、storage 或消息桥接的改动，建议在开发模式下手动打开 `https://www.pathofexile.com/trade2`，确认三个功能默认关闭且互不影响。
-- 分别验证翻译开启后的页面刷新、字典加载、繁中脚本、数据与 DOM 中文化和 `_zh` 缓存隔离。
-- 分别验证物品复制与筛选预设的即时启停、页面动态内容、PoB 文本复制、预设增删改用，以及关闭后的 UI 和事件清理。
+- 提交保持单一目的；翻译源变更应与对应的 `assets/translate.json`、`assets/translate-meta.json` 生成结果一起审查。
+- Git 提交说明使用简短中文并描述核心变更。
+- 不把工作流生成的 package 分支内容回写为 main 分支源码，也不手工发布该分支或字典 Pages；发布由现有 GitHub Actions 路径触发。
+
+## AGENTS.md 维护规则
+
+- AGENTS.md 用于记录 Coding Agent 无法可靠推断的项目规则。
+- 不记录通用编程知识、Git 基础知识或工具默认行为。
+- 不复制 README、API 文档或外部技术文档内容。
+- 不维护可通过目录扫描得到的当前模块、文件或功能清单；仓库结构只描述分类规则、职责边界和架构不变量。
+- 优先记录约束、决策和流程，而不是背景说明。
+- 优先记录必须长期成立的行为和边界不变量，而不是当前实现机制；只有实现细节本身构成兼容协议、运行环境约束或明确架构决策时，才保留具体名称。
+- 新增规则前，确认该规则是否：
+    1. Agent 容易误判；
+    2. 违反后会产生较大影响；
+    3. 不能通过代码或配置自动约束。
+- 删除已经由工具自动保证的规则，例如已有 lint、formatter、gitignore 明确约束的内容。
+- 保持 AGENTS.md 简洁，避免成为项目文档替代品。
+- 修改 AGENTS.md 时，只保留对未来 Coding Agent 有实际帮助的信息。
+- 定期检查规则是否仍然有效，删除过时约束。
+- 维护前必须核对当前目录、入口、配置和实现；代码与本文件冲突时先确认真实意图，不延续已不存在模块的说明。
+- 每条新增规则应能指出适用范围、违反风险或必要流程；临时约束需注明删除条件。
+- 保持本文件不超过 300 行；能由链接到仓库内权威文件替代的长篇说明不在此展开。

@@ -1,4 +1,4 @@
-import { ipcMain } from "../ipc/ipc";
+import { ipcMain } from "../../ipc/ipc";
 import { bookmarksIpcProtocol } from "./bookmarks-ipc-protocol";
 import {
 	exportBookmarkFolder,

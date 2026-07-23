@@ -1,9 +1,9 @@
 import browser from "webextension-polyfill";
-import { installTradeBookmarkHandlers } from "./bookmarks/bookmarks-background-service";
-import { installDictionaryHandlers } from "./dictionary/dictionary-background-service";
+import { installTradeBookmarkHandlers } from "./modules/bookmarks/bookmarks-background-service";
+import { installDictionaryHandlers } from "./modules/dictionary/dictionary-background-service";
 import { ipcMain, ipcWindow } from "./ipc/ipc";
 import { createBackgroundIpcMain, createTabIpcWindow } from "./ipc/ipc-implementations";
-import { installTradeSettingsHandlers } from "./settings/settings-background-service";
+import { installTradeSettingsHandlers } from "./modules/settings/settings-background-service";
 import { installTradeStatPresetHandlers } from "./trade/stat-preset/trade-stat-preset-storage";
 ipcMain.register(createBackgroundIpcMain);
 ipcWindow.register(createTabIpcWindow);

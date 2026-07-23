@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, watch, type Directive } from "vue";
-import type { TradeBookmarkItem } from "../../bookmarks/bookmarks-types";
+import type { TradeBookmarkItem } from "../../modules/bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
 
 const props = defineProps<{

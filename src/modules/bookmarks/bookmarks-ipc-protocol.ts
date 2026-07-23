@@ -1,4 +1,4 @@
-import { defineIpcProtocol, defineNotification, defineRpc } from "../ipc/ipc-protocol";
+import { defineIpcProtocol, defineNotification, defineRpc } from "../../ipc/ipc-protocol";
 import type {
 	BookmarkFolderOption,
 	TradeBookmarkChangeResult,

@@ -1,4 +1,4 @@
-import { defineIpcProtocol, defineRpc } from "../ipc/ipc-protocol";
+import { defineIpcProtocol, defineRpc } from "../../ipc/ipc-protocol";
 import type { TranslateDictionary } from "./dictionary-types";
 
 export const dictionaryIpcProtocol = defineIpcProtocol({

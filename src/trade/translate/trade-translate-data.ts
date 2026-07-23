@@ -1,6 +1,6 @@
 import { proxy, XhrResponse } from "ajax-hook";
-import { loadDictionarySafely, preloadDictionary } from "../../dictionary/dictionary-service";
-import type { TranslateDictionary } from "../../dictionary/dictionary-types";
+import { loadDictionarySafely, preloadDictionary } from "../../modules/dictionary/dictionary-service";
+import type { TranslateDictionary } from "../../modules/dictionary/dictionary-types";
 import {
 	type TradeFiltersDataResponse,
 	type TradeItemsDataResponse,

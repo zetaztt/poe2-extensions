@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
-import { ipcMain, ipcWindow } from "../ipc/ipc";
-import { tradeIpcProtocol } from "../trade/trade-ipc-protocol";
+import { ipcMain, ipcWindow } from "../../ipc/ipc";
+import { tradeIpcProtocol } from "../../trade/trade-ipc-protocol";
 import { settingsIpcProtocol } from "./settings-ipc-protocol";
 import {
 	applyStoredTradeSetting,

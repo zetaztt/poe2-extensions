@@ -1,6 +1,6 @@
 import { ensureBodyReady } from "../../utils";
 import { ipcMain, ipcWindow } from "../../ipc/ipc";
-import { settingsIpcProtocol } from "../../settings/settings-ipc-protocol";
+import { settingsIpcProtocol } from "../../modules/settings/settings-ipc-protocol";
 import { createMainWorldIpcMain, createMainWorldIpcWindow } from "../../ipc/main-world-ipc-implementations";
 import { tradeIpcProtocol } from "../trade-ipc-protocol";
 import { logPrefix } from "../trade-utils";

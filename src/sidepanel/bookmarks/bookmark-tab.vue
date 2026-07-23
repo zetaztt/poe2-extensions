@@ -14,12 +14,12 @@ import {
 	openTradeBookmark,
 	replaceTradeBookmarkWithCurrentSearch,
 	rootFolderId,
-} from "../../bookmarks/bookmarks-service";
+} from "../../modules/bookmarks/bookmarks-service";
 import {
 	type TradeBookmarkFolder,
 	type TradeBookmarkItem,
 	type TradeBookmarkRoot,
-} from "../../bookmarks/bookmarks-types";
+} from "../../modules/bookmarks/bookmarks-types";
 import { closeMenu, openMenu as openSidepanelMenu } from "../common/menu/sidepanel-menu";
 import { dismissSnackBar, showSnackBar, SidepanelSnackBarType } from "../common/snack-bar/sidepanel-snack-bar";
 import BookmarkFolder from "./bookmark-folder.vue";

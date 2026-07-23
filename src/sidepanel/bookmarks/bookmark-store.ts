@@ -10,8 +10,8 @@ import {
 	TradeBookmarkServiceErrorCode,
 	TradeBookmarkServiceEventType,
 	type TradeBookmarkServiceEvent,
-} from "../../bookmarks/bookmarks-service";
-import type { TradeBookmarkItem, TradeBookmarkRoot } from "../../bookmarks/bookmarks-types";
+} from "../../modules/bookmarks/bookmarks-service";
+import type { TradeBookmarkItem, TradeBookmarkRoot } from "../../modules/bookmarks/bookmarks-types";
 
 export interface TradeBookmarkStoreError {
 	sequence: number;

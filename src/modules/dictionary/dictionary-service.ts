@@ -1,4 +1,4 @@
-import { ipcMain } from "../ipc/ipc";
+import { ipcMain } from "../../ipc/ipc";
 import { dictionaryIpcProtocol } from "./dictionary-ipc-protocol";
 import type { TranslateDictionary } from "./dictionary-types";
 

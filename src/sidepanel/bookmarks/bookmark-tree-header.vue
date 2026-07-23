@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { TradeBookmarkRoot } from "../../bookmarks/bookmarks-types";
+import type { TradeBookmarkRoot } from "../../modules/bookmarks/bookmarks-types";
 import BookmarkIconButton from "./bookmark-icon-button.vue";
 
 const props = defineProps<{

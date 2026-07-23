@@ -1,4 +1,4 @@
-import { loadDictionarySafely } from "../../dictionary/dictionary-service";
+import { loadDictionarySafely } from "../../modules/dictionary/dictionary-service";
 import { TradeStatConfig, TradeStatsGroup, Translated } from "../trade-types";
 
 export function observeItemElement() {
