@@ -42,10 +42,10 @@ export function createContentIpcMain(): IpcConnectionHub<void> {
 	return hub;
 }
 
-export function createSidePanelIpcWindow(): IpcConnectionHub<number | undefined> {
+export function createTabIpcWindow(): IpcConnectionHub<number | undefined> {
 	const tabConnections = new Map<number, MessageConnection>();
 	return new IpcConnectionHub((tabId) => {
-		if (tabId === undefined) throw new Error("sidepanel 调用 ipcWindow 时必须通过 to(tabId) 指定标签页");
+		if (tabId === undefined) throw new Error("tab IPC 调用 ipcWindow 时必须通过 to(tabId) 指定标签页");
 
 		let connection = tabConnections.get(tabId);
 		if (!connection) {

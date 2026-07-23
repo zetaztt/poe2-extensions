@@ -1,40 +1,31 @@
 <script lang="ts" setup>
-import { ipcMain } from "../../ipc/ipc";
-import { onActivated, onBeforeUnmount, onDeactivated, ref, watch } from "vue";
-import type { TranslateDictionary } from "../../translate-dictionary";
-import { tradeIpcProtocol } from "../../trade/trade-ipc-protocol";
+import { computed, onActivated, onBeforeUnmount, onDeactivated, ref, watch } from "vue";
+import { useDictionaryStore, type DictionarySearchResult } from "./dictionary-store";
 
-interface DictionarySearchEntry {
-	original: string;
-	translated: string;
-	normalizedOriginal: string;
-	normalizedTranslated: string;
-	order: number;
-}
-
-interface DictionarySearchResult {
-	original: string;
-	translated: string;
-}
-
-const maxResults = 20;
 const searchDebounceMs = 300;
 
+const {
+	dictionary,
+	isLoading,
+	lastError,
+	loadDictionary: loadDictionaryFromStore,
+	searchDictionary: searchDictionaryStore,
+} = useDictionaryStore();
 const query = ref("");
 const results = ref<DictionarySearchResult[]>([]);
-const isLoading = ref(false);
 const isSearching = ref(false);
-const loadError = ref("");
 const copiedOriginal = ref("");
 const copyError = ref("");
+const loadError = computed(() => {
+	const error = lastError.value?.error;
+	return error instanceof Error ? error.message : error ? "翻译字典加载失败" : "";
+});
 
-let hasLoaded = false;
-let searchIndex: DictionarySearchEntry[] = [];
 let searchTimer: number | null = null;
 let copyTimer: number | null = null;
 
 onActivated(() => {
-	if (!hasLoaded) {
+	if (!dictionary.value) {
 		if (!isLoading.value) void loadDictionary();
 		return;
 	}
@@ -76,71 +67,23 @@ function clearSearchTimer(): void {
 }
 
 async function loadDictionary(): Promise<void> {
-	isLoading.value = true;
-	loadError.value = "";
-
 	try {
-		const dictionary = await requestDictionary();
-		searchIndex = createSearchIndex(dictionary);
-		hasLoaded = true;
-
+		await loadDictionaryFromStore();
 		if (query.value.trim()) searchDictionary(query.value);
 	} catch (error) {
-		loadError.value = error instanceof Error ? error.message : "翻译字典加载失败";
-	} finally {
-		isLoading.value = false;
+		console.warn("[poe2-extensions] 翻译字典加载失败", error);
 	}
 }
 
-async function requestDictionary(): Promise<TranslateDictionary> {
-	return ipcMain.invoke(tradeIpcProtocol.fetchDictionary);
-}
-
-function createSearchIndex(dictionary: TranslateDictionary): DictionarySearchEntry[] {
-	return Object.entries(dictionary).map(([original, translated], order) => ({
-		original,
-		translated,
-		normalizedOriginal: normalizeSearchText(original),
-		normalizedTranslated: normalizeSearchText(translated),
-		order,
-	}));
-}
-
 function searchDictionary(value: string): void {
-	const normalizedQuery = normalizeSearchText(value);
-	if (!normalizedQuery || !hasLoaded) {
+	if (!value.trim() || !dictionary.value) {
 		isSearching.value = false;
 		results.value = [];
 		return;
 	}
 
-	results.value = searchIndex
-		.map((entry) => ({
-			entry,
-			rank: Math.min(
-				getMatchRank(entry.normalizedOriginal, normalizedQuery),
-				getMatchRank(entry.normalizedTranslated, normalizedQuery),
-			),
-		}))
-		.filter((match) => match.rank < Number.POSITIVE_INFINITY)
-		.sort((left, right) => left.rank - right.rank || left.entry.order - right.entry.order)
-		.slice(0, maxResults)
-		.map(({ entry }) => ({
-			original: entry.original,
-			translated: entry.translated,
-		}));
+	results.value = searchDictionaryStore(value);
 	isSearching.value = false;
-}
-
-function getMatchRank(text: string, search: string): number {
-	if (text === search) return 0;
-	if (text.startsWith(search)) return 1;
-	if (text.includes(search)) return 2;
-	return Number.POSITIVE_INFINITY;
-}
-
-function normalizeSearchText(value: string): string {
-	return value.trim().toLocaleLowerCase();
 }
 
 async function copyOriginal(original: string): Promise<void> {
@@ -167,9 +110,7 @@ function resetCopyStatusLater(): void {
 }
 
 function retryLoad(): void {
-	hasLoaded = false;
 	isSearching.value = false;
-	searchIndex = [];
 	results.value = [];
 	void loadDictionary();
 }

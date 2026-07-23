@@ -1,4 +1,6 @@
 import { proxy, XhrResponse } from "ajax-hook";
+import { loadDictionarySafely, preloadDictionary } from "../../dictionary/dictionary-service";
+import type { TranslateDictionary } from "../../dictionary/dictionary-types";
 import {
 	type TradeFiltersDataResponse,
 	type TradeItemsDataResponse,
@@ -6,7 +8,6 @@ import {
 	type TradeStatsResponse,
 	type Translated,
 } from "../trade-types";
-import { loadTranslateDictionary, preloadTranslateDictionary, TranslateDictionary } from "../../translate-dictionary";
 import { isUniqueItem } from "../trade-utils";
 
 export const tradeDataPaths = {
@@ -29,7 +30,7 @@ export function isTradeDataUrl(url: string): boolean {
 }
 
 export async function processTradeData(response: XhrResponse) {
-	const dictionary = await loadTranslateDictionary();
+	const dictionary = await loadDictionarySafely();
 	const data = JSON.parse(response.response);
 
 	if (!dictionary || !isObject(data)) return data;
@@ -164,7 +165,7 @@ export function installTranslateDataHook() {
 		//请求发起前进入
 		onRequest: (config, handler) => {
 			if (isTradeDataUrl(config.url)) {
-				preloadTranslateDictionary();
+				preloadDictionary();
 			}
 
 			handler.next(config);

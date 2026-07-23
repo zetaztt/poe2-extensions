@@ -1,5 +1,6 @@
 import { ensureBodyReady } from "../../utils";
 import { ipcMain, ipcWindow } from "../../ipc/ipc";
+import { settingsIpcProtocol } from "../../settings/settings-ipc-protocol";
 import { createMainWorldIpcMain, createMainWorldIpcWindow } from "../../ipc/main-world-ipc-implementations";
 import { tradeIpcProtocol } from "../trade-ipc-protocol";
 import { logPrefix } from "../trade-utils";
@@ -34,7 +35,7 @@ export function injectTradeStatPreset(): void {
 
 async function initializeTradeStatPreset(): Promise<void> {
 	try {
-		const initialEnabled = await ipcMain.invoke(tradeIpcProtocol.getTradeStatPresetEnabled);
+		const initialEnabled = (await ipcMain.invoke(settingsIpcProtocol.load)).settings.statPresetEnabled;
 		if (!hasReceivedStatPresetUpdate) setTradeStatPresetEnabled(initialEnabled);
 	} catch (error) {
 		console.warn(`${logPrefix} 筛选预设初始状态读取失败`, error);

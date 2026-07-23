@@ -1,4 +1,4 @@
-import { loadTranslateDictionary } from "../../translate-dictionary";
+import { loadDictionarySafely } from "../../dictionary/dictionary-service";
 import { TradeStatConfig, TradeStatsGroup, Translated } from "../trade-types";
 
 export function observeItemElement() {
@@ -28,7 +28,7 @@ async function translateItemElement(itemElement: HTMLElement) {
 		translateItemStatFieldText(element as HTMLSpanElement);
 	}
 
-	const dictionary = await loadTranslateDictionary();
+	const dictionary = await loadDictionarySafely();
 
 	if (!dictionary) {
 		return;

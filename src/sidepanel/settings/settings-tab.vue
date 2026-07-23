@@ -1,29 +1,19 @@
 <script lang="ts" setup>
-import browser from "webextension-polyfill";
-import { ipcMain, ipcWindow } from "../../ipc/ipc";
-import { computed, onMounted, ref } from "vue";
-import {
-	getTradeItemCopyEnabled,
-	getTradeStatPresetEnabled,
-	getTradeTranslateEnabled,
-	setTradeItemCopyEnabled,
-	setTradeStatPresetEnabled,
-	setTradeTranslateEnabled,
-} from "../../settings";
-import { tradeIpcProtocol } from "../../trade/trade-ipc-protocol";
+import { computed, onActivated, ref, watch } from "vue";
+import { SettingsServiceErrorCode, TradeSetting, useSettingsStore } from "./settings-store";
 
-enum TradeSettingToggleType {
-	Translate = 1,
-	ItemCopy = 2,
-	StatPreset = 3,
-}
-
-const tradeTranslateEnabled = ref(false);
-const tradeItemCopyEnabled = ref(false);
-const tradeStatPresetEnabled = ref(false);
-const isLoadingSettings = ref(true);
-const isSavingSettings = ref(false);
+const {
+	settings,
+	isLoading: isLoadingSettings,
+	isSaving: isSavingSettings,
+	lastError,
+	loadSettings,
+	updateSetting,
+} = useSettingsStore();
 const settingsStatusText = ref("");
+const tradeTranslateEnabled = computed(() => settings.value?.translateEnabled ?? false);
+const tradeItemCopyEnabled = computed(() => settings.value?.itemCopyEnabled ?? false);
+const tradeStatPresetEnabled = computed(() => settings.value?.statPresetEnabled ?? false);
 
 const statusLabel = computed(() => {
 	const translate = tradeTranslateEnabled.value ? "翻译已开启" : "翻译已关闭";
@@ -32,158 +22,42 @@ const statusLabel = computed(() => {
 	return `${translate}，${itemCopy}，${statPreset}`;
 });
 
-onMounted(() => {
-	void loadSettings();
+onActivated(() => {
+	if (!settings.value && !isLoadingSettings.value) {
+		void loadSettings().catch((error: unknown) => {
+			console.error("[poe2-extensions] trade 设置读取失败", error);
+		});
+	}
 });
 
-async function loadSettings(): Promise<void> {
-	isLoadingSettings.value = true;
+watch(lastError, (error) => {
+	if (!error) return;
+	settingsStatusText.value =
+		error.code === SettingsServiceErrorCode.LoadFailed
+			? "设置读取失败，请稍后重试。"
+			: "设置保存失败，请稍后重试。";
+});
 
-	const [translateEnabled, itemCopyEnabled, statPresetEnabled] = await Promise.all([
-		getTradeTranslateEnabled(),
-		getTradeItemCopyEnabled(),
-		getTradeStatPresetEnabled(),
-	]);
-
-	tradeTranslateEnabled.value = translateEnabled;
-	tradeItemCopyEnabled.value = itemCopyEnabled;
-	tradeStatPresetEnabled.value = statPresetEnabled;
-	isLoadingSettings.value = false;
-}
-
-function onCheckboxChange(event: Event, type: TradeSettingToggleType): void {
+function onCheckboxChange(event: Event, setting: TradeSetting): void {
 	const input = event.target as HTMLInputElement;
-	if (type === TradeSettingToggleType.Translate) {
-		void onTranslateToggle(input.checked);
-		return;
-	}
-
-	if (type === TradeSettingToggleType.ItemCopy) {
-		void onItemCopyToggle(input.checked);
-		return;
-	}
-
-	void onStatPresetToggle(input.checked);
+	void onSettingToggle(setting, input.checked);
 }
 
-async function onTranslateToggle(nextValue: boolean): Promise<void> {
-	const previousValue = tradeTranslateEnabled.value;
-	tradeTranslateEnabled.value = nextValue;
-	isSavingSettings.value = true;
+async function onSettingToggle(setting: TradeSetting, enabled: boolean): Promise<void> {
 	settingsStatusText.value = "";
 
 	try {
-		await setTradeTranslateEnabled(nextValue);
-		await ipcMain.send(tradeIpcProtocol.syncTranslateInjection);
-		const reloaded = await reloadActiveTradeTab();
-		settingsStatusText.value = reloaded
-			? "设置已保存，trade2 页面已刷新。"
-			: "设置已保存，打开或刷新 trade2 页面后生效。";
+		const activeTradeTabUpdated = await updateSetting(setting, enabled);
+		settingsStatusText.value = getSettingUpdatedMessage(setting, activeTradeTabUpdated);
 	} catch (error) {
-		tradeTranslateEnabled.value = previousValue;
 		settingsStatusText.value = "设置保存失败，请稍后重试。";
-		console.error("[poe2-extensions] 中文翻译设置保存失败", error);
-	} finally {
-		isSavingSettings.value = false;
+		console.error("[poe2-extensions] trade 设置保存失败", error);
 	}
 }
 
-async function onItemCopyToggle(nextValue: boolean): Promise<void> {
-	const previousValue = tradeItemCopyEnabled.value;
-	tradeItemCopyEnabled.value = nextValue;
-	isSavingSettings.value = true;
-	settingsStatusText.value = "";
-
-	try {
-		await setTradeItemCopyEnabled(nextValue);
-		const updated = await updateActiveTradeTabItemCopy();
-		settingsStatusText.value = updated
-			? "设置已保存，trade2 页面已更新。"
-			: "设置已保存，打开或刷新 trade2 页面后生效。";
-	} catch (error) {
-		tradeItemCopyEnabled.value = previousValue;
-		settingsStatusText.value = "设置保存失败，请稍后重试。";
-		console.error("[poe2-extensions] 复制物品文本设置保存失败", error);
-	} finally {
-		isSavingSettings.value = false;
-	}
-}
-
-async function onStatPresetToggle(nextValue: boolean): Promise<void> {
-	const previousValue = tradeStatPresetEnabled.value;
-	tradeStatPresetEnabled.value = nextValue;
-	isSavingSettings.value = true;
-	settingsStatusText.value = "";
-
-	try {
-		await setTradeStatPresetEnabled(nextValue);
-		const updated = await updateActiveTradeTabStatPreset();
-		settingsStatusText.value = updated
-			? "设置已保存，trade2 页面已更新。"
-			: "设置已保存，打开或刷新 trade2 页面后生效。";
-	} catch (error) {
-		tradeStatPresetEnabled.value = previousValue;
-		settingsStatusText.value = "设置保存失败，请稍后重试。";
-		console.error("[poe2-extensions] 筛选预设保存设置保存失败", error);
-	} finally {
-		isSavingSettings.value = false;
-	}
-}
-
-async function reloadActiveTradeTab(): Promise<boolean> {
-	const [tab] = await browser.tabs.query({
-		active: true,
-		currentWindow: true,
-	});
-
-	if (!tab?.id || !isTrade2Url(tab.url)) return false;
-
-	await browser.tabs.reload(tab.id);
-	return true;
-}
-
-async function updateActiveTradeTabItemCopy(): Promise<boolean> {
-	return sendActiveTradeTabMessage((tabId) =>
-		ipcWindow.to(tabId).send(tradeIpcProtocol.itemCopyUpdated, {
-			enabled: tradeItemCopyEnabled.value,
-		}),
-	);
-}
-
-async function updateActiveTradeTabStatPreset(): Promise<boolean> {
-	return sendActiveTradeTabMessage((tabId) =>
-		ipcWindow.to(tabId).send(tradeIpcProtocol.statPresetUpdated, {
-			enabled: tradeStatPresetEnabled.value,
-		}),
-	);
-}
-
-async function sendActiveTradeTabMessage(send: (tabId: number) => Promise<void>): Promise<boolean> {
-	const [tab] = await browser.tabs.query({
-		active: true,
-		currentWindow: true,
-	});
-
-	if (!tab?.id || !isTrade2Url(tab.url)) return false;
-
-	try {
-		await send(tab.id);
-		return true;
-	} catch (error) {
-		console.warn("[poe2-extensions] trade2 页面设置同步失败", error);
-		return false;
-	}
-}
-
-function isTrade2Url(url: string | undefined): boolean {
-	if (!url) return false;
-
-	try {
-		const parsedUrl = new URL(url);
-		return parsedUrl.origin === "https://www.pathofexile.com" && parsedUrl.pathname.startsWith("/trade2");
-	} catch {
-		return false;
-	}
+function getSettingUpdatedMessage(setting: TradeSetting, activeTradeTabUpdated: boolean): string {
+	if (!activeTradeTabUpdated) return "设置已保存，打开或刷新 trade2 页面后生效。";
+	return setting === TradeSetting.Translate ? "设置已保存，trade2 页面已刷新。" : "设置已保存，trade2 页面已更新。";
 }
 </script>
 
@@ -201,7 +75,7 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeTranslateEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, TradeSettingToggleType.Translate)" />
+					@change="onCheckboxChange($event, TradeSetting.Translate)" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
@@ -216,7 +90,7 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeItemCopyEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, TradeSettingToggleType.ItemCopy)" />
+					@change="onCheckboxChange($event, TradeSetting.ItemCopy)" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
@@ -231,7 +105,7 @@ function isTrade2Url(url: string | undefined): boolean {
 					type="checkbox"
 					:checked="tradeStatPresetEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, TradeSettingToggleType.StatPreset)" />
+					@change="onCheckboxChange($event, TradeSetting.StatPreset)" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 

@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import { ipcMain } from "../../ipc/ipc";
-import { getTradeStatPresetEnabled } from "../../settings";
+import { getTradeStatPresetEnabled } from "../../settings/settings-storage";
 import { tradeIpcProtocol } from "../trade-ipc-protocol";
 import type { TradeStatPreset, TradeStatPresetQuery } from "../trade-types";
 

@@ -1,5 +1,4 @@
 import { defineIpcProtocol, defineNotification, defineRpc } from "../ipc/ipc-protocol";
-import type { TranslateDictionary } from "../translate-dictionary";
 import type { TradeStatPreset } from "./trade-types";
 
 export interface TradeFeatureUpdateData {
@@ -18,16 +17,10 @@ export interface DeleteStatPresetParams {
 
 export const tradeIpcProtocol = defineIpcProtocol({
 	name: "trade",
-	fetchDictionary: defineRpc<void, TranslateDictionary>({
-		timeoutMs: 15_000,
-	}),
-	getTradeItemCopyEnabled: defineRpc<void, boolean>(),
-	getTradeStatPresetEnabled: defineRpc<void, boolean>(),
 	listStatPresets: defineRpc<void, TradeStatPreset[]>(),
 	saveStatPreset: defineRpc<SaveStatPresetParams, TradeStatPreset[]>(),
 	renameStatPreset: defineRpc<RenameStatPresetParams, TradeStatPreset[]>(),
 	deleteStatPreset: defineRpc<DeleteStatPresetParams, TradeStatPreset[]>(),
-	syncTranslateInjection: defineNotification<void>(),
 	itemCopyUpdated: defineNotification<TradeFeatureUpdateData>(),
 	statPresetUpdated: defineNotification<TradeFeatureUpdateData>(),
 });

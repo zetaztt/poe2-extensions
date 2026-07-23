@@ -1,4 +1,5 @@
 import { ipcMain, ipcWindow } from "../../ipc/ipc";
+import { settingsIpcProtocol } from "../../settings/settings-ipc-protocol";
 import { createMainWorldIpcMain, createMainWorldIpcWindow } from "../../ipc/main-world-ipc-implementations";
 import { tradeIpcProtocol } from "../trade-ipc-protocol";
 import { getTradeSearchItemById, logPrefix } from "../trade-utils";
@@ -29,7 +30,7 @@ export function injectTradeItemCopy(): void {
 
 async function initializeTradeItemCopy(): Promise<void> {
 	try {
-		const initialEnabled = await ipcMain.invoke(tradeIpcProtocol.getTradeItemCopyEnabled);
+		const initialEnabled = (await ipcMain.invoke(settingsIpcProtocol.load)).settings.itemCopyEnabled;
 		if (!hasReceivedItemCopyUpdate) setTradeItemCopyEnabled(initialEnabled);
 	} catch (error) {
 		console.warn(`${logPrefix} 复制物品文本初始状态读取失败`, error);
