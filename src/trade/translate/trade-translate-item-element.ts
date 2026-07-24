@@ -1,5 +1,5 @@
-import { loadDictionarySafely } from "../../modules/dictionary/dictionary-service";
 import { TradeStatConfig, TradeStatsGroup, Translated } from "../trade-types";
+import { tradeTranslateDictionaryLoader } from "./trade-translate-dictionary-loader";
 
 export function observeItemElement() {
 	const itemObserver = new MutationObserver((mutations) => {
@@ -28,7 +28,7 @@ async function translateItemElement(itemElement: HTMLElement) {
 		translateItemStatFieldText(element as HTMLSpanElement);
 	}
 
-	const dictionary = await loadDictionarySafely();
+	const dictionary = await tradeTranslateDictionaryLoader.loadDictionarySafely();
 
 	if (!dictionary) {
 		return;

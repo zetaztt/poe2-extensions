@@ -1,16 +1,13 @@
 <script lang="ts" setup>
+import { storeToRefs } from "pinia";
 import { computed, onActivated, onBeforeUnmount, onDeactivated, ref, watch } from "vue";
-import { useDictionaryStore, type DictionarySearchResult } from "./dictionary-store";
+import { useDictionaryStore } from "../../modules/dictionary/dictionary-store";
+import type { DictionarySearchResult } from "../../modules/dictionary/dictionary-types";
 
 const searchDebounceMs = 300;
 
-const {
-	dictionary,
-	isLoading,
-	lastError,
-	loadDictionary: loadDictionaryFromStore,
-	searchDictionary: searchDictionaryStore,
-} = useDictionaryStore();
+const dictionaryStore = useDictionaryStore();
+const { dictionary, isLoading, lastError } = storeToRefs(dictionaryStore);
 const query = ref("");
 const results = ref<DictionarySearchResult[]>([]);
 const isSearching = ref(false);
@@ -68,7 +65,7 @@ function clearSearchTimer(): void {
 
 async function loadDictionary(): Promise<void> {
 	try {
-		await loadDictionaryFromStore();
+		await dictionaryStore.loadDictionary();
 		if (query.value.trim()) searchDictionary(query.value);
 	} catch (error) {
 		console.warn("[poe2-extensions] 翻译字典加载失败", error);
@@ -82,7 +79,7 @@ function searchDictionary(value: string): void {
 		return;
 	}
 
-	results.value = searchDictionaryStore(value);
+	results.value = dictionaryStore.searchDictionary(value);
 	isSearching.value = false;
 }
 

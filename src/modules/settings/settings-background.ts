@@ -29,7 +29,7 @@ let settingsRevision = 0;
 let translateInjectionSyncPromise: Promise<void> = Promise.resolve();
 let lastSyncedTranslateEnabled: boolean | null = null;
 
-export function installTradeSettingsHandlers(): void {
+function install(): void {
 	ipcMain.handle(settingsIpcProtocol.load, loadSettingsSnapshot);
 	ipcMain.handle(settingsIpcProtocol.update, ({ setting, enabled }) => updateSetting(setting, enabled));
 	browser.storage.onChanged.addListener(onStorageChanged);
@@ -213,3 +213,7 @@ function isTrade2Url(url: string | undefined): boolean {
 function createId(): string {
 	return globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
+
+export const settingsBackground = {
+	install,
+};

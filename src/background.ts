@@ -1,18 +1,18 @@
 import browser from "webextension-polyfill";
-import { installTradeBookmarkHandlers } from "./modules/bookmarks/bookmarks-background-service";
-import { installDictionaryHandlers } from "./modules/dictionary/dictionary-background-service";
+import { tradeBookmarkBackground } from "./modules/bookmarks/bookmarks-background";
+import { dictionaryBackground } from "./modules/dictionary/dictionary-background";
 import { ipcMain, ipcWindow } from "./ipc/ipc";
 import { createBackgroundIpcMain, createTabIpcWindow } from "./ipc/ipc-implementations";
-import { installTradeSettingsHandlers } from "./modules/settings/settings-background-service";
+import { settingsBackground } from "./modules/settings/settings-background";
 import { installTradeStatPresetHandlers } from "./trade/stat-preset/trade-stat-preset-storage";
 ipcMain.register(createBackgroundIpcMain);
 ipcWindow.register(createTabIpcWindow);
 
 console.debug("[poe2-extensions] background loaded.", { id: browser.runtime.id });
 void enableSidePanelOnActionClick();
-installTradeBookmarkHandlers();
-installDictionaryHandlers();
-installTradeSettingsHandlers();
+tradeBookmarkBackground.install();
+dictionaryBackground.install();
+settingsBackground.install();
 installTradeStatPresetHandlers();
 
 async function enableSidePanelOnActionClick(): Promise<void> {

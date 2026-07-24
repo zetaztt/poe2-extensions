@@ -2,7 +2,6 @@ import browser from "webextension-polyfill";
 import { ipcMain } from "../../ipc/ipc";
 import { bookmarksIpcProtocol } from "./bookmarks-ipc-protocol";
 import {
-	rootFolderId,
 	TradeBookmarkServiceErrorCode,
 	type BookmarkFolderOption,
 	type TradeBookmarkChangeResult,
@@ -13,15 +12,6 @@ import {
 	type TradeBookmarkPersistenceError,
 	type TradeBookmarkRoot,
 	type TradeBookmarkTreeSnapshot,
-} from "./bookmarks-types";
-
-export { rootFolderId, TradeBookmarkServiceErrorCode };
-export type {
-	BookmarkFolderOption,
-	TradeBookmarkFolder,
-	TradeBookmarkGroup,
-	TradeBookmarkItem,
-	TradeBookmarkRoot,
 } from "./bookmarks-types";
 
 type ActiveBrowserTab = {
@@ -44,164 +34,99 @@ const tradeBookmarkServiceErrorMessages: Record<TradeBookmarkServiceErrorCode, s
 	[TradeBookmarkServiceErrorCode.PersistenceFailed]: "书签尚未保存到本地存储。",
 };
 
-export enum TradeBookmarkServiceEventType {
-	Loaded = 1,
-	Changed = 2,
-	Error = 3,
+function loadTradeBookmarks(): Promise<TradeBookmarkTreeSnapshot> {
+	return ipcMain.invoke(bookmarksIpcProtocol.load);
 }
 
-export type TradeBookmarkServiceEvent =
-	| { type: TradeBookmarkServiceEventType.Loaded; tree: TradeBookmarkRoot }
-	| { type: TradeBookmarkServiceEventType.Changed; tree: TradeBookmarkRoot }
-	| { type: TradeBookmarkServiceEventType.Error; code: TradeBookmarkServiceErrorCode; error: unknown };
-
-let currentRootTree: TradeBookmarkRoot | null = null;
-// background 重启后 revision 会归零，instanceId 用于把新生命周期与旧广播区分开。
-let currentBackgroundInstanceId = "";
-let currentBookmarkRevision = -1;
-const retiredBackgroundInstanceIds = new Set<string>();
-let isBookmarkServiceLoading = false;
-let lastBookmarkServiceErrorCode = TradeBookmarkServiceErrorCode.None;
-let areBookmarkNotificationsInstalled = false;
-const listeners = new Set<(event: TradeBookmarkServiceEvent) => void>();
-
-export function getCurrentTradeBookmarkTree(): TradeBookmarkRoot | null {
-	return currentRootTree;
-}
-
-export function isTradeBookmarkServiceLoading(): boolean {
-	return isBookmarkServiceLoading;
-}
-
-export function getTradeBookmarkServiceErrorCode(): TradeBookmarkServiceErrorCode {
-	return lastBookmarkServiceErrorCode;
-}
-
-export function subscribeTradeBookmarks(listener: (event: TradeBookmarkServiceEvent) => void): () => void {
-	ensureBookmarkNotificationsInstalled();
-	listeners.add(listener);
-	return () => listeners.delete(listener);
-}
-
-export async function loadTradeBookmarks(): Promise<TradeBookmarkRoot> {
-	ensureBookmarkNotificationsInstalled();
-	isBookmarkServiceLoading = true;
-	lastBookmarkServiceErrorCode = TradeBookmarkServiceErrorCode.None;
-
-	try {
-		const snapshot = await ipcMain.invoke(bookmarksIpcProtocol.load);
-		return applyBookmarkSnapshot(snapshot, TradeBookmarkServiceEventType.Loaded, true);
-	} catch (error) {
-		publishTradeBookmarkError(TradeBookmarkServiceErrorCode.LoadFailed, error);
-		throw error;
-	} finally {
-		isBookmarkServiceLoading = false;
-	}
-}
-
-export function getTradeBookmarkRootGroups(): Promise<TradeBookmarkGroup[]> {
-	ensureBookmarkNotificationsInstalled();
+function getTradeBookmarkRootGroups(): Promise<TradeBookmarkGroup[]> {
 	return ipcMain.invoke(bookmarksIpcProtocol.getRootGroups);
 }
 
-export function getTradeBookmarkRootTree(): Promise<TradeBookmarkRoot> {
-	ensureBookmarkNotificationsInstalled();
+function getTradeBookmarkRootTree(): Promise<TradeBookmarkRoot> {
 	return ipcMain.invoke(bookmarksIpcProtocol.getRootTree);
 }
 
-export async function createBookmarkFolder(parentId: string, title: string): Promise<BookmarkFolderOption> {
-	return runBookmarkMutation(TradeBookmarkServiceErrorCode.CreateFolderFailed, () =>
-		ipcMain.invoke(bookmarksIpcProtocol.createFolder, { parentId, title }),
-	);
+function createBookmarkFolder(
+	parentId: string,
+	title: string,
+): Promise<TradeBookmarkChangeResult<BookmarkFolderOption>> {
+	return ipcMain.invoke(bookmarksIpcProtocol.createFolder, { parentId, title });
 }
 
-export async function renameBookmarkFolder(folderId: string, title: string): Promise<BookmarkFolderOption> {
-	return runBookmarkMutation(TradeBookmarkServiceErrorCode.RenameFolderFailed, () =>
-		ipcMain.invoke(bookmarksIpcProtocol.renameFolder, { folderId, title }),
-	);
+function renameBookmarkFolder(
+	folderId: string,
+	title: string,
+): Promise<TradeBookmarkChangeResult<BookmarkFolderOption>> {
+	return ipcMain.invoke(bookmarksIpcProtocol.renameFolder, { folderId, title });
 }
 
-export async function deleteBookmarkFolder(folderId: string): Promise<void> {
-	await runBookmarkMutation(TradeBookmarkServiceErrorCode.DeleteFolderFailed, () =>
-		ipcMain.invoke(bookmarksIpcProtocol.deleteFolder, { folderId }),
-	);
+function deleteBookmarkFolder(folderId: string): Promise<TradeBookmarkChangeResult<null>> {
+	return ipcMain.invoke(bookmarksIpcProtocol.deleteFolder, { folderId });
 }
 
-export async function moveBookmarkFolder(folderId: string, targetParentId: string, targetIndex: number): Promise<void> {
-	await runBookmarkMutation(TradeBookmarkServiceErrorCode.MoveFailed, () =>
-		ipcMain.invoke(bookmarksIpcProtocol.moveFolder, { folderId, targetParentId, targetIndex }),
-	);
+function moveBookmarkFolder(
+	folderId: string,
+	targetParentId: string,
+	targetIndex: number,
+): Promise<TradeBookmarkChangeResult<null>> {
+	return ipcMain.invoke(bookmarksIpcProtocol.moveFolder, { folderId, targetParentId, targetIndex });
 }
 
-export function getTradeBookmarkGroups(folderId: string): Promise<TradeBookmarkGroup[]> {
-	ensureBookmarkNotificationsInstalled();
+function getTradeBookmarkGroups(folderId: string): Promise<TradeBookmarkGroup[]> {
 	return ipcMain.invoke(bookmarksIpcProtocol.getGroups, { folderId });
 }
 
-export function getTradeBookmarkTree(folderId: string): Promise<TradeBookmarkRoot | TradeBookmarkFolder | null> {
-	ensureBookmarkNotificationsInstalled();
+function getTradeBookmarkTree(folderId: string): Promise<TradeBookmarkRoot | TradeBookmarkFolder | null> {
 	return ipcMain.invoke(bookmarksIpcProtocol.getTree, { folderId });
 }
 
-export async function addCurrentTradeSearchBookmark(folderId: string): Promise<TradeBookmarkItem> {
-	return runBookmarkMutation(TradeBookmarkServiceErrorCode.AddFailed, async () => {
-		const tab = await getActiveTab();
-		if (!tab?.url || !isTrade2Url(tab.url)) throw new Error("当前活动标签页不是 trade2 搜索页");
-		return ipcMain.invoke(bookmarksIpcProtocol.addCurrentSearch, {
-			folderId,
-			title: tab.title,
-			url: tab.url,
-		});
+async function addCurrentTradeSearchBookmark(folderId: string): Promise<TradeBookmarkChangeResult<TradeBookmarkItem>> {
+	const tab = await getActiveTab();
+	if (!tab?.url || !isTrade2Url(tab.url)) throw new Error("当前活动标签页不是 trade2 搜索页");
+	return ipcMain.invoke(bookmarksIpcProtocol.addCurrentSearch, {
+		folderId,
+		title: tab.title,
+		url: tab.url,
 	});
 }
 
-export async function renameTradeBookmark(bookmarkId: string, title: string): Promise<TradeBookmarkItem> {
-	return runBookmarkMutation(TradeBookmarkServiceErrorCode.RenameFailed, () =>
-		ipcMain.invoke(bookmarksIpcProtocol.renameBookmark, { bookmarkId, title }),
-	);
+function renameTradeBookmark(bookmarkId: string, title: string): Promise<TradeBookmarkChangeResult<TradeBookmarkItem>> {
+	return ipcMain.invoke(bookmarksIpcProtocol.renameBookmark, { bookmarkId, title });
 }
 
-export async function deleteTradeBookmark(bookmarkId: string): Promise<void> {
-	await runBookmarkMutation(TradeBookmarkServiceErrorCode.DeleteFailed, () =>
-		ipcMain.invoke(bookmarksIpcProtocol.deleteBookmark, { bookmarkId }),
-	);
+function deleteTradeBookmark(bookmarkId: string): Promise<TradeBookmarkChangeResult<null>> {
+	return ipcMain.invoke(bookmarksIpcProtocol.deleteBookmark, { bookmarkId });
 }
 
-export async function moveTradeBookmark(
+function moveTradeBookmark(
 	bookmarkId: string,
 	targetFolderId: string,
 	targetIndex: number,
-): Promise<void> {
-	await runBookmarkMutation(TradeBookmarkServiceErrorCode.MoveFailed, () =>
-		ipcMain.invoke(bookmarksIpcProtocol.moveBookmark, { bookmarkId, targetFolderId, targetIndex }),
-	);
+): Promise<TradeBookmarkChangeResult<null>> {
+	return ipcMain.invoke(bookmarksIpcProtocol.moveBookmark, { bookmarkId, targetFolderId, targetIndex });
 }
 
-export async function replaceTradeBookmarkWithCurrentSearch(bookmarkId: string): Promise<TradeBookmarkItem> {
-	return runBookmarkMutation(TradeBookmarkServiceErrorCode.ReplaceFailed, async () => {
-		const tab = await getActiveTab();
-		if (!tab?.url || !isTrade2Url(tab.url)) throw new Error("当前活动标签页不是 trade2 搜索页");
-		return ipcMain.invoke(bookmarksIpcProtocol.replaceBookmark, { bookmarkId, url: tab.url });
-	});
+async function replaceTradeBookmarkWithCurrentSearch(
+	bookmarkId: string,
+): Promise<TradeBookmarkChangeResult<TradeBookmarkItem>> {
+	const tab = await getActiveTab();
+	if (!tab?.url || !isTrade2Url(tab.url)) throw new Error("当前活动标签页不是 trade2 搜索页");
+	return ipcMain.invoke(bookmarksIpcProtocol.replaceBookmark, { bookmarkId, url: tab.url });
 }
 
-export function exportBookmarkTree(): Promise<TradeBookmarkExportData> {
-	ensureBookmarkNotificationsInstalled();
+function exportBookmarkTree(): Promise<TradeBookmarkExportData> {
 	return ipcMain.invoke(bookmarksIpcProtocol.exportTree);
 }
 
-export function exportBookmarkFolder(folderId: string): Promise<TradeBookmarkExportData> {
-	ensureBookmarkNotificationsInstalled();
+function exportBookmarkFolder(folderId: string): Promise<TradeBookmarkExportData> {
 	return ipcMain.invoke(bookmarksIpcProtocol.exportFolder, { folderId });
 }
 
-export async function importBookmarkData(value: unknown): Promise<void> {
-	ensureBookmarkNotificationsInstalled();
-	const result = await ipcMain.invoke(bookmarksIpcProtocol.importData, { value });
-	applyBookmarkSnapshot(result, TradeBookmarkServiceEventType.Changed);
+function importBookmarkData(value: unknown): Promise<TradeBookmarkChangeResult<null>> {
+	return ipcMain.invoke(bookmarksIpcProtocol.importData, { value });
 }
 
-export async function openTradeBookmark(url: string): Promise<void> {
+async function openTradeBookmark(url: string): Promise<void> {
 	const tab = await getActiveTab();
 	if (tab?.id && isTrade2Url(tab.url)) {
 		await browser.tabs.update(tab.id, { url });
@@ -211,7 +136,7 @@ export async function openTradeBookmark(url: string): Promise<void> {
 	await browser.tabs.create({ url });
 }
 
-export function isTrade2Url(url: string | undefined): boolean {
+function isTrade2Url(url: string | undefined): boolean {
 	if (!url) return false;
 
 	try {
@@ -222,82 +147,47 @@ export function isTrade2Url(url: string | undefined): boolean {
 	}
 }
 
-export function getTradeBookmarkServiceErrorMessage(code: TradeBookmarkServiceErrorCode): string {
+function getTradeBookmarkServiceErrorMessage(code: TradeBookmarkServiceErrorCode): string {
 	return tradeBookmarkServiceErrorMessages[code];
 }
 
-async function runBookmarkMutation<T>(
-	errorCode: TradeBookmarkServiceErrorCode,
-	invoke: () => Promise<TradeBookmarkChangeResult<T>>,
-): Promise<T> {
-	ensureBookmarkNotificationsInstalled();
-
-	try {
-		const result = await invoke();
-		applyBookmarkSnapshot(result, TradeBookmarkServiceEventType.Changed);
-		return result.value;
-	} catch (error) {
-		publishTradeBookmarkError(errorCode, error);
-		throw error;
-	}
-}
-
-function ensureBookmarkNotificationsInstalled(): void {
-	if (areBookmarkNotificationsInstalled) return;
-	areBookmarkNotificationsInstalled = true;
-	ipcMain.on(bookmarksIpcProtocol.changed, (snapshot) => {
-		applyBookmarkSnapshot(snapshot, TradeBookmarkServiceEventType.Changed);
-	});
-	ipcMain.on(bookmarksIpcProtocol.persistenceFailed, onBookmarkPersistenceFailed);
-}
-
-function applyBookmarkSnapshot(
-	snapshot: TradeBookmarkTreeSnapshot,
-	type: TradeBookmarkServiceEventType.Loaded | TradeBookmarkServiceEventType.Changed,
-	force = false,
-): TradeBookmarkRoot {
-	if (retiredBackgroundInstanceIds.has(snapshot.instanceId)) return currentRootTree ?? snapshot.tree;
-
-	const isNewBackgroundInstance = snapshot.instanceId !== currentBackgroundInstanceId;
-	const isNewerRevision = snapshot.revision > currentBookmarkRevision;
-	const isOlderRevision = snapshot.revision < currentBookmarkRevision;
-	if (!isNewBackgroundInstance && isOlderRevision) return currentRootTree ?? snapshot.tree;
-	if (!force && !isNewBackgroundInstance && !isNewerRevision) return currentRootTree ?? snapshot.tree;
-
-	if (isNewBackgroundInstance || isNewerRevision || !currentRootTree) {
-		if (isNewBackgroundInstance && currentBackgroundInstanceId) {
-			retiredBackgroundInstanceIds.add(currentBackgroundInstanceId);
-		}
-		currentBackgroundInstanceId = snapshot.instanceId;
-		currentBookmarkRevision = snapshot.revision;
-		currentRootTree = snapshot.tree;
-	}
-	lastBookmarkServiceErrorCode = TradeBookmarkServiceErrorCode.None;
-	publishTradeBookmarkEvent({ type, tree: currentRootTree });
-	return currentRootTree;
-}
-
-function onBookmarkPersistenceFailed(error: TradeBookmarkPersistenceError): void {
-	if (currentBackgroundInstanceId && error.instanceId !== currentBackgroundInstanceId) return;
-	publishTradeBookmarkError(TradeBookmarkServiceErrorCode.PersistenceFailed, new Error(error.message));
-}
-
-function publishTradeBookmarkError(code: TradeBookmarkServiceErrorCode, error: unknown): void {
-	lastBookmarkServiceErrorCode = code;
-	publishTradeBookmarkEvent({ type: TradeBookmarkServiceEventType.Error, code, error });
-}
-
-function publishTradeBookmarkEvent(event: TradeBookmarkServiceEvent): void {
-	for (const listener of listeners) {
-		try {
-			listener(event);
-		} catch (error) {
-			console.error("[poe2-extensions] trade 书签 service 事件处理失败", error);
-		}
-	}
+function subscribeTradeBookmarks(
+	onChanged: (snapshot: TradeBookmarkTreeSnapshot) => void,
+	onPersistenceFailed: (error: TradeBookmarkPersistenceError) => void,
+): () => void {
+	const unsubscribeChanged = ipcMain.on(bookmarksIpcProtocol.changed, onChanged);
+	const unsubscribePersistenceFailed = ipcMain.on(bookmarksIpcProtocol.persistenceFailed, onPersistenceFailed);
+	return () => {
+		unsubscribeChanged();
+		unsubscribePersistenceFailed();
+	};
 }
 
 async function getActiveTab(): Promise<ActiveBrowserTab | undefined> {
 	const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
 	return tab;
 }
+
+export const tradeBookmarkService = {
+	loadTradeBookmarks,
+	getTradeBookmarkRootGroups,
+	getTradeBookmarkRootTree,
+	createBookmarkFolder,
+	renameBookmarkFolder,
+	deleteBookmarkFolder,
+	moveBookmarkFolder,
+	getTradeBookmarkGroups,
+	getTradeBookmarkTree,
+	addCurrentTradeSearchBookmark,
+	renameTradeBookmark,
+	deleteTradeBookmark,
+	moveTradeBookmark,
+	replaceTradeBookmarkWithCurrentSearch,
+	exportBookmarkTree,
+	exportBookmarkFolder,
+	importBookmarkData,
+	openTradeBookmark,
+	isTrade2Url,
+	getTradeBookmarkServiceErrorMessage,
+	subscribeTradeBookmarks,
+};

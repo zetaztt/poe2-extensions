@@ -1,15 +1,11 @@
 <script lang="ts" setup>
+import { storeToRefs } from "pinia";
 import { computed, onActivated, ref, watch } from "vue";
-import { SettingsServiceErrorCode, TradeSetting, useSettingsStore } from "./settings-store";
+import { useSettingsStore } from "../../modules/settings/settings-store";
+import { SettingsServiceErrorCode, TradeSetting } from "../../modules/settings/settings-types";
 
-const {
-	settings,
-	isLoading: isLoadingSettings,
-	isSaving: isSavingSettings,
-	lastError,
-	loadSettings,
-	updateSetting,
-} = useSettingsStore();
+const settingsStore = useSettingsStore();
+const { settings, isLoading: isLoadingSettings, isSaving: isSavingSettings, lastError } = storeToRefs(settingsStore);
 const settingsStatusText = ref("");
 const tradeTranslateEnabled = computed(() => settings.value?.translateEnabled ?? false);
 const tradeItemCopyEnabled = computed(() => settings.value?.itemCopyEnabled ?? false);
@@ -24,7 +20,7 @@ const statusLabel = computed(() => {
 
 onActivated(() => {
 	if (!settings.value && !isLoadingSettings.value) {
-		void loadSettings().catch((error: unknown) => {
+		void settingsStore.loadSettings().catch((error: unknown) => {
 			console.error("[poe2-extensions] trade 设置读取失败", error);
 		});
 	}
@@ -47,7 +43,7 @@ async function onSettingToggle(setting: TradeSetting, enabled: boolean): Promise
 	settingsStatusText.value = "";
 
 	try {
-		const activeTradeTabUpdated = await updateSetting(setting, enabled);
+		const activeTradeTabUpdated = await settingsStore.updateSetting(setting, enabled);
 		settingsStatusText.value = getSettingUpdatedMessage(setting, activeTradeTabUpdated);
 	} catch (error) {
 		settingsStatusText.value = "设置保存失败，请稍后重试。";

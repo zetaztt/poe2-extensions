@@ -4,6 +4,12 @@ export enum TradeSetting {
 	StatPreset = 3,
 }
 
+export enum SettingsServiceErrorCode {
+	None = 0,
+	LoadFailed = 1,
+	UpdateFailed = 2,
+}
+
 export interface TradeSettings {
 	translateEnabled: boolean;
 	itemCopyEnabled: boolean;

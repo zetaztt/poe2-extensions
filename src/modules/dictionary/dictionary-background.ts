@@ -3,8 +3,8 @@ import { ipcMain } from "../../ipc/ipc";
 import { dictionaryIpcProtocol } from "./dictionary-ipc-protocol";
 import type { TranslateDictionary } from "./dictionary-types";
 
-export const translateDictionaryUrl = "https://zetaztt.github.io/poe2-extensions/translate.json";
-export const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2-extensions/translate-meta.json";
+const translateDictionaryUrl = "https://zetaztt.github.io/poe2-extensions/translate.json";
+const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2-extensions/translate-meta.json";
 
 const translateDictionaryCacheKey = "translateDictionaryCache";
 const localTranslateDictionaryPath = "/translate.json" as Parameters<typeof browser.runtime.getURL>[0];
@@ -22,7 +22,7 @@ interface CachedTranslateDictionary {
 let localTranslateDictionaryPromise: Promise<TranslateDictionary | null> | null = null;
 let localTranslateMetaPromise: Promise<TranslateMeta | null> | null = null;
 
-export function installDictionaryHandlers(): void {
+function install(): void {
 	ipcMain.handle(dictionaryIpcProtocol.load, fetchTranslateDictionary);
 }
 
@@ -161,3 +161,7 @@ function isTranslateDictionary(value: unknown): value is TranslateDictionary {
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+export const dictionaryBackground = {
+	install,
+};

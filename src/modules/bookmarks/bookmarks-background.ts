@@ -31,7 +31,7 @@ let bookmarkRevision = 0;
 let persistedBookmarkRevision = 0;
 let bookmarkSavePromise: Promise<void> | null = null;
 
-export function installTradeBookmarkHandlers(): void {
+function install(): void {
 	ipcMain.handle(bookmarksIpcProtocol.load, loadBookmarks);
 	ipcMain.handle(bookmarksIpcProtocol.getRootGroups, getRootGroups);
 	ipcMain.handle(bookmarksIpcProtocol.getRootTree, getRootTree);
@@ -441,3 +441,7 @@ function createId(prefix: "instance" | "folder" | "bookmark"): string {
 		globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 	return `${prefix}-${randomId}`;
 }
+
+export const tradeBookmarkBackground = {
+	install,
+};

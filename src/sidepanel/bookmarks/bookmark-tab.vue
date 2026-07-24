@@ -1,21 +1,9 @@
 <script lang="ts" setup>
+import { storeToRefs } from "pinia";
 import { computed, onActivated, onDeactivated, ref, watch } from "vue";
+import { useTradeBookmarkStore } from "../../modules/bookmarks/bookmarks-store";
 import {
-	addCurrentTradeSearchBookmark,
-	createBookmarkFolder,
-	deleteBookmarkFolder,
-	deleteTradeBookmark,
-	exportBookmarkFolder,
-	exportBookmarkTree,
-	getTradeBookmarkServiceErrorMessage,
-	importBookmarkData,
-	moveBookmarkFolder,
-	moveTradeBookmark,
-	openTradeBookmark,
-	replaceTradeBookmarkWithCurrentSearch,
 	rootFolderId,
-} from "../../modules/bookmarks/bookmarks-service";
-import {
 	type TradeBookmarkFolder,
 	type TradeBookmarkItem,
 	type TradeBookmarkRoot,
@@ -24,7 +12,6 @@ import { closeMenu, openMenu as openSidepanelMenu } from "../common/menu/sidepan
 import { dismissSnackBar, showSnackBar, SidepanelSnackBarType } from "../common/snack-bar/sidepanel-snack-bar";
 import BookmarkFolder from "./bookmark-folder.vue";
 import BookmarkItem from "./bookmark-item.vue";
-import { useTradeBookmarkStore } from "./bookmark-store";
 import BookmarkTreeHeader from "./bookmark-tree-header.vue";
 import { SidepanelMenuOptions, SidepanelMenuItem, SidepanelMenuAlign } from "../common/menu/sidepanel-menu-types.ts";
 
@@ -52,14 +39,8 @@ type DropTarget =
 			position: BookmarkDropPosition.Before | BookmarkDropPosition.After;
 	  };
 
-const {
-	bookmarkTree,
-	isLoadingBookmarks,
-	lastError,
-	loadBookmarks: loadBookmarkStore,
-	renameFolderOptimistically,
-	renameBookmarkOptimistically,
-} = useTradeBookmarkStore();
+const tradeBookmarkStore = useTradeBookmarkStore();
+const { bookmarkTree, isLoadingBookmarks, lastError } = storeToRefs(tradeBookmarkStore);
 const expandedFolderIds = ref<Set<string>>(new Set());
 const creatingFolderId = ref("");
 const creatingBookmarkId = ref("");
@@ -94,7 +75,7 @@ watch(
 watch(
 	lastError,
 	(error) => {
-		if (error) showBookmarkError(getTradeBookmarkServiceErrorMessage(error.code));
+		if (error) showBookmarkError(tradeBookmarkStore.getTradeBookmarkServiceErrorMessage(error.code));
 	},
 	{ immediate: true },
 );
@@ -118,7 +99,7 @@ function showBookmarkError(message: string): void {
 
 async function loadBookmarks(): Promise<void> {
 	try {
-		await loadBookmarkStore();
+		await tradeBookmarkStore.loadTradeBookmarks();
 	} catch (error) {
 		console.error("[poe2-extensions] trade 书签读取失败", error);
 	}
@@ -131,7 +112,9 @@ async function onExportBookmarks(folder?: TradeBookmarkFolder): Promise<void> {
 	dismissSnackBar();
 
 	try {
-		const data = folder ? await exportBookmarkFolder(folder.id) : await exportBookmarkTree();
+		const data = folder
+			? await tradeBookmarkStore.exportBookmarkFolder(folder.id)
+			: await tradeBookmarkStore.exportBookmarkTree();
 		const blob = new Blob([JSON.stringify(data, null, "\t")], { type: "application/json" });
 		const url = URL.createObjectURL(blob);
 		const link = document.createElement("a");
@@ -169,7 +152,7 @@ async function onImportBookmarksChange(event: Event): Promise<void> {
 
 	try {
 		const data: unknown = JSON.parse(await file.text());
-		await importBookmarkData(data);
+		await tradeBookmarkStore.importBookmarkData(data);
 		showBookmarkSuccess("书签 JSON 已同步。");
 	} catch (error) {
 		showBookmarkError(error instanceof Error ? error.message : "导入书签失败，请确认 JSON 文件有效。");
@@ -340,7 +323,7 @@ async function addCurrentSearchToFolder(folderId: string): Promise<void> {
 	dismissSnackBar();
 
 	try {
-		const bookmark = await addCurrentTradeSearchBookmark(folderId);
+		const bookmark = await tradeBookmarkStore.addCurrentTradeSearchBookmark(folderId);
 		expandFolder(folderId);
 		creatingBookmarkId.value = bookmark.id;
 	} catch (error) {
@@ -358,7 +341,7 @@ async function onCreateFolder(parentId: string): Promise<void> {
 	dismissSnackBar();
 
 	try {
-		const folder = await createBookmarkFolder(parentId, "New Folder");
+		const folder = await tradeBookmarkStore.createBookmarkFolder(parentId, "New Folder");
 		expandFolder(parentId);
 		creatingFolderId.value = folder.id;
 	} catch (error) {
@@ -378,7 +361,7 @@ async function cancelCreatedFolder(folderId: string): Promise<void> {
 	dismissSnackBar();
 
 	try {
-		await deleteBookmarkFolder(folderId);
+		await tradeBookmarkStore.deleteBookmarkFolder(folderId);
 		creatingFolderId.value = "";
 	} catch (error) {
 		showBookmarkError("取消新建文件夹失败，请稍后重试。");
@@ -396,7 +379,7 @@ async function onDeleteFolder(folder: TradeBookmarkFolder): Promise<void> {
 	dismissSnackBar();
 
 	try {
-		await deleteBookmarkFolder(folder.id);
+		await tradeBookmarkStore.deleteBookmarkFolder(folder.id);
 		removeExpandedFolder(folder.id);
 	} catch (error) {
 		showBookmarkError("删除文件夹失败，请稍后重试。");
@@ -415,7 +398,7 @@ async function cancelCreatedBookmark(bookmarkId: string): Promise<void> {
 	dismissSnackBar();
 
 	try {
-		await deleteTradeBookmark(bookmarkId);
+		await tradeBookmarkStore.deleteTradeBookmark(bookmarkId);
 		creatingBookmarkId.value = "";
 	} catch (error) {
 		showBookmarkError("取消新建书签失败，请稍后重试。");
@@ -429,7 +412,7 @@ async function onOpenBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	dismissSnackBar();
 
 	try {
-		await openTradeBookmark(bookmark.url);
+		await tradeBookmarkStore.openTradeBookmark(bookmark.url);
 	} catch (error) {
 		showBookmarkError("打开书签失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签打开失败", error);
@@ -443,7 +426,7 @@ async function onReplaceBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	dismissSnackBar();
 
 	try {
-		await replaceTradeBookmarkWithCurrentSearch(bookmark.id);
+		await tradeBookmarkStore.replaceTradeBookmarkWithCurrentSearch(bookmark.id);
 		showBookmarkSuccess("书签链接已替换为当前搜索。");
 	} catch (error) {
 		showBookmarkError(error instanceof Error ? error.message : "替换书签失败，请稍后重试。");
@@ -461,7 +444,7 @@ async function onDeleteBookmark(bookmark: TradeBookmarkItem): Promise<void> {
 	dismissSnackBar();
 
 	try {
-		await deleteTradeBookmark(bookmark.id);
+		await tradeBookmarkStore.deleteTradeBookmark(bookmark.id);
 	} catch (error) {
 		showBookmarkError("删除书签失败，请稍后重试。");
 		console.error("[poe2-extensions] trade 书签删除失败", error);
@@ -535,14 +518,14 @@ async function onDrop(event: DragEvent): Promise<void> {
 			const moveTarget = getFolderMoveTarget(item.id, target);
 			if (!moveTarget) return;
 
-			await moveBookmarkFolder(item.id, moveTarget.parentId, moveTarget.index);
+			await tradeBookmarkStore.moveBookmarkFolder(item.id, moveTarget.parentId, moveTarget.index);
 			if (target.type === BookmarkDragItemType.Folder && target.position === BookmarkDropPosition.Inside)
 				expandFolder(target.id);
 		} else {
 			const moveTarget = getBookmarkMoveTarget(item.id, target);
 			if (!moveTarget) return;
 
-			await moveTradeBookmark(item.id, moveTarget.folderId, moveTarget.index);
+			await tradeBookmarkStore.moveTradeBookmark(item.id, moveTarget.folderId, moveTarget.index);
 			expandFolder(moveTarget.folderId);
 		}
 	} catch (error) {
@@ -671,7 +654,7 @@ function queueFolderRename(folderId: string, title: string): void {
 	dismissSnackBar();
 	if (creatingFolderId.value === folderId) creatingFolderId.value = "";
 
-	void renameFolderOptimistically(folderId, title).catch((error: unknown) => {
+	void tradeBookmarkStore.renameFolderOptimistically(folderId, title).catch((error: unknown) => {
 		console.error("[poe2-extensions] trade 书签目录重命名失败", error);
 	});
 }
@@ -680,7 +663,7 @@ function queueBookmarkRename(bookmarkId: string, title: string): void {
 	dismissSnackBar();
 	if (creatingBookmarkId.value === bookmarkId) creatingBookmarkId.value = "";
 
-	void renameBookmarkOptimistically(bookmarkId, title).catch((error: unknown) => {
+	void tradeBookmarkStore.renameBookmarkOptimistically(bookmarkId, title).catch((error: unknown) => {
 		console.error("[poe2-extensions] trade 书签重命名失败", error);
 	});
 }
