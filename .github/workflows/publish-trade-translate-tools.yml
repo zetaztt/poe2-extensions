@@ -6,7 +6,7 @@ on:
         branches:
             - main
         paths:
-            - packages/trade-translate-tools/**
+            - projects/packages/trade-translate-tools/**
             - .github/workflows/publish-trade-translate-tools.yml
 
 permissions:
@@ -37,7 +37,7 @@ jobs:
               run: npm ci
 
             - name: Type check package
-              run: npx tsc --noEmit -p packages/trade-translate-tools/tsconfig.json
+              run: npx tsc --noEmit -p projects/packages/trade-translate-tools/tsconfig.json
 
             - name: Prepare package snapshot
               shell: bash
@@ -47,9 +47,9 @@ jobs:
                   package_snapshot="$(mktemp -d)"
                   echo "PACKAGE_SNAPSHOT=${package_snapshot}" >> "${GITHUB_ENV}"
 
-                  cp packages/trade-translate-tools/package.json "${package_snapshot}/package.json"
-                  cp packages/trade-translate-tools/tsconfig.json "${package_snapshot}/tsconfig.json"
-                  cp -R packages/trade-translate-tools/src "${package_snapshot}/src"
+                  cp projects/packages/trade-translate-tools/package.json "${package_snapshot}/package.json"
+                  cp projects/packages/trade-translate-tools/tsconfig.json "${package_snapshot}/tsconfig.json"
+                  cp -R projects/packages/trade-translate-tools/src "${package_snapshot}/src"
 
                   if [ -f LICENSE ]; then
                       cp LICENSE "${package_snapshot}/LICENSE"
@@ -58,7 +58,7 @@ jobs:
                   printf '%s\n' \
                       "# zeta-poe2-trade-translate-tools" \
                       "" \
-                      'This branch is generated automatically from `packages/trade-translate-tools` on `main`.' \
+                      'This branch is generated automatically from `projects/packages/trade-translate-tools` on `main`.' \
                       "Do not edit this branch by hand." \
                       > "${package_snapshot}/README.md"
 

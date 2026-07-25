@@ -1,24 +1,22 @@
 {
+	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
-		"target": "ES2022",
-		"useDefineForClassFields": true,
-		"module": "ESNext",
-		"lib": ["ES2022", "DOM", "DOM.Iterable"],
-		"skipLibCheck": true,
-		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true,
-		"resolveJsonModule": true,
-		"isolatedModules": true,
-		"noEmit": true,
-		"strict": true,
-		"jsx": "preserve",
-		"paths": {
-			"zeta-poe2-trade-translate-tools": ["./packages/trade-translate-tools/src/index.ts"],
-			"zeta-poe2-trade-translate-tools/translate-texts": [
-				"./packages/trade-translate-tools/src/translate-texts/index.ts"
-			],
-			"zeta-poe2-trade-translate-tools/trade-api": ["./packages/trade-translate-tools/src/trade-api/index.ts"]
-		}
+		"composite": true,
+		"lib": ["ES2022", "DOM"],
+		"outDir": "dist/types/tooling",
+		"rootDir": ".",
+		"tsBuildInfoFile": "dist/types/tooling/tsconfig.tsbuildinfo",
+		"types": ["node"]
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "vite.config.ts", "scripts/**/*.ts", "packages/**/*.ts"]
+	"include": ["eslint.config.ts", "vite.config.ts", "scripts/**/*.ts", "package.json", "manifest.json"],
+	"references": [
+		{ "path": "./projects/packages/core" },
+		{ "path": "./projects/packages/ipc-window" },
+		{ "path": "./projects/packages/ipc-webextension" },
+		{ "path": "./projects/apps/background" },
+		{ "path": "./projects/apps/content" },
+		{ "path": "./projects/apps/inject" },
+		{ "path": "./projects/apps/sidepanel" },
+		{ "path": "./projects/packages/trade-translate-tools" }
+	]
 }

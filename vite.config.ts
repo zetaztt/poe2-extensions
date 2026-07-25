@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import webExtension from "vite-plugin-web-extension";
 import pkg from "./package.json" with { type: "json" };
-import manifest from "./src/manifest.json" with { type: "json" };
+import manifest from "./manifest.json" with { type: "json" };
 import fs from "fs";
 import path from "path";
 
@@ -16,6 +16,9 @@ if (process.env.NODE_ENV !== "production") {
 
 export default defineConfig({
 	publicDir: "assets",
+	build: {
+		outDir: "dist/poe2-extensions",
+	},
 	define: {
 		CHROME: "true",
 	},
@@ -35,9 +38,9 @@ export default defineConfig({
 				args: ["--disable-blink-features=AutomationControlled"],
 			},
 			additionalInputs: [
-				"src/trade/item-code/trade-item-code-inject.ts",
-				"src/trade/stat-preset/trade-stat-preset-inject.ts",
-				"src/trade/translate/trade-translate-inject.ts",
+				"projects/apps/inject/src/trade/item-code/trade-item-code-inject.ts",
+				"projects/apps/inject/src/trade/stat-preset/trade-stat-preset-inject.ts",
+				"projects/apps/inject/src/trade/translate/trade-translate-inject.ts",
 			],
 			scriptViteConfig: {
 				build: {
@@ -45,7 +48,7 @@ export default defineConfig({
 				},
 			},
 			browser: "chrome",
-			watchFilePaths: ["package.json", "src/manifest.json"],
+			watchFilePaths: ["package.json", "manifest.json"],
 			skipManifestValidation: true,
 		}),
 	],

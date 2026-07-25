@@ -1,0 +1,11 @@
+{
+	"name": "@poe2-extensions/apps-inject",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"dependencies": {
+		"@poe2-extensions/core": "0.0.0",
+		"@poe2-extensions/ipc-window": "0.0.0",
+		"ajax-hook": "^3.0.3"
+	}
+}

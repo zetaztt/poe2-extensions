@@ -1,0 +1,17 @@
+{
+	"name": "@poe2-extensions/core",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"exports": {
+		"./bookmarks": "./src/bookmarks/index.ts",
+		"./dictionary": "./src/dictionary/index.ts",
+		"./settings": "./src/settings/index.ts",
+		"./trade": "./src/trade/index.ts",
+		"./ipc": "./src/ipc/index.ts",
+		"./ipc/transport": "./src/ipc/jsonrpc-transport.ts"
+	},
+	"dependencies": {
+		"vscode-jsonrpc": "^9.0.1"
+	}
+}

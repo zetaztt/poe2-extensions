@@ -1,0 +1,288 @@
+<script lang="ts" setup>
+import { storeToRefs } from "pinia";
+import { computed, onActivated, ref, watch } from "vue";
+import { SettingsServiceErrorCode, TradeSetting } from "@poe2-extensions/core/settings";
+import { useSettingsStore } from "../modules/settings/settings-store";
+
+const settingsStore = useSettingsStore();
+const { settings, isLoading: isLoadingSettings, isSaving: isSavingSettings, lastError } = storeToRefs(settingsStore);
+const settingsStatusText = ref("");
+const tradeTranslateEnabled = computed(() => settings.value?.translateEnabled ?? false);
+const tradeItemCopyEnabled = computed(() => settings.value?.itemCopyEnabled ?? false);
+const tradeStatPresetEnabled = computed(() => settings.value?.statPresetEnabled ?? false);
+
+const statusLabel = computed(() => {
+	const translate = tradeTranslateEnabled.value ? "翻译已开启" : "翻译已关闭";
+	const itemCopy = tradeItemCopyEnabled.value ? "复制已开启" : "复制已关闭";
+	const statPreset = tradeStatPresetEnabled.value ? "预设已开启" : "预设已关闭";
+	return `${translate}，${itemCopy}，${statPreset}`;
+});
+
+onActivated(() => {
+	if (!settings.value && !isLoadingSettings.value) {
+		void settingsStore.loadSettings().catch((error: unknown) => {
+			console.error("[poe2-extensions] trade 设置读取失败", error);
+		});
+	}
+});
+
+watch(lastError, (error) => {
+	if (!error) return;
+	settingsStatusText.value =
+		error.code === SettingsServiceErrorCode.LoadFailed
+			? "设置读取失败，请稍后重试。"
+			: "设置保存失败，请稍后重试。";
+});
+
+function onCheckboxChange(event: Event, setting: TradeSetting): void {
+	const input = event.target as HTMLInputElement;
+	void onSettingToggle(setting, input.checked);
+}
+
+async function onSettingToggle(setting: TradeSetting, enabled: boolean): Promise<void> {
+	settingsStatusText.value = "";
+
+	try {
+		const activeTradeTabUpdated = await settingsStore.updateSetting(setting, enabled);
+		settingsStatusText.value = getSettingUpdatedMessage(setting, activeTradeTabUpdated);
+	} catch (error) {
+		settingsStatusText.value = "设置保存失败，请稍后重试。";
+		console.error("[poe2-extensions] trade 设置保存失败", error);
+	}
+}
+
+function getSettingUpdatedMessage(setting: TradeSetting, activeTradeTabUpdated: boolean): string {
+	if (!activeTradeTabUpdated) return "设置已保存，打开或刷新 trade2 页面后生效。";
+	return setting === TradeSetting.Translate ? "设置已保存，trade2 页面已刷新。" : "设置已保存，trade2 页面已更新。";
+}
+</script>
+
+<template>
+	<section class="tab-content">
+		<section class="panel">
+			<label class="setting-row">
+				<span>
+					<span class="setting-title">中文翻译</span>
+					<span class="setting-description">控制 trade2 页面数据和物品文本中文化</span>
+				</span>
+
+				<input
+					class="switch-input"
+					type="checkbox"
+					:checked="tradeTranslateEnabled"
+					:disabled="isLoadingSettings || isSavingSettings"
+					@change="onCheckboxChange($event, TradeSetting.Translate)" />
+				<span class="switch" aria-hidden="true"></span>
+			</label>
+
+			<label class="setting-row">
+				<span>
+					<span class="setting-title">复制物品文本</span>
+					<span class="setting-description">将 trade2 物品复制为 PoB 文本</span>
+				</span>
+
+				<input
+					class="switch-input"
+					type="checkbox"
+					:checked="tradeItemCopyEnabled"
+					:disabled="isLoadingSettings || isSavingSettings"
+					@change="onCheckboxChange($event, TradeSetting.ItemCopy)" />
+				<span class="switch" aria-hidden="true"></span>
+			</label>
+
+			<label class="setting-row">
+				<span>
+					<span class="setting-title">筛选预设保存</span>
+					<span class="setting-description">保存和复用 trade2 高级筛选 stat group</span>
+				</span>
+
+				<input
+					class="switch-input"
+					type="checkbox"
+					:checked="tradeStatPresetEnabled"
+					:disabled="isLoadingSettings || isSavingSettings"
+					@change="onCheckboxChange($event, TradeSetting.StatPreset)" />
+				<span class="switch" aria-hidden="true"></span>
+			</label>
+
+			<div class="status">
+				<span
+					class="status-dot"
+					:class="{ active: tradeTranslateEnabled || tradeItemCopyEnabled || tradeStatPresetEnabled }"></span>
+				<span>{{ isLoadingSettings ? "读取设置中" : statusLabel }}</span>
+			</div>
+
+			<p v-if="settingsStatusText" class="message">{{ settingsStatusText }}</p>
+		</section>
+
+		<section class="panel muted">
+			<h2>字典来源</h2>
+			<a href="https://zetaztt.github.io/poe2-extensions/translate.json" target="_blank"> translate.json </a>
+		</section>
+	</section>
+</template>
+
+<style scoped>
+.tab-content {
+	display: grid;
+	gap: 0;
+	padding: 8px;
+	background: #000;
+}
+
+.panel {
+	border: 0;
+	border-radius: 0;
+	background: #000;
+}
+
+.panel + .panel {
+	margin-top: 8px;
+}
+
+h2,
+p {
+	margin: 0;
+}
+
+h2 {
+	padding: 5px 2px;
+	border-bottom: 1px solid #4a4a4a;
+	color: #e2e2e2;
+	background: #000;
+	font-family: FontinSmallCaps, Verdana, Arial, "Microsoft YaHei", sans-serif;
+	font-size: 14px;
+	font-weight: 400;
+}
+
+.setting-description,
+.message,
+.muted {
+	color: var(--color-text);
+}
+
+.setting-description {
+	display: block;
+	margin-top: 3px;
+	font-size: 11px;
+	line-height: 1.35;
+}
+
+.setting-row {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-height: 48px;
+	padding: 6px 10px;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	border-bottom-color: #000;
+	background: #101112;
+	cursor: pointer;
+}
+
+.setting-row:hover {
+	background: #151719;
+}
+
+.setting-row > span:first-child {
+	min-width: 0;
+}
+
+.setting-title {
+	display: block;
+	color: var(--color-text-secondary);
+	font-size: 14px;
+	font-weight: 400;
+}
+
+.switch-input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.switch {
+	position: relative;
+	flex: 0 0 auto;
+	width: 84px;
+	height: 32px;
+	border: 1px solid #333;
+	border-radius: 0;
+	background: #1e2124;
+}
+
+.switch::after {
+	display: grid;
+	height: 100%;
+	place-items: center;
+	color: #9d9d9d;
+	content: "关闭";
+	font-size: 13px;
+}
+
+.switch-input:checked + .switch {
+	border-color: #8a5e12;
+	background: #684200;
+}
+
+.switch-input:checked + .switch::after {
+	color: #fff;
+	content: "开启";
+}
+
+.switch-input:disabled + .switch {
+	opacity: 0.6;
+}
+
+.status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 34px;
+	padding: 6px 10px;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	color: #dcdcdc;
+	background: #1e2124;
+	font-size: 12px;
+}
+
+.status-dot {
+	width: 12px;
+	height: 12px;
+	border: 1px solid #4a4a4a;
+	border-radius: 0;
+	background: #111;
+}
+
+.status-dot.active {
+	border-color: #a38d6d;
+	background: #a38d6d;
+	box-shadow: none;
+}
+
+.message {
+	padding: 8px 10px;
+	border: 1px solid #333;
+	font-size: 11px;
+	line-height: 1.4;
+}
+
+a {
+	display: block;
+	padding: 8px 10px;
+	border: 1px solid #000;
+	border-left-color: #8a6d3b;
+	color: #43a2e6;
+	background: #1e2124;
+	text-decoration: none;
+}
+
+a:hover {
+	color: var(--color-text-secondary);
+	text-decoration: underline;
+}
+</style>

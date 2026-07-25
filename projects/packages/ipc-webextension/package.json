@@ -1,0 +1,17 @@
+{
+	"name": "@poe2-extensions/ipc-webextension",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@poe2-extensions/core": "0.0.0",
+		"webextension-polyfill": "^0.12.0"
+	},
+	"devDependencies": {
+		"@types/chrome": "^0.2.2",
+		"@types/webextension-polyfill": "^0.12.5"
+	}
+}

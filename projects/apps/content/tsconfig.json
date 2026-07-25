@@ -1,0 +1,17 @@
+{
+	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		"composite": true,
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"outDir": "../../../dist/types/content",
+		"rootDir": "src",
+		"tsBuildInfoFile": "../../../dist/types/content/tsconfig.tsbuildinfo",
+		"types": []
+	},
+	"include": ["src/**/*.ts"],
+	"references": [
+		{ "path": "../../packages/core" },
+		{ "path": "../../packages/ipc-window" },
+		{ "path": "../../packages/ipc-webextension" }
+	]
+}
