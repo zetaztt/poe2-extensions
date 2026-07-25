@@ -40,10 +40,8 @@ jobs:
                       '</html>' \
                       > "${publish_dir}/index.html"
 
-                  echo "PUBLISH_DIR=${publish_dir}" >> "${GITHUB_ENV}"
-
             - name: Publish
               uses: peaceiris/actions-gh-pages@v4
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
-                  publish_dir: ${{ env.PUBLISH_DIR }}
+                  publish_dir: ${{ runner.temp }}/translate-pages
