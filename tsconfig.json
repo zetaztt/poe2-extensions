@@ -1,13 +1,18 @@
 {
 	"compilerOptions": {
+		"composite": true,
 		"target": "ES2022",
 		"module": "ESNext",
 		"lib": ["ES2022", "DOM"],
+		"declaration": true,
+		"emitDeclarationOnly": true,
 		"skipLibCheck": true,
 		"moduleResolution": "bundler",
 		"isolatedModules": true,
-		"noEmit": true,
+		"outDir": "../../../dist/types/trade-translate-tools",
+		"rootDir": "src",
 		"strict": true,
+		"tsBuildInfoFile": "../../../dist/types/trade-translate-tools/tsconfig.tsbuildinfo",
 		"types": ["node"]
 	},
 	"include": ["src/**/*.ts"]
