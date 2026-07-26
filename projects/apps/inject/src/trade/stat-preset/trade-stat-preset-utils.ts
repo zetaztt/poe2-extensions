@@ -1,6 +1,7 @@
 import type { TradeStatPreset, TradeStatPresetQuery } from "@poe2-extensions/core/trade";
 import { logPrefix } from "../trade-utils";
-import statPresetStyle from "./trade-stat-preset-style.css?raw";
+
+const statPresetScriptUrl = (document.currentScript as HTMLScriptElement | null)?.src;
 
 export function cloneStatPresetQuery(query: TradeStatPresetQuery): TradeStatPresetQuery {
 	return JSON.parse(JSON.stringify(query)) as TradeStatPresetQuery;
@@ -30,12 +31,17 @@ const styleId = "poe2-extensions-stat-preset-style";
 
 export function installStatPresetStyle(): void {
 	if (document.getElementById(styleId)) return;
+	if (!statPresetScriptUrl) {
+		console.warn(`${logPrefix} 筛选预设样式加载失败：无法确定扩展资源地址`);
+		return;
+	}
 
-	const style = document.createElement("style");
-	style.id = styleId;
-	style.textContent = statPresetStyle;
+	const link = document.createElement("link");
+	link.id = styleId;
+	link.rel = "stylesheet";
+	link.href = new URL("trade-stat-preset-style.css", statPresetScriptUrl).href;
 
-	document.documentElement.appendChild(style);
+	document.documentElement.appendChild(link);
 }
 
 export function removeStatPresetStyle(): void {

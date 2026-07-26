@@ -6,7 +6,7 @@
 		"outDir": "dist/types/tooling",
 		"rootDir": ".",
 		"tsBuildInfoFile": "dist/types/tooling/tsconfig.tsbuildinfo",
-		"types": ["node"]
+		"types": ["node", "chrome"]
 	},
 	"include": ["eslint.config.ts", "vite.config.ts", "scripts/**/*.ts", "tests/**/*.ts", "package.json"],
 	"references": [
