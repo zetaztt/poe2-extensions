@@ -8,7 +8,7 @@
 		"tsBuildInfoFile": "dist/types/tooling/tsconfig.tsbuildinfo",
 		"types": ["node"]
 	},
-	"include": ["eslint.config.ts", "vite.config.ts", "scripts/**/*.ts", "package.json", "manifest.json"],
+	"include": ["eslint.config.ts", "vite.config.ts", "scripts/**/*.ts", "package.json"],
 	"references": [
 		{ "path": "./projects/packages/core" },
 		{ "path": "./projects/packages/ipc-window" },
