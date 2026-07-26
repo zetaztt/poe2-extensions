@@ -90,10 +90,8 @@ export default defineConfig((env) => {
 					args: ["--disable-blink-features=AutomationControlled"],
 				},
 				additionalInputs: [
-					"projects/apps/inject/src/trade/item-code/trade-item-code-inject.ts",
-					"projects/apps/inject/src/trade/stat-preset/trade-stat-preset-inject.ts",
-					"projects/apps/inject/src/trade/stat-preset/trade-stat-preset-style.css",
 					"projects/apps/inject/src/trade/translate/trade-translate-inject.ts",
+					...accessibleResources,
 				],
 				browser: "chrome",
 				watchFilePaths: ["package.json", "manifest.json"],
