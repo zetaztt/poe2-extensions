@@ -9,9 +9,6 @@
 		"./settings": "./src/settings/index.ts",
 		"./trade": "./src/trade/index.ts",
 		"./ipc": "./src/ipc/index.ts",
-		"./ipc/transport": "./src/ipc/jsonrpc-transport.ts"
-	},
-	"dependencies": {
-		"vscode-jsonrpc": "^9.0.1"
+		"./ipc/transport": "./src/ipc/ipc-connection.ts"
 	}
 }

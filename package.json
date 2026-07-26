@@ -13,9 +13,10 @@
 		"build": "vite build",
 		"build:dev": "vite build --mode development",
 		"compile": "npm run lint && vue-tsc --build",
+		"test": "tsx --test tests/ipc/ipc-connection.test.ts",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"lint": "eslint projects scripts vite.config.ts",
+		"lint": "eslint projects scripts tests vite.config.ts",
 		"pull-trade-texts": "tsx ./scripts/translate/pull-trade-texts.ts",
 		"pull-translate": "npm run pull-trade-texts",
 		"build-translate": "tsx ./scripts/translate/build-translate.ts"

@@ -1,4 +1,4 @@
-import { ErrorCodes, ResponseError } from "vscode-jsonrpc/browser";
+import { IpcError, IpcErrorCode } from "./ipc-connection";
 import type { IpcConnectionHub } from "./ipc-connection-hub";
 import {
 	IpcProtocolMemberKind,
@@ -171,6 +171,6 @@ function getNotificationMember(member: AnyIpcProtocolMember): IpcNotificationDef
 	return member;
 }
 
-function invalidMethodError(method: string): ResponseError<void> {
-	return new ResponseError(ErrorCodes.MethodNotFound, `IPC 方法不存在或类型不匹配: ${method}`);
+function invalidMethodError(method: string): IpcError {
+	return new IpcError(IpcErrorCode.MethodNotFound, `IPC 方法不存在或类型不匹配: ${method}`);
 }

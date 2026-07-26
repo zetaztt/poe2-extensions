@@ -1,8 +1,8 @@
 import { IpcConnectionHub } from "@poe2-extensions/core/ipc";
-import { createWindowJsonRpcConnection, WindowIpcChannel, WindowIpcDirection } from "@poe2-extensions/ipc-window";
+import { createWindowIpcConnection, WindowIpcChannel, WindowIpcDirection } from "@poe2-extensions/ipc-window";
 
 export function createMainWorldIpcMain(): IpcConnectionHub<void> {
-	const windowTransport = createWindowJsonRpcConnection(
+	const windowTransport = createWindowIpcConnection(
 		WindowIpcChannel.Main,
 		WindowIpcDirection.MainToContent,
 		WindowIpcDirection.ContentToMain,
@@ -13,7 +13,7 @@ export function createMainWorldIpcMain(): IpcConnectionHub<void> {
 }
 
 export function createMainWorldIpcWindow(): IpcConnectionHub<number | undefined> {
-	const windowTransport = createWindowJsonRpcConnection(
+	const windowTransport = createWindowIpcConnection(
 		WindowIpcChannel.Window,
 		WindowIpcDirection.MainToContent,
 		WindowIpcDirection.ContentToMain,

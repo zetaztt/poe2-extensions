@@ -1,15 +1,13 @@
 import {
-	createJsonRpcConnection,
-	isJsonRpcMessage,
-	JsonRpcMessageReader,
-	JsonRpcMessageWriter,
-	type JsonRpcMessage,
-	type MessageConnection,
+	createIpcConnection,
+	isIpcMessage,
+	type IpcConnection,
+	type IpcMessage,
 } from "@poe2-extensions/core/ipc/transport";
 
 export enum WindowIpcChannel {
-	Main = "poe2-extensions:jsonrpc:main",
-	Window = "poe2-extensions:jsonrpc:window",
+	Main = "poe2-extensions:ipc:main:v1",
+	Window = "poe2-extensions:ipc:window:v1",
 }
 
 export enum WindowIpcDirection {
@@ -17,39 +15,48 @@ export enum WindowIpcDirection {
 	MainToContent = "main-to-content",
 }
 
-interface WindowJsonRpcEnvelope {
+interface WindowIpcEnvelope {
 	channel: WindowIpcChannel;
 	direction: WindowIpcDirection;
-	message: JsonRpcMessage;
+	message: IpcMessage;
 }
 
-export function createWindowJsonRpcConnection(
+export function createWindowIpcConnection(
 	channel: WindowIpcChannel,
 	outgoingDirection: WindowIpcDirection,
 	incomingDirection: WindowIpcDirection,
-): { connection: MessageConnection; dispose: () => void } {
-	const reader = new JsonRpcMessageReader();
-	const writer = new JsonRpcMessageWriter((message) => {
-		const envelope: WindowJsonRpcEnvelope = {
-			channel,
-			direction: outgoingDirection,
-			message,
-		};
-		window.postMessage(envelope, window.location.origin);
-	});
-	const connection = createJsonRpcConnection(reader, writer);
+): { connection: IpcConnection; dispose: () => void } {
+	const sendMessage = (message: IpcMessage): undefined => {
+		window.postMessage(
+			{
+				channel,
+				direction: outgoingDirection,
+				message,
+			} satisfies WindowIpcEnvelope,
+			window.location.origin,
+		);
+		return undefined;
+	};
+	const connection = createIpcConnection(sendMessage);
 	const listener = (event: MessageEvent<unknown>) => {
-		// main world 与 content script 共用页面消息总线，方向校验可避免连接读取自己发出的消息。
 		if (
 			event.source !== window
 			|| event.origin !== window.location.origin
-			|| !isWindowJsonRpcEnvelope(event.data)
+			|| !isWindowIpcEnvelope(event.data)
 			|| event.data.channel !== channel
 			|| event.data.direction !== incomingDirection
 		) {
 			return;
 		}
-		reader.accept(event.data.message);
+
+		void connection
+			.receive(event.data.message)
+			.then((response) => {
+				if (response) sendMessage(response);
+			})
+			.catch((error) => {
+				console.error("[poe2-extensions] window IPC 消息处理失败", error);
+			});
 	};
 
 	window.addEventListener("message", listener);
@@ -62,13 +69,13 @@ export function createWindowJsonRpcConnection(
 	};
 }
 
-function isWindowJsonRpcEnvelope(value: unknown): value is WindowJsonRpcEnvelope {
+function isWindowIpcEnvelope(value: unknown): value is WindowIpcEnvelope {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
 	const envelope = value as { channel?: unknown; direction?: unknown; message?: unknown };
 	return (
 		(envelope.channel === WindowIpcChannel.Main || envelope.channel === WindowIpcChannel.Window)
 		&& (envelope.direction === WindowIpcDirection.ContentToMain
 			|| envelope.direction === WindowIpcDirection.MainToContent)
-		&& isJsonRpcMessage(envelope.message)
+		&& isIpcMessage(envelope.message)
 	);
 }

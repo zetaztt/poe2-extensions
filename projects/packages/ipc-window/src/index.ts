@@ -1,1 +1,1 @@
-export { createWindowJsonRpcConnection, WindowIpcChannel, WindowIpcDirection } from "./window-ipc-transport";
+export { createWindowIpcConnection, WindowIpcChannel, WindowIpcDirection } from "./window-ipc-transport";

@@ -1,22 +1,14 @@
-import {
-	CancellationTokenSource,
-	ResponseError,
-	type CancellationToken,
-	type Disposable,
-	type MessageConnection,
-} from "vscode-jsonrpc/browser";
-
-const ipcRequestTimeoutErrorCode = -32_000;
+import type { Disposable, IpcConnection, IpcRequestContext } from "./ipc-connection";
 // 全局发布使用内部 envelope；普通 notification 保持点对点，显式寻址不会被 relay 扩散。
 const ipcPublishedNotificationMethod = "$/ipc/publish";
 const maxRememberedPublishedNotifications = 256;
 
-type RequestHandler = (params: unknown, token: CancellationToken) => unknown | Promise<unknown>;
+type RequestHandler = (params: unknown, context: IpcRequestContext) => unknown | Promise<unknown>;
 type NotificationHandler = (params: unknown) => void | Promise<void>;
 
 interface RegisteredHandler<THandler> {
 	handler: THandler;
-	disposables: Map<MessageConnection, Disposable>;
+	disposables: Map<IpcConnection, Disposable>;
 }
 
 interface PublishedNotification {
@@ -27,19 +19,19 @@ interface PublishedNotification {
 
 // 一个通道可以连接多个对端；已有 handler 会自动挂载到后续建立的连接。
 export class IpcConnectionHub<TAddress> {
-	private readonly connections = new Set<MessageConnection>();
+	private readonly connections = new Set<IpcConnection>();
 	private readonly requestHandlers = new Map<string, RegisteredHandler<RequestHandler>>();
 	private readonly notificationHandlers = new Map<string, RegisteredHandler<NotificationHandler>>();
-	private readonly publishedNotificationDisposables = new Map<MessageConnection, Disposable>();
+	private readonly publishedNotificationDisposables = new Map<IpcConnection, Disposable>();
 	// relay target 可能是惰性 runtime 连接，首次发布经过 source 时才需要解析并加入拓扑。
-	private readonly relayTargets = new Map<MessageConnection, Set<TAddress>>();
+	private readonly relayTargets = new Map<IpcConnection, Set<TAddress>>();
 	// 同一发布可能经多个 content/window 路径返回，有限 ID 集合确保每个环境只处理一次。
 	private readonly publishedNotificationIds = new Set<string>();
 	private readonly publishedNotificationIdOrder: string[] = [];
 
-	public constructor(private readonly resolveConnection: (address: TAddress) => MessageConnection) {}
+	public constructor(private readonly resolveConnection: (address: TAddress) => IpcConnection) {}
 
-	public addConnection(connection: MessageConnection): () => void {
+	public addConnection(connection: IpcConnection): () => void {
 		if (this.connections.has(connection)) return () => undefined;
 
 		this.connections.add(connection);
@@ -72,24 +64,20 @@ export class IpcConnectionHub<TAddress> {
 		};
 	}
 
-	public addRelay(sourceConnection: MessageConnection, targetAddress: TAddress): () => void {
+	public addRelay(sourceConnection: IpcConnection, targetAddress: TAddress): () => void {
 		this.addConnection(sourceConnection);
 		const targets = this.relayTargets.get(sourceConnection) ?? new Set<TAddress>();
 		targets.add(targetAddress);
 		this.relayTargets.set(sourceConnection, targets);
 
-		const requestDisposable = sourceConnection.onRequest((method, params, token) => {
+		const requestDisposable = sourceConnection.onRequest((method, params, context) => {
 			const targetConnection = this.getConnection(targetAddress);
-			return params === undefined
-				? targetConnection.sendRequest(method, token)
-				: targetConnection.sendRequest(method, params, token);
+			return targetConnection.sendRequest(method, params, context.deadline);
 		});
 		const notificationDisposable = sourceConnection.onNotification((method, params) => {
 			if (method === ipcPublishedNotificationMethod) return undefined;
 			const targetConnection = this.getConnection(targetAddress);
-			return params === undefined
-				? targetConnection.sendNotification(method)
-				: targetConnection.sendNotification(method, params);
+			return targetConnection.sendNotification(method, params);
 		});
 
 		return () => {
@@ -107,22 +95,7 @@ export class IpcConnectionHub<TAddress> {
 		timeoutMs: number,
 	): Promise<unknown> {
 		const connection = this.getConnection(address);
-		const cancellation = new CancellationTokenSource();
-		const timeoutId = globalThis.setTimeout(() => cancellation.cancel(), timeoutMs);
-
-		try {
-			return params === undefined
-				? await connection.sendRequest(method, cancellation.token)
-				: await connection.sendRequest(method, params, cancellation.token);
-		} catch (error) {
-			if (cancellation.token.isCancellationRequested) {
-				throw new ResponseError(ipcRequestTimeoutErrorCode, `IPC 请求超时: ${method}`);
-			}
-			throw error;
-		} finally {
-			globalThis.clearTimeout(timeoutId);
-			cancellation.dispose();
-		}
+		return connection.sendRequest(method, params, Date.now() + timeoutMs);
 	}
 
 	public send(address: TAddress, method: string, data: unknown | undefined): Promise<void> {
@@ -179,13 +152,13 @@ export class IpcConnectionHub<TAddress> {
 		};
 	}
 
-	private getConnection(address: TAddress): MessageConnection {
+	private getConnection(address: TAddress): IpcConnection {
 		const connection = this.resolveConnection(address);
 		this.addConnection(connection);
 		return connection;
 	}
 
-	private async receivePublishedNotification(source: MessageConnection, value: unknown): Promise<void> {
+	private async receivePublishedNotification(source: IpcConnection, value: unknown): Promise<void> {
 		if (!isPublishedNotification(value) || this.publishedNotificationIds.has(value.id)) return;
 
 		this.rememberPublishedNotification(value.id);
@@ -202,7 +175,7 @@ export class IpcConnectionHub<TAddress> {
 
 	private async forwardPublishedNotification(
 		notification: PublishedNotification,
-		source?: MessageConnection,
+		source?: IpcConnection,
 	): Promise<void> {
 		const targetConnections = new Set(this.connections);
 		const routeEntries = source

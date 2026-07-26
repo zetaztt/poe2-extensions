@@ -9,4 +9,4 @@ export type {
 	IpcRpcDefinition,
 	IpcRpcOptions,
 } from "./ipc-protocol";
-export type { MessageConnection } from "vscode-jsonrpc/browser";
+export type { IpcConnection } from "./ipc-connection";

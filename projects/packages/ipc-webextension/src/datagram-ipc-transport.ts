@@ -1,36 +1,43 @@
 import browser from "webextension-polyfill";
 import {
-	createJsonRpcConnection,
-	isJsonRpcMessage,
-	JsonRpcMessageReader,
-	JsonRpcMessageWriter,
-	Message,
-	type JsonRpcMessage,
-	type MessageConnection,
-	type RequestMessage,
-	type ResponseMessage,
+	createIpcConnection,
+	isIpcMessage,
+	IpcMessageKind,
+	type IpcConnection,
+	type IpcMessage,
+	type IpcResponseMessage,
 } from "@poe2-extensions/core/ipc/transport";
 
-const jsonRpcChannel = "poe2-extensions:jsonrpc";
-const jsonRpcConnectMethod = "$/ipc/connect";
+const ipcChannel = "poe2-extensions:ipc:v1";
+const ipcConnectMethod = "$/ipc/connect";
 
-interface JsonRpcEnvelope {
-	channel: typeof jsonRpcChannel;
+interface IpcEnvelope {
+	channel: typeof ipcChannel;
 	endpointId: string;
-	message: JsonRpcMessage;
+	message: IpcMessage;
 }
 
-type SendEnvelope = (envelope: JsonRpcEnvelope) => Promise<unknown>;
-type InstallEnvelopeListener = (endpointId: string, accept: (message: JsonRpcMessage) => void) => () => void;
+type SendEnvelope = (envelope: IpcEnvelope) => Promise<unknown>;
+type InstallEnvelopeListener = (
+	endpointId: string,
+	receive: (message: IpcMessage) => Promise<IpcResponseMessage | undefined>,
+) => () => void;
 
-export function createRuntimeJsonRpcClient(): MessageConnection {
+export function createRuntimeIpcClient(): IpcConnection {
 	return createDatagramClient(
 		(envelope) => browser.runtime.sendMessage(envelope),
-		(endpointId, accept) => {
+		(endpointId, receive) => {
 			const listener = (value: unknown) => {
-				if (!isJsonRpcEnvelope(value) || value.endpointId !== endpointId) return undefined;
-				accept(value.message);
-				return undefined;
+				if (!isIpcEnvelope(value) || value.endpointId !== endpointId) return undefined;
+				return receive(value.message).then((response) =>
+					response
+						? ({
+								channel: ipcChannel,
+								endpointId,
+								message: response,
+							} satisfies IpcEnvelope)
+						: undefined,
+				);
 			};
 			browser.runtime.onMessage.addListener(listener);
 			return () => browser.runtime.onMessage.removeListener(listener);
@@ -38,28 +45,28 @@ export function createRuntimeJsonRpcClient(): MessageConnection {
 	);
 }
 
-export function announceRuntimeJsonRpcClient(connection: MessageConnection): Promise<void> {
+export function announceRuntimeIpcClient(connection: IpcConnection): Promise<void> {
 	// Datagram server 只能从入站消息发现 endpoint；主动握手让纯监听环境也能接收后续发布。
-	return connection.sendNotification(jsonRpcConnectMethod);
+	return connection.sendNotification(ipcConnectMethod);
 }
 
-export function createTabJsonRpcClient(tabId: number): MessageConnection {
+export function createTabIpcClient(tabId: number): IpcConnection {
 	return createDatagramClient((envelope) => browser.tabs.sendMessage(tabId, envelope));
 }
 
-export function installRuntimeJsonRpcServer(onConnection: (connection: MessageConnection) => void): () => void {
-	const peers = new Map<string, DatagramServerPeer>();
+export function installRuntimeIpcServer(onConnection: (connection: IpcConnection) => void): () => void {
+	const peers = new Map<string, IpcServerPeer>();
 	const listener = (value: unknown) => {
-		if (!isJsonRpcEnvelope(value)) return undefined;
+		if (!isIpcEnvelope(value)) return undefined;
 
 		let peer = peers.get(value.endpointId);
 		if (!peer) {
-			peer = createDatagramServerPeer(value.endpointId);
+			peer = createIpcServerPeer(value.endpointId);
 			peers.set(value.endpointId, peer);
 			onConnection(peer.connection);
 		}
 
-		return peer.accept(value.message);
+		return peer.receive(value.message);
 	};
 
 	browser.runtime.onMessage.addListener(listener);
@@ -73,80 +80,60 @@ export function installRuntimeJsonRpcServer(onConnection: (connection: MessageCo
 function createDatagramClient(
 	sendEnvelope: SendEnvelope,
 	installEnvelopeListener?: InstallEnvelopeListener,
-): MessageConnection {
+): IpcConnection {
 	const endpointId = createEndpointId();
-	const reader = new JsonRpcMessageReader();
-	const writer = new JsonRpcMessageWriter(async (message) => {
-		const response = await sendEnvelope({
-			channel: jsonRpcChannel,
+	const connection = createIpcConnection(async (message) => {
+		const value = await sendEnvelope({
+			channel: ipcChannel,
 			endpointId,
 			message,
 		});
-		if (isJsonRpcEnvelope(response) && response.endpointId === endpointId && Message.isResponse(response.message)) {
-			reader.accept(response.message);
-		}
+		return isIpcEnvelope(value) && value.endpointId === endpointId ? value.message : undefined;
 	});
-	const connection = createJsonRpcConnection(reader, writer);
-	const removeEnvelopeListener = installEnvelopeListener?.(endpointId, (message) => reader.accept(message));
+	const removeEnvelopeListener = installEnvelopeListener?.(endpointId, (message) => connection.receive(message));
 	if (removeEnvelopeListener) connection.onDispose(removeEnvelopeListener);
 	return connection;
 }
 
-interface DatagramServerPeer {
-	connection: MessageConnection;
-	accept(message: JsonRpcMessage): Promise<JsonRpcEnvelope | undefined> | undefined;
+interface IpcServerPeer {
+	connection: IpcConnection;
+	receive(message: IpcMessage): Promise<IpcEnvelope | undefined> | undefined;
 }
 
-function createDatagramServerPeer(endpointId: string): DatagramServerPeer {
-	const reader = new JsonRpcMessageReader();
-	const pendingResponses = new Map<string | number | null, (response: ResponseMessage) => void>();
-	const writer = new JsonRpcMessageWriter((message) => {
-		if (Message.isResponse(message)) {
-			pendingResponses.get(message.id)?.(message);
-			pendingResponses.delete(message.id);
-			return;
-		}
-
-		if (Message.isNotification(message)) {
-			// runtime RPC 的响应沿原 sendMessage 返回；主动通知必须另发一条定向 endpoint 消息。
-			return browser.runtime
-				.sendMessage({ channel: jsonRpcChannel, endpointId, message } satisfies JsonRpcEnvelope)
-				.then(() => undefined);
-		}
+function createIpcServerPeer(endpointId: string): IpcServerPeer {
+	const connection = createIpcConnection(async (message) => {
+		const value = await browser.runtime.sendMessage({
+			channel: ipcChannel,
+			endpointId,
+			message,
+		} satisfies IpcEnvelope);
+		return isIpcEnvelope(value) && value.endpointId === endpointId ? value.message : undefined;
 	});
-	const connection = createJsonRpcConnection(reader, writer);
 
 	return {
 		connection,
-		accept(message) {
-			if (Message.isNotification(message)) {
-				reader.accept(message);
+		receive(message) {
+			if (message.kind === IpcMessageKind.Response) {
+				void connection.receive(message);
 				return undefined;
 			}
-			if (!Message.isRequest(message)) return undefined;
-
-			return new Promise((resolve) => {
-				pendingResponses.set(message.id, (response) => {
-					resolve({
-						channel: jsonRpcChannel,
-						endpointId,
-						message: response,
-					});
-				});
-				reader.accept(message as RequestMessage);
-			});
+			return connection.receive(message).then((response) =>
+				response
+					? {
+							channel: ipcChannel,
+							endpointId,
+							message: response,
+						}
+					: undefined,
+			);
 		},
 	};
 }
 
-function isJsonRpcEnvelope(value: unknown): value is JsonRpcEnvelope {
+function isIpcEnvelope(value: unknown): value is IpcEnvelope {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
 	const envelope = value as { channel?: unknown; endpointId?: unknown; message?: unknown };
-	return (
-		envelope.channel === jsonRpcChannel
-		&& typeof envelope.endpointId === "string"
-		&& isJsonRpcMessage(envelope.message)
-	);
+	return envelope.channel === ipcChannel && typeof envelope.endpointId === "string" && isIpcMessage(envelope.message);
 }
 
 function createEndpointId(): string {

@@ -1,6 +1,6 @@
 export {
-	announceRuntimeJsonRpcClient,
-	createRuntimeJsonRpcClient,
-	createTabJsonRpcClient,
-	installRuntimeJsonRpcServer,
+	announceRuntimeIpcClient,
+	createRuntimeIpcClient,
+	createTabIpcClient,
+	installRuntimeIpcServer,
 } from "./datagram-ipc-transport";

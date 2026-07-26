@@ -10,7 +10,7 @@
 - `projects/apps/content/`：isolated world content 工程，负责编排 runtime/window IPC relay 和 MAIN world 脚本注入。
 - `projects/apps/inject/`：MAIN world 工程，维护 trade2 DOM 功能及其独立入口；不具备 Extension API，不得引入侧边栏页面框架或 store。
 - `projects/apps/sidepanel/`：Vue 侧边栏工程。组件从模块 store 读取状态并调用 store action，只在组件内维护展示和临时交互状态。
-- `projects/packages/core/`：所有运行工程共同依赖的环境无关核心工程；领域子路径导出共享数据契约和 IPC protocol，`ipc/transport` 只公开供 transport 工程复用的 JSON-RPC 基础设施。
+- `projects/packages/core/`：所有运行工程共同依赖的环境无关核心工程；领域子路径导出共享数据契约和 IPC protocol，`ipc/transport` 只公开供 transport 工程复用的内部消息连接基础设施。
 - `projects/packages/ipc-window/`：DOM 环境的 `window.postMessage` transport，仅供 content 和 inject 使用。
 - `projects/packages/ipc-webextension/`：Extension 环境的 runtime/tabs transport，仅供 background、content 和 sidepanel 使用。
 - `data/trade-texts.po`：翻译人工维护源；`assets/translate.json` 和 `assets/translate-meta.json` 是生成产物及扩展内置 fallback。
