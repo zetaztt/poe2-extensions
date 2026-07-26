@@ -19,7 +19,7 @@ export default defineConfig((env) => {
 		build: {
 			outDir: "dist/poe2-extensions",
 			minify: env.mode === "production",
-			sourcemap: env.command === "serve" ? false : "inline",
+			sourcemap: env.command === "serve" ? "inline" : false,
 		},
 		define: {
 			CHROME: "true",
@@ -52,7 +52,7 @@ export default defineConfig((env) => {
 						service_worker: "projects/apps/background/src/main.ts",
 					},
 					side_panel: {
-						default_path: "projects/apps/sidepanel/src/index.html",
+						default_path: "projects/apps/sidepanel/src/sidepanel.html",
 					},
 					content_scripts: [
 						{
