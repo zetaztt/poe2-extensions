@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, normalizePath, type Plugin } from "vite";
 import vue from "@vitejs/plugin-vue";
 import webExtension from "vite-plugin-web-extension";
 import pkg from "./package.json" with { type: "json" };
@@ -47,6 +47,45 @@ const manifest = {
 	],
 } satisfies chrome.runtime.ManifestV3;
 
+function createHtmlCssOutputPlugin(): Plugin {
+	let rootDir: string;
+
+	return {
+		name: "html-css-output",
+		configResolved(config) {
+			rootDir = config.root;
+		},
+		outputOptions(outputOptions) {
+			const assetFileNames = outputOptions.assetFileNames;
+
+			outputOptions.assetFileNames = (assetInfo) => {
+				const assetName = assetInfo.name;
+				const originalFileName = assetInfo.originalFileNames[0] ?? assetInfo.originalFileName;
+
+				if (assetName && path.extname(assetName) === ".css" && originalFileName) {
+					const relativeOriginalFileName = path.isAbsolute(originalFileName)
+						? path.relative(rootDir, originalFileName)
+						: originalFileName;
+					const normalizedOriginalFileName = normalizePath(relativeOriginalFileName);
+
+					if (normalizedOriginalFileName !== ".." && !normalizedOriginalFileName.startsWith("../")) {
+						return path.posix.join(
+							path.posix.dirname(normalizedOriginalFileName),
+							path.posix.basename(assetName),
+						);
+					}
+				}
+
+				if (typeof assetFileNames === "function") {
+					return assetFileNames(assetInfo);
+				}
+
+				return assetFileNames ?? "assets/[name]-[hash][extname]";
+			};
+		},
+	};
+}
+
 export default defineConfig((env) => {
 	const chromeProfileDir = path.resolve(".chrome-profile");
 
@@ -83,6 +122,9 @@ export default defineConfig((env) => {
 			vue(),
 			webExtension({
 				manifest: () => manifest,
+				htmlViteConfig: {
+					plugins: [createHtmlCssOutputPlugin()],
+				},
 				webExtConfig: {
 					target: "chromium",
 					keepProfileChanges: true,
