@@ -32,7 +32,7 @@ const manifest = {
 		{
 			matches: ["https://www.pathofexile.com/trade2*"],
 			run_at: "document_start",
-			js: ["projects/apps/content/src/main.ts"],
+			js: ["projects/apps/content/src/trade/trade-content.ts"],
 		},
 	],
 	web_accessible_resources: [

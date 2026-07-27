@@ -2,42 +2,33 @@ import browser from "webextension-polyfill";
 import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
 import { createContentIpcMain, createContentIpcWindow } from "./ipc-adapter";
 
-ipcMain.register(createContentIpcMain);
-ipcWindow.register(createContentIpcWindow);
+export type ContentScriptMain = () => void | Promise<void>;
 
-export async function installTradeContent(): Promise<void> {
-	await injectTradeFeatureScripts();
-}
-
-async function injectTradeFeatureScripts(): Promise<void> {
-	const injectPaths = [
-		"projects/apps/inject/src/trade/item-code/trade-item-code-inject.js",
-		"projects/apps/inject/src/trade/stat-preset/trade-stat-preset-inject.js",
-	];
-	const injectPromises: Promise<void>[] = [];
-
-	for (const path of injectPaths) {
-		injectPromises.push(
-			injectExtensionScript(path, { keepInDom: true })
-				.then(() => undefined)
-				.catch((error) => {
-					console.error(`[poe2-extensions][trade] 主世界脚本注入失败: ${path}`, error);
-				}),
-		);
-	}
-
-	await Promise.all(injectPromises);
-}
-
-interface InjectExtensionScriptOptions {
+export interface InjectExtensionScriptOptions {
 	keepInDom?: boolean;
 }
 
-interface InjectExtensionScriptResult {
+export interface InjectExtensionScriptResult {
 	script: HTMLScriptElement;
 }
 
-function injectExtensionScript(
+export function bootstrapContentScript(main: ContentScriptMain): void {
+	ipcMain.register(createContentIpcMain);
+	ipcWindow.register(createContentIpcWindow);
+
+	try {
+		const result = main();
+		if (result) {
+			void result.catch((error) => {
+				console.error("[poe2-extensions] content script 初始化失败", error);
+			});
+		}
+	} catch (error) {
+		console.error("[poe2-extensions] content script 初始化失败", error);
+	}
+}
+
+export function injectExtensionScript(
 	path: string,
 	options: InjectExtensionScriptOptions = {},
 ): Promise<InjectExtensionScriptResult> {
@@ -67,4 +58,3 @@ function injectExtensionScript(
 		(document.head || document.documentElement).append(script);
 	});
 }
-void installTradeContent();
