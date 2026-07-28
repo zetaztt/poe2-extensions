@@ -1,0 +1,14 @@
+import type { Config } from "prettier";
+
+export default {
+	useTabs: true,
+	tabWidth: 4,
+	singleQuote: false,
+	semi: true,
+	trailingComma: "all",
+	printWidth: 120,
+	bracketSameLine: true,
+	endOfLine: "lf",
+	experimentalOperatorPosition: "start",
+	proseWrap: "preserve",
+} satisfies Config;
