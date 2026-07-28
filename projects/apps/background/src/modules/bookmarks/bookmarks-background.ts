@@ -1,11 +1,14 @@
+import browser from "webextension-polyfill";
 import {
 	bookmarksIpcProtocol,
 	rootFolderId,
+	TradeBookmarkExportContent,
 	type BookmarkFolderOption,
 	type StoredTradeBookmark,
 	type StoredTradeBookmarkFolder,
 	type StoredTradeBookmarkTree,
 	type TradeBookmarkChangeResult,
+	type TradeBookmarkExportData,
 	type TradeBookmarkFolder,
 	type TradeBookmarkGroup,
 	type TradeBookmarkItem,
@@ -13,15 +16,15 @@ import {
 	type TradeBookmarkTreeSnapshot,
 } from "@poe2-extensions/core/bookmarks";
 import { ipcMain } from "@poe2-extensions/core/ipc";
-import {
-	exportBookmarkFolder,
-	exportBookmarkTree,
-	getBookmarkTree,
-	importBookmarkData,
-	saveBookmarkTree,
-} from "./bookmarks-storage";
 
+const tradeBookmarkTreeStorageKey = "tradeBookmarkTree";
+const tradeBookmarkExportSource = "poe2-extensions-trade-bookmarks";
+const storage = browser.storage.local;
 const bookmarkServiceInstanceId = createId("instance");
+
+type BookmarkImportData =
+	| { content: TradeBookmarkExportContent.Tree; tree: StoredTradeBookmarkTree }
+	| { content: TradeBookmarkExportContent.Folder; folder: StoredTradeBookmarkFolder };
 
 // background 生命周期内的唯一持久化模型；所有窗口的命令都直接修改这棵树。
 let storedBookmarkTree: StoredTradeBookmarkTree | null = null;
@@ -253,7 +256,7 @@ async function importData(value: unknown): Promise<TradeBookmarkChangeResult<nul
 async function getStoredBookmarkTree(): Promise<StoredTradeBookmarkTree> {
 	if (storedBookmarkTree) return storedBookmarkTree;
 
-	storedBookmarkTreePromise ??= getBookmarkTree()
+	storedBookmarkTreePromise ??= loadBookmarkTree()
 		.then((tree) => {
 			storedBookmarkTree = tree;
 			return tree;
@@ -263,6 +266,139 @@ async function getStoredBookmarkTree(): Promise<StoredTradeBookmarkTree> {
 			throw error;
 		});
 	return storedBookmarkTreePromise;
+}
+
+async function loadBookmarkTree(): Promise<StoredTradeBookmarkTree> {
+	const values = await storage.get(tradeBookmarkTreeStorageKey);
+	const value = values[tradeBookmarkTreeStorageKey];
+
+	if (isStoredBookmarkTree(value)) return value;
+
+	const tree = createDefaultBookmarkTree();
+	await saveBookmarkTree(tree);
+	return tree;
+}
+
+async function saveBookmarkTree(tree: StoredTradeBookmarkTree): Promise<void> {
+	await storage.set({
+		[tradeBookmarkTreeStorageKey]: tree,
+	});
+}
+
+function exportBookmarkTree(tree: StoredTradeBookmarkTree): TradeBookmarkExportData {
+	return {
+		source: tradeBookmarkExportSource,
+		exportedAt: Date.now(),
+		content: TradeBookmarkExportContent.Tree,
+		tree: structuredClone(tree),
+	};
+}
+
+function exportBookmarkFolder(tree: StoredTradeBookmarkTree, folderId: string): TradeBookmarkExportData {
+	const folder = findFolder(tree, folderId);
+	if (!folder) throw new Error("未找到可导出的书签文件夹。");
+
+	return {
+		source: tradeBookmarkExportSource,
+		exportedAt: Date.now(),
+		content: TradeBookmarkExportContent.Folder,
+		folder: structuredClone(folder),
+	};
+}
+
+function importBookmarkData(tree: StoredTradeBookmarkTree, value: unknown): boolean {
+	const data = getImportBookmarkData(value);
+	if (!data) throw new Error("导入文件不是有效的 trade2 书签备份。");
+
+	return syncImportFolders(tree, getImportFolders(data));
+}
+
+function createDefaultBookmarkTree(): StoredTradeBookmarkTree {
+	const now = Date.now();
+	return {
+		version: 1,
+		root: {
+			folders: [],
+			createdAt: now,
+			updatedAt: now,
+		},
+	};
+}
+
+function getImportFolders(data: BookmarkImportData): StoredTradeBookmarkFolder[] {
+	return data.content === TradeBookmarkExportContent.Tree ? data.tree.root.folders : [data.folder];
+}
+
+function syncImportFolders(tree: StoredTradeBookmarkTree, importedFolders: StoredTradeBookmarkFolder[]): boolean {
+	const now = Date.now();
+	let hasChanged = false;
+
+	for (const importedFolder of importedFolders) {
+		const existingFolder = tree.root.folders.find((folder) => folder.id === importedFolder.id);
+		const targetFolder = existingFolder ?? createImportFolder(tree, importedFolder);
+		if (!existingFolder) hasChanged = true;
+
+		for (const importedBookmark of importedFolder.bookmarks) {
+			const existingBookmark = findBookmarkWithParent(tree, importedBookmark.id);
+			if (existingBookmark) {
+				if (
+					existingBookmark.bookmark.url !== importedBookmark.url
+					|| existingBookmark.bookmark.updatedAt !== importedBookmark.updatedAt
+				) {
+					existingBookmark.bookmark.url = importedBookmark.url;
+					existingBookmark.bookmark.updatedAt = importedBookmark.updatedAt;
+					existingBookmark.parent.updatedAt = now;
+					hasChanged = true;
+				}
+				continue;
+			}
+
+			targetFolder.bookmarks.push({
+				...structuredClone(importedBookmark),
+				parentId: targetFolder.id,
+			});
+			targetFolder.updatedAt = now;
+			hasChanged = true;
+		}
+	}
+
+	if (hasChanged) tree.root.updatedAt = now;
+	return hasChanged;
+}
+
+function createImportFolder(
+	tree: StoredTradeBookmarkTree,
+	importedFolder: StoredTradeBookmarkFolder,
+): StoredTradeBookmarkFolder {
+	const folder: StoredTradeBookmarkFolder = {
+		...structuredClone(importedFolder),
+		parentId: rootFolderId,
+		bookmarks: [],
+	};
+	tree.root.folders.push(folder);
+	return folder;
+}
+
+function getImportBookmarkData(value: unknown): BookmarkImportData | null {
+	if (!isRecord(value)) return null;
+
+	if (value.source === tradeBookmarkExportSource && typeof value.exportedAt === "number") {
+		if (value.content === TradeBookmarkExportContent.Folder && isStoredFolder(value.folder, true)) {
+			return { content: TradeBookmarkExportContent.Folder, folder: value.folder };
+		}
+
+		if (
+			(value.content === TradeBookmarkExportContent.Tree || value.content === undefined)
+			&& isStoredBookmarkTree(value.tree, true)
+		) {
+			return { content: TradeBookmarkExportContent.Tree, tree: value.tree };
+		}
+
+		return null;
+	}
+
+	if (isStoredBookmarkTree(value, true)) return { content: TradeBookmarkExportContent.Tree, tree: value };
+	return null;
 }
 
 function commitBookmarkChange<T>(tree: StoredTradeBookmarkTree, value: T): TradeBookmarkChangeResult<T> {
@@ -389,6 +525,43 @@ function findBookmarkParentFolder(tree: StoredTradeBookmarkTree, bookmarkId: str
 	return findBookmarkWithParent(tree, bookmarkId)?.parent ?? null;
 }
 
+function isStoredBookmarkTree(value: unknown, requireTrade2Urls = false): value is StoredTradeBookmarkTree {
+	if (!isRecord(value) || value.version !== 1) return false;
+	if (!isRecord(value.root)) return false;
+	if (typeof value.root.createdAt !== "number" || typeof value.root.updatedAt !== "number") return false;
+	if (!Array.isArray(value.root.folders)) return false;
+	return value.root.folders.every((folder) => isStoredFolder(folder, requireTrade2Urls));
+}
+
+function isStoredFolder(value: unknown, requireTrade2Urls: boolean): value is StoredTradeBookmarkFolder {
+	if (!isRecord(value)) return false;
+	if (typeof value.id !== "string" || typeof value.title !== "string") return false;
+	if (value.parentId !== rootFolderId) return false;
+	if (typeof value.createdAt !== "number" || typeof value.updatedAt !== "number") return false;
+	if (!Array.isArray(value.bookmarks)) return false;
+	const folderId = value.id;
+
+	return value.bookmarks.every((bookmark) => isStoredBookmark(bookmark, folderId, requireTrade2Urls));
+}
+
+function isStoredBookmark(
+	value: unknown,
+	parentFolderId: string,
+	requireTrade2Urls: boolean,
+): value is StoredTradeBookmark {
+	if (!isRecord(value)) return false;
+
+	return (
+		typeof value.id === "string"
+		&& typeof value.title === "string"
+		&& typeof value.url === "string"
+		&& (!requireTrade2Urls || isTrade2Url(value.url))
+		&& value.parentId === parentFolderId
+		&& typeof value.dateAdded === "number"
+		&& typeof value.updatedAt === "number"
+	);
+}
+
 function assertModifiableFolder(folder: StoredTradeBookmarkFolder): void {
 	if (!canModifyFolder(folder)) throw new Error("该书签目录不能修改");
 }
@@ -440,6 +613,10 @@ function createId(prefix: "instance" | "folder" | "bookmark"): string {
 	const randomId =
 		globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 	return `${prefix}-${randomId}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
 }
 
 export const tradeBookmarkBackground = {

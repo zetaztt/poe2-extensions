@@ -23,7 +23,7 @@ const manifest = {
 	host_permissions: ["https://www.pathofexile.com/*", "https://zetaztt.github.io/*", "https://web.poecdn.com/*"],
 	permissions: ["scripting", "storage", "tabs", "sidePanel"],
 	background: {
-		service_worker: "projects/apps/background/src/main.ts",
+		service_worker: "projects/apps/background/src/background.ts",
 	},
 	side_panel: {
 		default_path: "projects/apps/sidepanel/src/sidepanel.html",

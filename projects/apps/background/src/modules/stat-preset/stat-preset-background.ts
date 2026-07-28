@@ -1,11 +1,12 @@
 import browser from "webextension-polyfill";
 import { ipcMain } from "@poe2-extensions/core/ipc";
+import { TradeSetting } from "@poe2-extensions/core/settings";
 import { tradeIpcProtocol, type TradeStatPreset, type TradeStatPresetQuery } from "@poe2-extensions/core/trade";
-import { getTradeStatPresetEnabled } from "../../modules/settings/settings-storage";
+import { settingsBackground } from "../settings/settings-background";
 
 const tradeStatPresetStorageKey = "tradeStatPresets";
 
-export function installTradeStatPresetHandlers(): void {
+function install(): void {
 	ipcMain.handle(tradeIpcProtocol.listStatPresets, async () => {
 		await ensureStatPresetEnabled();
 		return getStoredTradeStatPresets();
@@ -70,7 +71,9 @@ async function deleteStatPreset(name: string): Promise<TradeStatPreset[]> {
 }
 
 async function ensureStatPresetEnabled(): Promise<void> {
-	if (!(await getTradeStatPresetEnabled())) throw new Error("筛选预设保存已关闭");
+	if (!(await settingsBackground.getSettingEnabled(TradeSetting.StatPreset))) {
+		throw new Error("筛选预设保存已关闭");
+	}
 }
 
 async function getStoredTradeStatPresets(): Promise<TradeStatPreset[]> {
@@ -107,3 +110,7 @@ function isTradeStatPresetQuery(value: unknown): value is TradeStatPresetQuery {
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+export const tradeStatPresetBackground = {
+	install,
+};

@@ -2,7 +2,7 @@ import { ensureBodyReady } from "../../utils";
 import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
 import { settingsIpcProtocol } from "@poe2-extensions/core/settings";
 import { tradeIpcProtocol } from "@poe2-extensions/core/trade";
-import { createMainWorldIpcMain, createMainWorldIpcWindow } from "../../ipc-adapter";
+import { bootstrapInjectScript } from "../../inject-script";
 import { logPrefix } from "../trade-utils";
 import { resetStatPresetModal } from "./trade-stat-preset-modal";
 import {
@@ -18,8 +18,6 @@ import { installStatPresetStyle, removeStatPresetStyle } from "./trade-stat-pres
 let enabled = false;
 // 初始化 RPC 与侧边栏即时通知可能并发；一旦收到通知，就不能再用较旧的初始值覆盖它。
 let hasReceivedStatPresetUpdate = false;
-ipcMain.register(createMainWorldIpcMain);
-ipcWindow.register(createMainWorldIpcWindow);
 
 export function injectTradeStatPreset(): void {
 	if (window.location.hostname !== "www.pathofexile.com" || !window.location.pathname.startsWith("/trade2")) {
@@ -91,4 +89,4 @@ function removeStatPresetUi(): void {
 	removeStatPresetStyle();
 }
 
-injectTradeStatPreset();
+bootstrapInjectScript(injectTradeStatPreset, { registerIpcWindow: true });

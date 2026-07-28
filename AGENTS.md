@@ -13,7 +13,7 @@
 - `projects/packages/core/`：所有运行工程共同依赖的环境无关核心工程；领域子路径导出共享数据契约和 IPC protocol，`ipc/transport` 只公开供 transport 工程复用的内部消息连接基础设施。
 - `projects/packages/ipc-window/`：DOM 环境的 `window.postMessage` transport，仅供 content 和 inject 使用。
 - `projects/packages/ipc-webextension/`：Extension 环境的 runtime/tabs transport，仅供 background、content 和 sidepanel 使用。
-- `data/trade-texts.po`：翻译人工维护源；`assets/translate.json` 和 `assets/translate-meta.json` 是生成产物及扩展内置 fallback。
+- `data/trade-texts.po`：翻译人工维护源；`assets/translate.json` 和 `assets/translate.meta.json` 是生成产物及扩展内置 fallback。
 - `scripts/translate/`：拉取 trade 数据和生成字典；`projects/packages/trade-translate-tools/` 是 npm workspace 中供脚本和发布分支复用的源码包。
 
 ## 开发流程
@@ -91,7 +91,7 @@
 
 ## Git 与变更管理
 
-- 提交保持单一目的；翻译源变更应与对应的 `assets/translate.json`、`assets/translate-meta.json` 生成结果一起审查。
+- 提交保持单一目的；翻译源变更应与对应的 `assets/translate.json`、`assets/translate.meta.json` 生成结果一起审查。
 - Git 提交说明使用简短中文并描述核心变更。
 - 不把工作流生成的 package 分支内容回写为 main 分支源码，也不手工发布该分支或字典 Pages；发布由现有 GitHub Actions 路径触发。
 

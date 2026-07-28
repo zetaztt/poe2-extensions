@@ -8,17 +8,18 @@ import {
 	type TradeSettingsUpdateResult,
 } from "@poe2-extensions/core/settings";
 import { tradeIpcProtocol } from "@poe2-extensions/core/trade";
-import {
-	applyStoredTradeSetting,
-	loadTradeSettings,
-	setTradeSettingEnabled,
-	tradeItemCopyEnabledKey,
-	tradeStatPresetEnabledKey,
-	tradeTranslateEnabledKey,
-} from "./settings-storage";
 
 const tradeTranslateContentScriptId = "poe2-trade-translate-inject";
 const tradeTranslateContentScriptPath = "projects/apps/inject/src/trade/translate/trade-translate-inject.js";
+const tradeTranslateEnabledKey = "tradeTranslateEnabled";
+const tradeItemCopyEnabledKey = "tradeItemCopyEnabled";
+const tradeStatPresetEnabledKey = "tradeStatPresetEnabled";
+const defaultTradeSettings: TradeSettings = {
+	translateEnabled: false,
+	itemCopyEnabled: false,
+	statPresetEnabled: false,
+};
+const settingsStorage = browser.storage.sync;
 const settingsServiceInstanceId = createId();
 
 // background 生命周期内的权威设置快照；所有 sidepanel 只消费带 revision 的副本。
@@ -67,6 +68,76 @@ async function getCurrentSettings(): Promise<TradeSettings> {
 			throw error;
 		});
 	return currentSettingsPromise;
+}
+
+async function getSettingEnabled(setting: TradeSetting): Promise<boolean> {
+	assertTradeSetting(setting);
+	try {
+		return getTradeSettingValue(await getCurrentSettings(), setting);
+	} catch (error) {
+		console.warn(`[poe2-extensions] ${getTradeSettingReadErrorMessage(setting)}`, error);
+		return getDefaultTradeSettingValue(setting);
+	}
+}
+
+async function loadTradeSettings(): Promise<TradeSettings> {
+	const values = await settingsStorage.get([
+		tradeTranslateEnabledKey,
+		tradeItemCopyEnabledKey,
+		tradeStatPresetEnabledKey,
+	]);
+
+	return {
+		translateEnabled: getBooleanOrDefault(values[tradeTranslateEnabledKey], defaultTradeSettings.translateEnabled),
+		itemCopyEnabled: getBooleanOrDefault(values[tradeItemCopyEnabledKey], defaultTradeSettings.itemCopyEnabled),
+		statPresetEnabled: getBooleanOrDefault(
+			values[tradeStatPresetEnabledKey],
+			defaultTradeSettings.statPresetEnabled,
+		),
+	};
+}
+
+async function setTradeSettingEnabled(setting: TradeSetting, enabled: boolean): Promise<void> {
+	await settingsStorage.set({ [getTradeSettingStorageKey(setting)]: enabled });
+}
+
+function getTradeSettingStorageKey(setting: TradeSetting): string {
+	if (setting === TradeSetting.Translate) return tradeTranslateEnabledKey;
+	if (setting === TradeSetting.ItemCopy) return tradeItemCopyEnabledKey;
+	if (setting === TradeSetting.StatPreset) return tradeStatPresetEnabledKey;
+	throw new Error("未知的 trade 设置项");
+}
+
+function applyStoredTradeSetting(settings: TradeSettings, setting: TradeSetting, value: unknown): TradeSettings {
+	const enabled = typeof value === "boolean" ? value : getDefaultTradeSettingValue(setting);
+	if (setting === TradeSetting.Translate) return { ...settings, translateEnabled: enabled };
+	if (setting === TradeSetting.ItemCopy) return { ...settings, itemCopyEnabled: enabled };
+	if (setting === TradeSetting.StatPreset) return { ...settings, statPresetEnabled: enabled };
+	throw new Error("未知的 trade 设置项");
+}
+
+function getTradeSettingValue(settings: TradeSettings, setting: TradeSetting): boolean {
+	if (setting === TradeSetting.Translate) return settings.translateEnabled;
+	if (setting === TradeSetting.ItemCopy) return settings.itemCopyEnabled;
+	if (setting === TradeSetting.StatPreset) return settings.statPresetEnabled;
+	throw new Error("未知的 trade 设置项");
+}
+
+function getDefaultTradeSettingValue(setting: TradeSetting): boolean {
+	if (setting === TradeSetting.Translate) return defaultTradeSettings.translateEnabled;
+	if (setting === TradeSetting.ItemCopy) return defaultTradeSettings.itemCopyEnabled;
+	if (setting === TradeSetting.StatPreset) return defaultTradeSettings.statPresetEnabled;
+	throw new Error("未知的 trade 设置项");
+}
+
+function getTradeSettingReadErrorMessage(setting: TradeSetting): string {
+	if (setting === TradeSetting.Translate) return "中文翻译设置读取失败";
+	if (setting === TradeSetting.ItemCopy) return "复制物品文本设置读取失败";
+	return "筛选预设保存设置读取失败";
+}
+
+function getBooleanOrDefault(value: unknown, fallback: boolean): boolean {
+	return typeof value === "boolean" ? value : fallback;
 }
 
 function applySettings(settings: TradeSettings): TradeSettingsSnapshot {
@@ -216,4 +287,5 @@ function createId(): string {
 
 export const settingsBackground = {
 	install,
+	getSettingEnabled,
 };

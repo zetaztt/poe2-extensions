@@ -1,14 +1,11 @@
 import { ensureBodyReady } from "../../utils";
-import { ipcMain } from "@poe2-extensions/core/ipc";
-import { createMainWorldIpcMain } from "../../ipc-adapter";
+import { bootstrapInjectScript } from "../../inject-script";
 import { logPrefix } from "../trade-utils";
 import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./trade-translate-data";
 import { observeItemElement } from "./trade-translate-item-element";
 import { installLocalStorageHook } from "./trade-translate-storage";
 
 export const traditionalChineseScriptUrl = "https://web.poecdn.com/js/translate.zh_TW.js";
-
-ipcMain.register(createMainWorldIpcMain);
 
 export function injectTradeTranslate(): void {
 	ensureBodyReady(function () {
@@ -40,4 +37,4 @@ export function injectTraditionalChineseScript(): void {
 	target.appendChild(script);
 }
 
-injectTradeTranslate();
+bootstrapInjectScript(injectTradeTranslate);

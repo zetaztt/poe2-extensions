@@ -1,7 +1,7 @@
 import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
 import { settingsIpcProtocol } from "@poe2-extensions/core/settings";
 import { tradeIpcProtocol } from "@poe2-extensions/core/trade";
-import { createMainWorldIpcMain, createMainWorldIpcWindow } from "../../ipc-adapter";
+import { bootstrapInjectScript } from "../../inject-script";
 import { getTradeSearchItemById, logPrefix } from "../trade-utils";
 import { formatTradeItemText } from "./trade-item-code-format";
 
@@ -13,8 +13,6 @@ let enabled = false;
 let observer: MutationObserver | null = null;
 // 初始化 RPC 与侧边栏即时通知可能并发；一旦收到通知，就不能再用较旧的初始值覆盖它。
 let hasReceivedItemCopyUpdate = false;
-ipcMain.register(createMainWorldIpcMain);
-ipcWindow.register(createMainWorldIpcWindow);
 
 export function injectTradeItemCopy(): void {
 	if (window.location.hostname !== "www.pathofexile.com" || !window.location.pathname.startsWith("/trade2")) {
@@ -170,4 +168,4 @@ function isTradeRow(node: HTMLElement): boolean {
 	return node.matches("div.row[data-id]");
 }
 
-injectTradeItemCopy();
+bootstrapInjectScript(injectTradeItemCopy, { registerIpcWindow: true });

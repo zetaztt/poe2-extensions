@@ -4,7 +4,8 @@ import { createBackgroundIpcMain, createTabIpcWindow } from "./ipc-adapter";
 import { tradeBookmarkBackground } from "./modules/bookmarks/bookmarks-background";
 import { dictionaryBackground } from "./modules/dictionary/dictionary-background";
 import { settingsBackground } from "./modules/settings/settings-background";
-import { installTradeStatPresetHandlers } from "./trade/stat-preset/trade-stat-preset-storage";
+import { tradeStatPresetBackground } from "./modules/stat-preset/stat-preset-background";
+
 ipcMain.register(createBackgroundIpcMain);
 ipcWindow.register(createTabIpcWindow);
 
@@ -13,7 +14,7 @@ void enableSidePanelOnActionClick();
 tradeBookmarkBackground.install();
 dictionaryBackground.install();
 settingsBackground.install();
-installTradeStatPresetHandlers();
+tradeStatPresetBackground.install();
 
 async function enableSidePanelOnActionClick(): Promise<void> {
 	if (CHROME) {
