@@ -3,11 +3,11 @@ import { dictionaryIpcProtocol, type TranslateDictionary } from "@poe2-extension
 import { ipcMain } from "@poe2-extensions/core/ipc";
 
 const translateDictionaryUrl = "https://zetaztt.github.io/poe2-extensions/translate.json";
-const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2-extensions/translate.meta.json";
+const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2-extensions/translate-meta.json";
 
 const translateDictionaryCacheKey = "translateDictionaryCache";
-const localTranslateDictionaryPath = "/translate.json" as Parameters<typeof browser.runtime.getURL>[0];
-const localTranslateMetaPath = "/translate.meta.json" as Parameters<typeof browser.runtime.getURL>[0];
+const localTranslateDictionaryPath = "/data/translate.json" as Parameters<typeof browser.runtime.getURL>[0];
+const localTranslateMetaPath = "/data/translate-meta.json" as Parameters<typeof browser.runtime.getURL>[0];
 
 interface TranslateMeta {
 	version: number;

@@ -132,13 +132,13 @@ function cancelRename(): void {
 		</span>
 		<BookmarkIconButton
 			class="bookmark-item-row-action"
-			icon="/sidepanel/bookmark-rename.png"
+			icon="/assets/sidepanel/bookmark-rename.png"
 			:disabled="busy"
 			title="重命名书签"
 			:on-click="startRename" />
 		<BookmarkIconButton
 			class="bookmark-item-row-action"
-			icon="/sidepanel/bookmark-more.png"
+			icon="/assets/sidepanel/bookmark-more.png"
 			:disabled="busy"
 			title="更多"
 			:on-click="openMenu" />

@@ -4,5 +4,5 @@ node_modules
 storage
 tmp
 package-lock.json
-assets
+public
 data

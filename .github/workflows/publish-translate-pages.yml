@@ -6,8 +6,8 @@ on:
         branches:
             - main
         paths:
-            - assets/translate.json
-            - assets/translate.meta.json
+            - public/data/translate.json
+            - public/data/translate-meta.json
             - .github/workflows/publish-translate-pages.yml
 
 permissions:
@@ -29,14 +29,14 @@ jobs:
 
                   publish_dir="${RUNNER_TEMP}/translate-pages"
                   mkdir -p "${publish_dir}"
-                  cp assets/translate.json "${publish_dir}/translate.json"
-                  cp assets/translate.meta.json "${publish_dir}/translate.meta.json"
+                  cp public/data/translate.json "${publish_dir}/translate.json"
+                  cp public/data/translate-meta.json "${publish_dir}/translate-meta.json"
                   touch "${publish_dir}/.nojekyll"
                   printf '%s\n' \
                       '<!doctype html>' \
                       '<html lang="zh-CN">' \
                       '<head><meta charset="utf-8"><title>POE2 Translate Dictionary</title></head>' \
-                      '<body><a href="translate.json">translate.json</a><br><a href="translate.meta.json">translate.meta.json</a></body>' \
+                      '<body><a href="translate.json">translate.json</a><br><a href="translate-meta.json">translate-meta.json</a></body>' \
                       '</html>' \
                       > "${publish_dir}/index.html"
 

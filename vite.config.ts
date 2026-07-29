@@ -109,7 +109,7 @@ export default defineConfig((env) => {
 	}
 
 	return {
-		publicDir: "assets",
+		publicDir: "public",
 		build: {
 			outDir: "dist/poe2-extensions",
 			minify: env.mode === "production",

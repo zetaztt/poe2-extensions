@@ -127,8 +127,8 @@ function cancelRename(): void {
 							class="tree-toggle-icon"
 							:src="
 								hasContent && expanded
-									? '/sidepanel/filter-toggle-expanded.png'
-									: '/sidepanel/filter-toggle-collapsed.png'
+									? '/assets/sidepanel/filter-toggle-expanded.png'
+									: '/assets/sidepanel/filter-toggle-collapsed.png'
 							"
 							alt=""
 							aria-hidden="true" />
@@ -155,7 +155,7 @@ function cancelRename(): void {
 					</span>
 					<BookmarkIconButton
 						class="bookmark-folder-header-action bookmark-folder-add-action"
-						icon="/sidepanel/bookmark-add.png"
+						icon="/assets/sidepanel/bookmark-add.png"
 						:disabled="busy"
 						title="添加书签"
 						:on-click="addBookmark" />
@@ -163,13 +163,13 @@ function cancelRename(): void {
 					<BookmarkIconButton
 						v-if="folder.canModify"
 						class="bookmark-folder-header-action bookmark-folder-rename-action"
-						icon="/sidepanel/bookmark-rename.png"
+						icon="/assets/sidepanel/bookmark-rename.png"
 						:disabled="busy"
 						title="重命名文件夹"
 						:on-click="startRename" />
 					<BookmarkIconButton
 						class="bookmark-folder-header-action bookmark-folder-menu-action"
-						icon="/sidepanel/bookmark-more.png"
+						icon="/assets/sidepanel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
 						:on-click="openMenu" />

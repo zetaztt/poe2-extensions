@@ -56,13 +56,13 @@ function onDragEnd(): void {
 					</span>
 					<BookmarkIconButton
 						class="bookmark-tree-header-action bookmark-tree-header-add-action"
-						icon="/sidepanel/bookmark-folder-add.png"
+						icon="/assets/sidepanel/bookmark-folder-add.png"
 						:disabled="busy"
 						title="添加文件夹"
 						:on-click="createFolder" />
 					<BookmarkIconButton
 						class="bookmark-tree-header-action bookmark-tree-header-menu-action"
-						icon="/sidepanel/bookmark-more.png"
+						icon="/assets/sidepanel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
 						:on-click="openMenu" />

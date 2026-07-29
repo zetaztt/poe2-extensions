@@ -2,8 +2,9 @@ import crypto from "node:crypto";
 import fs from "fs";
 import { getTextOriginal, getTextTranslate, readTexts } from "./utils";
 
-const translateMetaPath = "./assets/translate.meta.json";
-const translateJsonPath = "./assets/translate.json";
+const translateOutputDirectory = "./public/data";
+const translateMetaPath = `${translateOutputDirectory}/translate-meta.json`;
+const translateJsonPath = `${translateOutputDirectory}/translate.json`;
 
 interface TranslateMeta {
 	md5: string;
@@ -35,6 +36,8 @@ function writeTranslateMeta(meta: TranslateMeta) {
 }
 
 function buildTranslate() {
+	fs.mkdirSync(translateOutputDirectory, { recursive: true });
+
 	const texts = readTexts();
 
 	const translateMap: Record<string, string> = {};
