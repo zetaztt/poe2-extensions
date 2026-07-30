@@ -5,6 +5,7 @@ import { defineConfig } from "eslint/config";
 import type { ESLintRules } from "eslint/rules";
 import importX from "eslint-plugin-import-x";
 import type { Options as NoExtraneousDependenciesOptions } from "eslint-plugin-import-x/rules/no-extraneous-dependencies";
+import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 import vueParser from "vue-eslint-parser";
 import { Linter } from "eslint";
@@ -36,7 +37,16 @@ function createProjectDependencyBoundaryConfigs() {
 
 export default defineConfig([
 	{
-		ignores: ["dist/**", "node_modules/**"],
+		ignores: [".chrome-profile/**", "dist/**", "node_modules/**"],
+	},
+	{
+		files: ["projects/**/*.{ts,vue}", "scripts/**/*.ts", "tests/**/*.ts", "vite.config.ts"],
+		plugins: {
+			"unused-imports": unusedImports,
+		},
+		rules: {
+			"unused-imports/no-unused-imports": "error",
+		},
 	},
 	{
 		files: ["projects/**/*.{ts,vue}", "scripts/**/*.ts", "vite.config.ts"],

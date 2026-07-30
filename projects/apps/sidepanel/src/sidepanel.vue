@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, type Component } from "vue";
 import BookmarkTab from "./bookmarks/bookmark-tab.vue";
-import { closeMenu } from "./common/menu/sidepanel-menu";
 import DictionaryTab from "./dictionary/dictionary-tab.vue";
 import SettingsTab from "./settings/settings-tab.vue";
 

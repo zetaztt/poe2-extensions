@@ -1,7 +1,7 @@
 import { ensureBodyReady } from "../../utils";
 import { bootstrapInjectScript } from "../../inject-script";
 import { logPrefix } from "../trade-utils";
-import { installTranslateDataHook, isTradeDataUrl, processTradeData } from "./trade-translate-data";
+import { installTranslateDataHook } from "./trade-translate-data";
 import { observeItemElement } from "./trade-translate-item-element";
 import { installLocalStorageHook } from "./trade-translate-storage";
 
