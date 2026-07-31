@@ -1,0 +1,26 @@
+[
+	{
+		"name": "Workspace project paths",
+		"type": "file",
+		"target": "./${1}",
+		"patterns": [
+			{
+				"type": "regex",
+				"value": "(projects/[a-zA-Z0-9_./-]+\\.[a-zA-Z0-9]+)",
+				"highlightGroup": 1
+			}
+		]
+	},
+	{
+		"name": "Public asset paths",
+		"type": "file",
+		"target": "./public${1}",
+		"patterns": [
+			{
+				"type": "regex",
+				"value": "(/assets/[a-zA-Z0-9_./-]+\\.[a-zA-Z0-9]+)",
+				"highlightGroup": 1
+			}
+		]
+	}
+]

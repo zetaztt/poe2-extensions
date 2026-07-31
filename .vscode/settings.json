@@ -62,13 +62,8 @@
 	],
 	"js/ts.tsdk.path": "./node_modules/typescript/lib",
 	"editor.links": true,
-	"click-file.linkStyle": "documentlink",
-	"click-file.remapDirectories": {
-		"/": [
-			"$POE2_PUBLIC_ASSETS"
-		]
-	},
 	"path-autocomplete.pathMappings": {
 		"/": "${folder}/public",
+		"projects/": "${folder}/projects",
 	},
 }
