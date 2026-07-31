@@ -29,12 +29,16 @@ export function bootstrapContentScript(main: ContentScriptMain): void {
 }
 
 export function injectExtensionScript(
-	path: string,
+	filepath: string,
 	options: InjectExtensionScriptOptions = {},
 ): Promise<InjectExtensionScriptResult> {
 	return new Promise((resolve, reject) => {
 		const script = document.createElement("script");
-		script.src = browser.runtime.getURL(path);
+
+		if (filepath.endsWith(".ts")) {
+			filepath = filepath.slice(0, -".ts".length) + ".js";
+		}
+		script.src = browser.runtime.getURL(filepath);
 		script.async = false;
 		script.defer = false;
 
@@ -50,7 +54,7 @@ export function injectExtensionScript(
 			"error",
 			() => {
 				if (!options.keepInDom) script.remove();
-				reject(new Error(`脚本注入失败: ${path}`));
+				reject(new Error(`脚本注入失败: ${filepath}`));
 			},
 			{ once: true },
 		);

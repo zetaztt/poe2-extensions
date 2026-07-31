@@ -69,10 +69,7 @@ function createHtmlCssOutputPlugin(): Plugin {
 					const normalizedOriginalFileName = normalizePath(relativeOriginalFileName);
 
 					if (normalizedOriginalFileName !== ".." && !normalizedOriginalFileName.startsWith("../")) {
-						return path.posix.join(
-							path.posix.dirname(normalizedOriginalFileName),
-							path.posix.basename(assetName),
-						);
+						return path.join(path.dirname(normalizedOriginalFileName), path.basename(assetName));
 					}
 				}
 

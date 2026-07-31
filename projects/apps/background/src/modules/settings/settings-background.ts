@@ -10,7 +10,7 @@ import {
 import { tradeIpcProtocol } from "@poe2-extensions/core/trade";
 
 const tradeTranslateContentScriptId = "poe2-trade-translate-inject";
-const tradeTranslateContentScriptPath = "projects/apps/inject/src/trade/translate/trade-translate-inject.js";
+const tradeTranslateContentScriptPath = "projects/apps/inject/src/trade/translate/trade-translate-inject.ts";
 const tradeTranslateEnabledKey = "tradeTranslateEnabled";
 const tradeItemCopyEnabledKey = "tradeItemCopyEnabled";
 const tradeStatPresetEnabledKey = "tradeStatPresetEnabled";
@@ -244,7 +244,7 @@ async function syncTradeTranslateInjection(enabled: boolean): Promise<void> {
 		{
 			id: tradeTranslateContentScriptId,
 			matches: ["https://www.pathofexile.com/trade2*"],
-			js: [tradeTranslateContentScriptPath],
+			js: [tradeTranslateContentScriptPath.slice(0, -".ts".length) + ".js"],
 			runAt: "document_start",
 			world: "MAIN",
 			allFrames: false,

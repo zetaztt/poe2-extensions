@@ -2,8 +2,8 @@ import { bootstrapContentScript, injectExtensionScript } from "../content-script
 
 async function injectTradeFeatureScripts(): Promise<void> {
 	const injectPaths = [
-		"projects/apps/inject/src/trade/item-code/trade-item-code-inject.js",
-		"projects/apps/inject/src/trade/stat-preset/trade-stat-preset-inject.js",
+		"projects/apps/inject/src/trade/item-code/trade-item-code-inject.ts",
+		"projects/apps/inject/src/trade/stat-preset/trade-stat-preset-inject.ts",
 	];
 	const injectPromises: Promise<void>[] = [];
 
