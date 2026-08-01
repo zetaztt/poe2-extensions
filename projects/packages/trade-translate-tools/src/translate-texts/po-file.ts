@@ -3,8 +3,14 @@ import PO from "pofile";
 
 import { getTradeTranslateTextItemKey, type TradeTranslateTextItem } from "./text-data";
 
+/**
+ * 人工维护翻译源的默认仓库相对路径。
+ */
 export const defaultTradeTranslatePoPath = "./data/trade-texts.po";
 
+/**
+ * 读取 PO 并按稳定 msgctxt 建索引；缺失 key 的条目不进入脚本合并流程。
+ */
 export function readTradeTranslateTextItemsFromPo(
 	textsPath = defaultTradeTranslatePoPath,
 ): Record<string, TradeTranslateTextItem> {
@@ -26,6 +32,9 @@ export function readTradeTranslateTextItemsFromPo(
 	return texts;
 }
 
+/**
+ * 将完整条目集合按稳定 key 排序后重写 PO；该函数会原位排序传入数组。
+ */
 export function writeTradeTranslateTextItemsToPo(
 	texts: TradeTranslateTextItem[],
 	textsPath = defaultTradeTranslatePoPath,

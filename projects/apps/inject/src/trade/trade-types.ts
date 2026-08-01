@@ -1,10 +1,16 @@
 import type { TradeStatPresetQuery } from "@poe2-extensions/core/trade";
 
+/**
+ * XHR hook 附加到官方数据项的翻译元数据；页面仍显示并保留英文原文。
+ */
 export type Translated<T> = T & {
 	_translateText: string;
 	_originalText: string;
 };
 
+/**
+ * 官方 trade2 数据端点的最小消费形状；运行时仍需在处理边界检查数组和对象。
+ */
 export interface TradeItemBaseConfig {
 	type: string;
 	text?: string;
@@ -95,6 +101,9 @@ export interface TradeSearchesState {
 	};
 }
 
+/**
+ * MAIN world 中官方 Vue 根实例的最小适配形状，不是扩展自身的页面 store。
+ */
 export interface TradeApp {
 	$store: TradeAppStore;
 	query?: TradeQueryState;
@@ -123,6 +132,9 @@ export interface TradeSearchResultEntry {
 	item: TradeSearchItem;
 }
 
+/**
+ * 官方搜索结果物品的宽松读取模型；可选字段反映联盟和物品类别差异。
+ */
 export interface TradeSearchItem {
 	realm?: string;
 	verified?: boolean;
@@ -203,6 +215,9 @@ export interface TradeSearchItemModMagnitude {
 
 export type TradeSearchItemHash = [string, number[]];
 
+/**
+ * 官方 api-plugins hook 的最小适配契约，仅用于读取当前页面响应。
+ */
 export interface ApiPluginsHookOptions {
 	on: "response";
 	hook: (response: Response) => void;

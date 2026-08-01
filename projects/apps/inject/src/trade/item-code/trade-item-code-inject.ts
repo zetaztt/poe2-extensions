@@ -27,6 +27,9 @@ async function initializeTradeItemCopy(): Promise<void> {
 	}
 }
 
+/**
+ * 即时切换物品复制增强；关闭时移除扩展监听与样式并恢复官方按钮行为。
+ */
 export function setTradeItemCopyEnabled(nextEnabled: boolean): void {
 	if (enabled === nextEnabled) {
 		refreshTradeItemCopyButtons();

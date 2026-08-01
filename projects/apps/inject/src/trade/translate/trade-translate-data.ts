@@ -10,6 +10,9 @@ import {
 import { isUniqueItem } from "../trade-utils";
 import { tradeTranslateDictionaryLoader } from "./trade-translate-dictionary-loader";
 
+/**
+ * 可翻译的官方 trade2 数据端点；路径匹配刻意不覆盖搜索结果和其他 API。
+ */
 export const tradeDataPaths = {
 	items: "/api/trade2/data/items",
 	stats: "/api/trade2/data/stats",
@@ -29,6 +32,9 @@ export function isTradeDataUrl(url: string): boolean {
 	return getTradeDataKind(url) !== undefined;
 }
 
+/**
+ * 在 XHR response 交给官方页面前原位翻译已识别数据；字典不可用或解析结果非对象时不改写响应。
+ */
 export async function processTradeData(response: XhrResponse) {
 	const dictionary = await tradeTranslateDictionaryLoader.loadDictionarySafely();
 	const data = JSON.parse(response.response);
@@ -62,6 +68,7 @@ export function processItemsData(data: TradeItemsDataResponse, dictionary: Trans
 		if (!Array.isArray(group.entries)) continue;
 
 		for (const entry of group.entries) {
+			// item/stat 可见文本必须同时保留英文原文，避免映射缺失或同名歧义丢失语义。
 			let originalText: string;
 			let translateText: string | undefined;
 
@@ -100,6 +107,7 @@ export function processStatsData(data: TradeStatsResponse, dictionary: Translate
 		if (!Array.isArray(group.entries)) continue;
 
 		for (const entry of group.entries) {
+			// 数值模板翻译后继续附带完整英文词条，避免同一 stat 文本产生歧义。
 			const translateText = dictionary[entry.text];
 			const originalText = entry.text;
 
@@ -160,9 +168,12 @@ function isObject(value: unknown): value is object {
 	return typeof value === "object" && value !== null;
 }
 
+/**
+ * 安装当前 MAIN world 生命周期唯一的 XHR hook；预请求加载字典以减少 response 阶段等待。
+ */
 export function installTranslateDataHook() {
 	proxy({
-		//请求发起前进入
+		// 请求阶段只预加载字典，不改变官方请求。
 		onRequest: (config, handler) => {
 			if (isTradeDataUrl(config.url)) {
 				tradeTranslateDictionaryLoader.preloadDictionary();
@@ -170,7 +181,7 @@ export function installTranslateDataHook() {
 
 			handler.next(config);
 		},
-		//请求成功后进入
+		// 响应阶段仅处理已知 trade2 数据端点，其他 XHR 原样继续。
 		onResponse: async (response, handler) => {
 			if (isTradeDataUrl(response.config.url)) {
 				console.log("处理中文数据", response);

@@ -8,6 +8,9 @@ type MergedRuneMod =
 			max: number;
 	  };
 
+/**
+ * 将官方搜索结果物品整理为接近游戏内复制格式的纯英文文本。
+ */
 export function formatTradeItemText(item: TradeSearchItem): string {
 	const lines = [
 		...getBasicInfo(item),
@@ -125,6 +128,7 @@ function getEnchantMods(item: TradeSearchItem): string[] {
 }
 
 function getRuneEffects(item: TradeSearchItem): string[] {
+	// 多个符文会重复贡献同类数值；按规范化模板合并后再恢复可读文本。
 	const merged: Record<string, MergedRuneMod> = {};
 
 	for (const mod of item.runeMods || []) {
@@ -135,6 +139,7 @@ function getRuneEffects(item: TradeSearchItem): string[] {
 }
 
 function processRuneEffect(mod: string, merged: Record<string, MergedRuneMod>): void {
+	// 仅合并已知的区间、整数和百分比形式；未知格式以 unmerged 原文保留，避免丢失词条。
 	const contextMatch = mod.match(/^([\w\s/]+?):\s(.+)$/);
 	const content = contextMatch ? contextMatch[2] : mod;
 

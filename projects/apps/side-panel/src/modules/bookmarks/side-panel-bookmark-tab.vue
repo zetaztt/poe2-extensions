@@ -55,6 +55,7 @@ const visibleBookmarkFolders = computed<TradeBookmarkFolder[]>(() => bookmarkTre
 watch(
 	bookmarkTree,
 	(tree) => {
+		// 快照替换时保留仍存在目录的展开状态；首次加载默认展开全部一级目录。
 		const previousExpandedIds = expandedFolderIds.value;
 		const nextFolderIds = new Set(tree ? tree.folders.map((folder) => folder.id) : []);
 		const nextExpandedIds = new Set<string>();
@@ -357,6 +358,7 @@ async function cancelFolderRename(folderId: string): Promise<void> {
 }
 
 async function cancelCreatedFolder(folderId: string): Promise<void> {
+	// “新建”先落入 background 权威树再进入重命名态，取消编辑必须发删除命令撤销该临时实体。
 	isBusy.value = true;
 	dismissSnackBar();
 
@@ -394,6 +396,7 @@ async function cancelBookmarkRename(bookmarkId: string): Promise<void> {
 }
 
 async function cancelCreatedBookmark(bookmarkId: string): Promise<void> {
+	// 新书签已经持久化；取消首次重命名表示撤销创建，而不是仅恢复标题。
 	isBusy.value = true;
 	dismissSnackBar();
 
@@ -514,6 +517,7 @@ async function onDrop(event: DragEvent): Promise<void> {
 	dismissSnackBar();
 
 	try {
+		// UI 只解析目标容器和原始插入位置；同目录移除后的索引修正由 background 统一完成。
 		if (item.type === BookmarkDragItemType.Folder) {
 			const moveTarget = getFolderMoveTarget(item.id, target);
 			if (!moveTarget) return;
@@ -613,6 +617,7 @@ function getFolderMoveTarget(folderId: string, target: DropTarget): { parentId: 
 	const targetIndex = folders.findIndex((folder) => folder.id === target.id);
 	if (targetIndex < 0) return null;
 
+	// index 基于移动前列表；相邻位置等价于原位置，避免发送无效 mutation。
 	const index = target.position === BookmarkDropPosition.After ? targetIndex + 1 : targetIndex;
 	const currentIndex = folders.findIndex((folder) => folder.id === folderId);
 	if (currentIndex === index || currentIndex + 1 === index) return null;
@@ -640,6 +645,7 @@ function getBookmarkMoveTarget(bookmarkId: string, target: DropTarget): { folder
 	const targetIndex = folder.bookmarks.findIndex((bookmark) => bookmark.id === target.id);
 	if (targetIndex < 0) return null;
 
+	// 跨目录时 currentIndex 为 -1；同目录则用移动前索引识别等价放置位置。
 	const index = target.position === BookmarkDropPosition.After ? targetIndex + 1 : targetIndex;
 	const currentIndex = folder.bookmarks.findIndex((bookmark) => bookmark.id === bookmarkId);
 	if (currentIndex === index || currentIndex + 1 === index) return null;

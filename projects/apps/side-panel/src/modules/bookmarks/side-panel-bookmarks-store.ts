@@ -18,6 +18,9 @@ interface TradeBookmarkStoreError {
 	error: unknown;
 }
 
+/**
+ * 消费 background 权威书签树的页面 store；负责快照排序、乐观重命名和失败后的重新加载。
+ */
 export const useTradeBookmarkStore = defineStore("trade-bookmarks", () => {
 	const bookmarkTree = ref<TradeBookmarkRoot | null>(null);
 	const isLoadingBookmarks = ref(false);
@@ -191,6 +194,7 @@ export const useTradeBookmarkStore = defineStore("trade-bookmarks", () => {
 	function applyBookmarkSnapshot(snapshot: TradeBookmarkTreeSnapshot, force = false): TradeBookmarkRoot {
 		if (retiredBackgroundInstanceIds.has(snapshot.instanceId)) return bookmarkTree.value ?? snapshot.tree;
 
+		// 已退休 instance 的迟到通知不能重新成为当前权威来源；force 只用于首次/失败后的显式加载。
 		const isNewBackgroundInstance = snapshot.instanceId !== currentBackgroundInstanceId;
 		const isNewerRevision = snapshot.revision > currentBookmarkRevision;
 		const isOlderRevision = snapshot.revision < currentBookmarkRevision;

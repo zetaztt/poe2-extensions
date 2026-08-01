@@ -1,6 +1,9 @@
 import { defineIpcProtocol, defineNotification, defineRpc } from "../ipc/ipc-protocol";
 import type { TradeStatPreset } from "./trade-types";
 
+/**
+ * background 向活动 trade2 页面的功能启停通知载荷。
+ */
 export interface TradeFeatureUpdateData {
 	enabled: boolean;
 }
@@ -15,6 +18,9 @@ export interface DeleteStatPresetParams {
 	name: string;
 }
 
+/**
+ * trade 领域 RPC；设置写入和筛选预设持久化都由 background 执行。
+ */
 export const tradeIpcProtocol = defineIpcProtocol({
 	name: "trade",
 	listStatPresets: defineRpc<void, TradeStatPreset[]>(),

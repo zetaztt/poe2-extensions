@@ -12,6 +12,7 @@ let modalInput: HTMLInputElement | null = null;
 let modalMessage: HTMLElement | null = null;
 
 function ensureStatPresetModal(): HTMLElement | null {
+	// 弹窗节点和引用在功能开启期间复用；关闭只隐藏，完整禁用由 reset 释放全部页面状态。
 	const existingModal = document.getElementById(modalId);
 	if (existingModal && modalInput) return existingModal;
 	if (!document.body) return null;
@@ -106,6 +107,9 @@ function closeStatPresetModal(): void {
 	modalRenameName = null;
 }
 
+/**
+ * 移除弹窗 DOM 和模块引用，确保功能再次启用时从干净状态重建。
+ */
 export function resetStatPresetModal(): void {
 	document.getElementById(modalId)?.remove();
 	modalTitle = null;

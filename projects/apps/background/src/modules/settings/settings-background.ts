@@ -249,6 +249,9 @@ function logListenerError(error: unknown): void {
 	console.warn("[poe2-extensions] 设置变化处理失败", error);
 }
 
+/**
+ * 当前 service worker 生命周期内持有权威设置缓存、revision 和串行持久化队列的领域单例。
+ */
 export const settingsBackground = {
 	install,
 	get,

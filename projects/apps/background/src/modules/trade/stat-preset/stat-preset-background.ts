@@ -109,6 +109,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * 仅在功能开启时提供筛选预设 RPC，并在 storage.local 边界校验数据的 background 单例。
+ */
 export const tradeStatPresetBackground = {
 	install,
 };

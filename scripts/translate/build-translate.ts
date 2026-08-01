@@ -55,6 +55,7 @@ function buildTranslate() {
 	const translateSortedJson = JSON.stringify(Object.entries(translateMap).sort((a, b) => a[0].localeCompare(b[0])));
 	const md5 = crypto.createHash("md5").update(translateSortedJson).digest("hex");
 	const previousTranslateMeta = readTranslateMeta();
+	// version 只在有效字典内容变化时推进；PO 排序或未翻译条目变化不能触发远端更新。
 	const version = previousTranslateMeta?.md5 === md5 ? previousTranslateMeta.version : Date.now();
 
 	fs.writeFileSync(translateJsonPath, translateJson);

@@ -12,6 +12,9 @@ export {
 export const poe2Href = "www.pathofexile.com";
 export const poe2TwHref = "www.pathofexile.tw";
 
+/**
+ * 拉取流程的临时审查日志；不属于翻译源或扩展生成产物。
+ */
 export const pullTranslateChangeLogPath = "./tmp/pull-translate-changes.log";
 
 const pullTranslateLogPrefix = "pull-translate";
@@ -54,6 +57,9 @@ export function writeTranslateChangeLogs(logPath: string, logs: string[]): void 
 	logPullTranslate(`${logs.length} 条文本变更已记录到 ${logPath}`);
 }
 
+/**
+ * 对比稳定 key 下的英文原文和人工翻译，并记录新增、修改与移除条目。
+ */
 export function logTextChanges(logPath: string, beforeTexts: Record<string, TextData>, afterTexts: TextData[]): void {
 	const afterTextsMap = new Map(afterTexts.map((text) => [getTextKey(text), text]));
 	let count = 0;
@@ -102,6 +108,9 @@ export function logTextChanges(logPath: string, beforeTexts: Record<string, Text
 	}
 }
 
+/**
+ * 只把存在歧义、不能安全进入 PO 源的上游文本写入审查日志。
+ */
 export function writeNeedCheckTexts(texts: TextData[]): void {
 	writeTranslateChangeLogs(
 		pullTranslateChangeLogPath,

@@ -5,6 +5,9 @@ export type TradeTranslateTextItem = InstanceType<typeof PO.Item>;
 
 const sourceCommentPattern = /^source:\s*(\S.*)$/;
 
+/**
+ * 创建以 msgctxt 为稳定 key 的 PO 条目，空翻译仍写为合法的单元素 msgstr。
+ */
 export function createTradeTranslateTextItem(
 	key: string,
 	original: string,
@@ -36,6 +39,9 @@ export function setTradeTranslateTextItemTranslation(
 	item.msgstr = [translate ?? ""];
 }
 
+/**
+ * 从提取注释读取上游来源标记；其他人工注释保持不变。
+ */
 export function getTradeTranslateTextItemSource(item: TradeTranslateTextItem): TradeTranslateSource | undefined {
 	const comments = item.extractedComments ?? [];
 	for (const comment of comments) {
@@ -47,6 +53,9 @@ export function getTradeTranslateTextItemSource(item: TradeTranslateTextItem): T
 	return undefined;
 }
 
+/**
+ * 替换唯一的 source 提取注释，同时保留条目上的其他提取注释。
+ */
 export function setTradeTranslateTextItemSource(
 	item: TradeTranslateTextItem,
 	source: TradeTranslateSource | undefined,

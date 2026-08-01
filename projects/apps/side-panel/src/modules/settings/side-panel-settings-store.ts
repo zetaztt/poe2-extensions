@@ -20,6 +20,10 @@ interface SettingsStoreError {
 	error: unknown;
 }
 
+/**
+ * 聚合 background 权威设置快照的页面 store。
+ * 按 key/instance/revision 排序通知，并负责乐观更新和失败恢复。
+ */
 export const useSettingsStore = defineStore("settings", () => {
 	const settings = ref<TradeSettings | null>(null);
 	const isLoading = ref(false);

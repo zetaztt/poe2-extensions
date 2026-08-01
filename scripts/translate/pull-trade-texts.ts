@@ -46,6 +46,7 @@ function addPulledText(
 	const { needCheck, muteMultiWarn } = options ?? {};
 
 	if (context.texts.has(key)) {
+		// 同一 key 对应多个英文原文时无法安全选择，保留首个值并要求维护者检查日志。
 		if (!muteMultiWarn) {
 			console.error("Could not set text map for key '" + key + "'");
 		}
@@ -176,6 +177,7 @@ async function pullFilterTexts(context: PulledTextContext, href: string): Promis
 }
 
 function mergePulledOriginalTexts(texts: TextData[], beforeTexts = readTexts()): TextData[] {
+	// 上游只更新 msgid；复用旧 PO.Item 以保留人工翻译、source 注释和其他维护元数据。
 	return texts.map((text) => {
 		const key = getTextKey(text);
 		const beforeText = key ? beforeTexts[key] : undefined;
@@ -206,6 +208,7 @@ async function pullTradeTexts(): Promise<void> {
 
 	const context = createPulledTextContext();
 
+	// 四类端点彼此独立；全部成功后才会合并并重写人工维护源。
 	await Promise.all([
 		pullItemTexts(context, poe2Href),
 		pullStatsTexts(context, poe2Href),

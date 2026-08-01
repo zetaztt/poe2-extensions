@@ -13,7 +13,10 @@ import {
 
 type SendEnvelope = (envelope: IpcEnvelope) => Promise<unknown>;
 
-/** 创建通过 runtime.sendMessage 调用 background ipcMain 的无地址 client connection；每个运行环境只应创建一次。 */
+/**
+ * 创建通过 runtime.sendMessage 调用 background ipcMain 的无地址 client connection。
+ * 每个运行环境只应创建一次。
+ */
 export function createRuntimeIpcClient(): IpcConnection {
 	return createWebExtensionIpcConnection(
 		IpcScope.Main,
@@ -25,7 +28,8 @@ export function createRuntimeIpcClient(): IpcConnection {
 }
 
 /**
- * 安装唯一的 background ipcMain server；主动 notification 会广播给扩展页面及调用方提供的 content tabs。
+ * 安装唯一的 background ipcMain server。
+ * 主动 notification 会广播给扩展页面及调用方提供的 content tabs。
  */
 export function installRuntimeIpcServer(
 	onConnection: (connection: IpcConnection) => void,
@@ -42,7 +46,9 @@ export function installRuntimeIpcServer(
 	return () => connection.dispose();
 }
 
-/** 安装当前 content 入口唯一的 ipcWindow server connection，供 hub 接收 tab 调用并向 Extension clients 发布通知。 */
+/**
+ * 安装当前 content 入口唯一的 ipcWindow server connection，供 hub 接收 tab 调用并向 Extension clients 发布通知。
+ */
 export function installTabIpcServer(onConnection: (connection: IpcConnection) => void): () => void {
 	const connection = createWebExtensionIpcConnection(
 		IpcScope.Window,
@@ -88,6 +94,8 @@ function receiveWebExtensionMessage(
 	connection: IpcConnection,
 	message: IpcMessage,
 ): Promise<IpcEnvelope | undefined> | undefined {
+	// runtime listener 只有处理 request 时才能返回 Promise，确保 response 由原 sendMessage 调用取得；
+	// notification/response 仅送入既有 connection，避免浏览器把无关 listener 当成响应者。
 	if (message.kind !== IpcMessageKind.Request) {
 		void connection.receive(message);
 		return undefined;

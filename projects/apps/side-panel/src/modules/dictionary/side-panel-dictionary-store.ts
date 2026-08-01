@@ -8,6 +8,9 @@ interface DictionaryStoreError {
 	error: unknown;
 }
 
+/**
+ * 缓存字典加载 Promise 和普通数据结果的页面 store，避免并发页面请求重复调用 background。
+ */
 export const useDictionaryStore = defineStore("dictionary", () => {
 	const dictionary = shallowRef<TranslateDictionary | null>(null);
 	const isLoading = ref(false);

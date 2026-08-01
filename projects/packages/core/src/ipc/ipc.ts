@@ -32,11 +32,15 @@ interface IpcUnaddressedChannelBackend<TAddress> extends IpcChannelBackendBase<T
 	publish(method: string, data: unknown | undefined): Promise<void>;
 }
 
-/** 按 address 类型选择 publish 或点对点 send 能力的运行环境 backend 契约。 */
+/**
+ * 按 address 类型选择 publish 或点对点 send 能力的运行环境 backend 契约。
+ */
 export type IpcChannelBackend<TAddress> = [TAddress] extends [void]
 	? IpcUnaddressedChannelBackend<TAddress>
 	: IpcAddressedChannelBackend<TAddress>;
-/** 在基础 channel backend 上增加 RPC 服务端注册能力。 */
+/**
+ * 在基础 channel backend 上增加 RPC 服务端注册能力。
+ */
 export type IpcHandlerChannelBackend<TAddress> = IpcChannelBackend<TAddress> & {
 	handle(
 		method: string,
@@ -45,14 +49,23 @@ export type IpcHandlerChannelBackend<TAddress> = IpcChannelBackend<TAddress> & {
 };
 
 const defaultRequestTimeoutMs = 10_000;
-/** 跨独立构建复用当前环境 ipcMain backend 的稳定注册标识，不得随实现重命名。 */
+/**
+ * 跨独立构建复用当前环境 ipcMain backend 的稳定注册标识，不得随实现重命名。
+ */
 export const ipcMainRegistrationKey = Symbol.for("poe2-extensions:ipc-main");
-/** 跨独立构建复用当前环境 ipcWindow backend 的稳定注册标识，不得随实现重命名。 */
+/**
+ * 跨独立构建复用当前环境 ipcWindow backend 的稳定注册标识，不得随实现重命名。
+ */
 export const ipcWindowRegistrationKey = Symbol.for("poe2-extensions:ipc-window");
 const ipcScope = globalThis as Record<PropertyKey, unknown>;
 
-/** 将具名 protocol member 映射到当前运行环境 backend，并在首次构造时完成稳定全局注册。 */
+/**
+ * 将具名 protocol member 映射到当前运行环境 backend，并在首次构造时完成稳定全局注册。
+ */
 export class IpcChannel<TAddress = void> {
+	/**
+	 * addressed 必须与 TAddress 是否为 void 一致，门面据此解析 variadic 参数并选择 send 或 publish。
+	 */
 	public constructor(
 		protected readonly registrationKey: symbol,
 		protected readonly addressed: [TAddress] extends [void] ? false : true,
@@ -64,7 +77,10 @@ export class IpcChannel<TAddress = void> {
 		ipcScope[registrationKey] = factory();
 	}
 
-	/** 发起 RPC；有地址 channel 将 address 作为首参，无地址 channel 直接从 member 开始。 */
+	/**
+	 * 发起 RPC。
+	 * 有地址 channel 将 address 作为首参，无地址 channel 直接从 member 开始。
+	 */
 	public invoke<TMember extends IpcRpcDefinition<any, any>>(
 		...args: [...IpcAddressArguments<TAddress>, member: TMember, ...IpcArguments<RpcParams<TMember>>]
 	): Promise<RpcResult<TMember>> {
@@ -75,7 +91,9 @@ export class IpcChannel<TAddress = void> {
 		return invoke(this.registrationKey, address, member, memberArgs);
 	}
 
-	/** 有地址时点对点发送 notification，无地址时向当前 hub 拓扑发布。 */
+	/**
+	 * 有地址时点对点发送 notification，无地址时向当前 hub 拓扑发布。
+	 */
 	public send<TMember extends IpcNotificationDefinition<any>>(
 		...args: [...IpcAddressArguments<TAddress>, member: TMember, ...IpcArguments<NotificationData<TMember>>]
 	): Promise<void> {
@@ -88,7 +106,10 @@ export class IpcChannel<TAddress = void> {
 			: publish(this.registrationKey, member, memberArgs);
 	}
 
-	/** 监听所有来源 notification；有地址 channel 提供实际来源，同 method 后注册者会替换旧 listener。 */
+	/**
+	 * 监听所有来源 notification。
+	 * 有地址 channel 提供实际来源，同 method 后注册者会替换旧 listener。
+	 */
 	public on<TMember extends IpcNotificationDefinition<any>>(
 		member: TMember,
 		listener: IpcNotificationListener<TAddress, NotificationData<TMember>>,
@@ -97,8 +118,13 @@ export class IpcChannel<TAddress = void> {
 	}
 }
 
-/** 仅供拥有对应 RPC 服务端职责的运行环境使用的 channel 门面。 */
+/**
+ * 仅供拥有对应 RPC 服务端职责的运行环境使用的 channel 门面。
+ */
 export class IpcHandlerChannel<TAddress = void> extends IpcChannel<TAddress> {
+	/**
+	 * 构造时立即注册带 handler 能力的 backend，并沿用 IpcChannel 的单例注册规则。
+	 */
 	public constructor(
 		registrationKey: symbol,
 		addressed: [TAddress] extends [void] ? false : true,
@@ -107,7 +133,10 @@ export class IpcHandlerChannel<TAddress = void> extends IpcChannel<TAddress> {
 		super(registrationKey, addressed, factory);
 	}
 
-	/** 注册全局 RPC handler；有地址 backend 提供请求来源，同 method 后注册者会替换旧 handler。 */
+	/**
+	 * 注册全局 RPC handler。
+	 * 有地址 backend 提供请求来源，同 method 后注册者会替换旧 handler。
+	 */
 	public handle<TMember extends IpcRpcDefinition<any, any>>(
 		member: TMember,
 		handler: IpcHandler<TAddress, RpcParams<TMember>, RpcResult<TMember>>,

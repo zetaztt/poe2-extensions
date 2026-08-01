@@ -22,7 +22,9 @@ interface PublishedNotification {
 	data?: unknown;
 }
 
-/** 聚合一个 channel 的多个连接，并将 handler、通知发布和 relay 应用于整个连接拓扑。 */
+/**
+ * 聚合一个 channel 的多个连接，并将 handler、通知发布和 relay 应用于整个连接拓扑。
+ */
 export class IpcConnectionHub<TAddress> {
 	private readonly connections = new Set<IpcConnection>();
 	private readonly connectionAddresses = new Map<IpcConnection, TAddress>();
@@ -37,12 +39,15 @@ export class IpcConnectionHub<TAddress> {
 
 	public constructor(private readonly resolveConnection: (address: TAddress) => IpcConnection) {}
 
-	/** 注册现有连接；有地址 hub 同时记录该连接对应的通知和请求来源。 */
+	/**
+	 * 注册现有连接；有地址 hub 同时记录该连接对应的通知和请求来源。
+	 */
 	public addConnection(connection: IpcConnection, ...args: IpcAddressArguments<TAddress>): () => void {
 		return this.registerConnection(connection, args.length > 0, args[0] as TAddress);
 	}
 
 	private registerConnection(connection: IpcConnection, hasAddress: boolean, address?: TAddress): () => void {
+		// relay source 不代表可寻址对端；单独传 hasAddress 可区分“地址值为 undefined”和“没有来源地址”。
 		if (hasAddress) this.connectionAddresses.set(connection, address as TAddress);
 		if (this.connections.has(connection)) return () => undefined;
 
@@ -83,7 +88,9 @@ export class IpcConnectionHub<TAddress> {
 		};
 	}
 
-	/** 将 source 上未被本地处理的调用转发到按地址惰性解析的目标连接。 */
+	/**
+	 * 将 source 上未被本地处理的调用转发到按地址惰性解析的目标连接。
+	 */
 	public addRelay(sourceConnection: IpcConnection, targetAddress: TAddress): () => void {
 		this.registerConnection(sourceConnection, false);
 		const targets = this.relayTargets.get(sourceConnection) ?? new Set<TAddress>();
@@ -123,7 +130,9 @@ export class IpcConnectionHub<TAddress> {
 		return data === undefined ? connection.sendNotification(method) : connection.sendNotification(method, data);
 	}
 
-	/** 在本地分发后沿全部连接和 relay 扩散 notification，并使用发布 ID 抑制环路重复。 */
+	/**
+	 * 在本地分发后沿全部连接和 relay 扩散 notification，并使用发布 ID 抑制环路重复。
+	 */
 	public async publish(method: string, data: unknown | undefined): Promise<void> {
 		const notification: PublishedNotification = {
 			id: createPublishedNotificationId(),
@@ -137,6 +146,9 @@ export class IpcConnectionHub<TAddress> {
 		]);
 	}
 
+	/**
+	 * 注册应用于现有及后续连接的 RPC handler；同 method 后注册者替换旧 handler。
+	 */
 	public handle(method: string, handler: RequestHandler<TAddress>): () => void {
 		this.requestHandlers.get(method)?.disposables.forEach((disposable) => disposable.dispose());
 		const registration: RegisteredHandler<RequestHandler<TAddress>> = {
@@ -155,6 +167,9 @@ export class IpcConnectionHub<TAddress> {
 		};
 	}
 
+	/**
+	 * 注册应用于现有及后续连接的 notification handler；同 method 后注册者替换旧 handler。
+	 */
 	public on(method: string, handler: NotificationHandler<TAddress>): () => void {
 		this.notificationHandlers.get(method)?.disposables.forEach((disposable) => disposable.dispose());
 		const registration: RegisteredHandler<NotificationHandler<TAddress>> = {
@@ -211,6 +226,7 @@ export class IpcConnectionHub<TAddress> {
 
 	private dispatchPublishedNotification(notification: PublishedNotification, source?: IpcConnection): Promise<void> {
 		const handler = this.notificationHandlers.get(notification.method)?.handler;
+		// 本地产生的无地址发布没有 source；void channel 的 listener 签名会在门面层移除该占位参数。
 		return Promise.resolve(
 			handler?.(this.connectionAddresses.get(source as IpcConnection) as TAddress, notification.data),
 		);

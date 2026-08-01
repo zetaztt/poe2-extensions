@@ -168,6 +168,9 @@ async function getActiveTab(): Promise<ActiveBrowserTab | undefined> {
 	return tab;
 }
 
+/**
+ * bookmarks IPC 与浏览器文件/标签页副作用的无状态页面 service。
+ */
 export const tradeBookmarkService = {
 	loadTradeBookmarks,
 	getTradeBookmarkRootGroups,

@@ -1,9 +1,15 @@
+/**
+ * Core IPC wire message 的判别值；属于跨 transport 共享格式。
+ */
 export const IpcMessageKind = {
 	Request: "request",
 	Response: "response",
 	Notification: "notification",
 } as const;
 
+/**
+ * Core IPC 使用的稳定错误码；transport 只负责透传，不应改写。
+ */
 export const IpcErrorCode = {
 	Timeout: -32_000,
 	ConnectionDisposed: -32_001,
@@ -11,18 +17,28 @@ export const IpcErrorCode = {
 	InternalError: -32_603,
 } as const;
 
+// Symbol.for 允许独立构建产物识别同一领域错误，不能改为模块本地 Symbol。
 const ipcErrorMarker = Symbol.for("poe2-extensions:ipc-error");
 
+/**
+ * 表示可重复安全释放的 IPC 注册或连接资源。
+ */
 export interface Disposable {
 	dispose(): void;
 }
 
+/**
+ * 可通过 wire format 序列化并在调用端还原为 IpcError 的错误数据。
+ */
 export interface IpcErrorData {
 	code: number;
 	message: string;
 	data?: unknown;
 }
 
+/**
+ * 带截止时间的 RPC 请求 wire message。
+ */
 export interface IpcRequestMessage {
 	kind: typeof IpcMessageKind.Request;
 	id: number;
@@ -31,6 +47,9 @@ export interface IpcRequestMessage {
 	deadline?: number;
 }
 
+/**
+ * 与 request id 对应的 RPC 响应；result 与 error 互斥。
+ */
 export interface IpcResponseMessage {
 	kind: typeof IpcMessageKind.Response;
 	id: number;
@@ -38,6 +57,9 @@ export interface IpcResponseMessage {
 	error?: IpcErrorData;
 }
 
+/**
+ * 不要求响应的单向通知 wire message。
+ */
 export interface IpcNotificationMessage {
 	kind: typeof IpcMessageKind.Notification;
 	method: string;
@@ -46,6 +68,9 @@ export interface IpcNotificationMessage {
 
 export type IpcMessage = IpcRequestMessage | IpcResponseMessage | IpcNotificationMessage;
 
+/**
+ * handler 可用于拒绝已经过期或即将过期的 relay 请求。
+ */
 export interface IpcRequestContext {
 	deadline?: number;
 }
@@ -59,8 +84,16 @@ export type IpcFallbackRequestHandler = (
 export type IpcNotificationHandler = (data: unknown) => void | Promise<void>;
 export type IpcFallbackNotificationHandler = (method: string, data: unknown) => void | Promise<void>;
 
+/**
+ * 连接与底层 transport 之间的消息发送边界。
+ * 返回 message 表示 transport 可在同一次调用中原路带回应答；返回 undefined 时响应将异步送回 receive。
+ */
 export type SendIpcMessage = (message: IpcMessage) => IpcMessage | undefined | Promise<IpcMessage | undefined>;
 
+/**
+ * 维护单个逻辑对端的请求状态和 handler；不负责 envelope、寻址或跨连接广播。
+ * 同一 method 的后注册 handler 会替换旧 handler，dispose 会拒绝全部未完成请求。
+ */
 export interface IpcConnection {
 	sendRequest(method: string, data?: unknown, deadline?: number): Promise<unknown>;
 	sendNotification(method: string, data?: unknown): Promise<void>;
@@ -79,6 +112,9 @@ interface PendingRequest {
 	timeoutId?: ReturnType<typeof globalThis.setTimeout>;
 }
 
+/**
+ * 可跨独立构建识别并通过 IPC wire format 传递的领域错误。
+ */
 export class IpcError<TData = unknown> extends Error {
 	public readonly [ipcErrorMarker] = true;
 
@@ -292,6 +328,7 @@ class DefaultIpcConnection implements IpcConnection {
 	}
 
 	private allocateRequestId(): number {
+		// ID 只需在该 connection 的未完成请求集合内唯一；回绕时跳过仍被占用的 ID。
 		const start = this.nextRequestId;
 		do {
 			const id = this.nextRequestId;
@@ -303,10 +340,16 @@ class DefaultIpcConnection implements IpcConnection {
 	}
 }
 
+/**
+ * 创建不绑定运行环境的逻辑 IPC connection。
+ */
 export function createIpcConnection(sendMessage: SendIpcMessage): IpcConnection {
 	return new DefaultIpcConnection(sendMessage);
 }
 
+/**
+ * 在 transport 接收边界校验共享 message 结构，拒绝无效 request id 和冲突响应字段。
+ */
 export function isIpcMessage(value: unknown): value is IpcMessage {
 	if (!isRecord(value)) return false;
 

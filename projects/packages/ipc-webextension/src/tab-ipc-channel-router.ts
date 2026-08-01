@@ -16,7 +16,9 @@ interface RegisteredNotificationHandler {
 	handler: NotificationHandler;
 }
 
-/** 隔离浏览器消息 API，使无状态 tab 路由可以使用纯消息平台验证。 */
+/**
+ * 隔离浏览器消息 API，使无状态 tab 路由可以使用纯消息平台验证。
+ */
 export interface TabIpcRouterPlatform {
 	sendTabMessage(tabId: number, envelope: IpcEnvelope): Promise<unknown>;
 	addClientMessageListener(listener: (value: unknown, senderTabId: number | undefined) => unknown): void;
@@ -64,6 +66,7 @@ export function createTabIpcChannelRouter(platform: TabIpcRouterPlatform): IpcCh
 	};
 
 	async function receiveTabIpcMessage(address: number, message: IpcMessage): Promise<IpcEnvelope | undefined> {
+		// 每条入站消息使用临时接收 connection，以返回 request 响应但不建立或缓存 tab 会话。
 		const connection = createIpcConnection(() => undefined);
 		connection.onNotification((method, data) => notificationHandlers.get(method)?.handler(address, data));
 		try {

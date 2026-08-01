@@ -47,6 +47,9 @@ function subscribeSettings(
 	};
 }
 
+/**
+ * settings IPC 的无状态页面 service；返回普通快照，不持有 Pinia 或响应式状态。
+ */
 export const settingsService = {
 	getValues,
 	setTranslateEnabled,

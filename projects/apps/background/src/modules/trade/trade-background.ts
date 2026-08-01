@@ -149,6 +149,9 @@ function isTrade2Url(url: string | undefined): boolean {
 	}
 }
 
+/**
+ * 协调 trade 功能设置副作用、动态翻译脚本注册和活动页面通知的 background 单例。
+ */
 export const tradeBackground = {
 	install,
 	getStatPresetEnabled,

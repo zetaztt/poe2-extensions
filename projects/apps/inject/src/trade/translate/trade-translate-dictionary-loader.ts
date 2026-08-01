@@ -4,6 +4,9 @@ import { ipcMain } from "../../inject-ipc-channels";
 let dictionary: TranslateDictionary | null = null;
 let dictionaryPromise: Promise<TranslateDictionary> | null = null;
 
+/**
+ * MAIN world 的普通字典加载器；缓存成功结果并合并并发请求，不保存响应式状态。
+ */
 export const tradeTranslateDictionaryLoader = {
 	loadDictionary,
 	loadDictionarySafely,

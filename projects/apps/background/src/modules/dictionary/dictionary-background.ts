@@ -26,6 +26,7 @@ function install(): void {
 }
 
 async function fetchTranslateDictionary(): Promise<TranslateDictionary> {
+	// 选择顺序为内置 fallback → 更高版本有效缓存 → 更高版本远端；任何远端失败都保留 current。
 	let current = await getLocalTranslateDictionary();
 	const cached = await getCachedTranslateDictionary();
 
@@ -161,6 +162,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * 按内置 fallback、本地有效缓存和更高版本远端数据选择翻译字典的 background 单例。
+ */
 export const dictionaryBackground = {
 	install,
 };

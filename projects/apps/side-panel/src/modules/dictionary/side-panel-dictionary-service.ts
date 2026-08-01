@@ -66,6 +66,9 @@ function normalizeSearchText(value: string): string {
 	return value.trim().toLocaleLowerCase();
 }
 
+/**
+ * dictionary IPC 的无状态页面 service；搜索只处理调用方传入的普通字典数据。
+ */
 export const dictionaryService = {
 	loadDictionary,
 	searchDictionary,

@@ -11,7 +11,10 @@ const browserTabIpcPlatform: TabIpcRouterPlatform = {
 	},
 };
 
-/** 创建使用 browser.tabs/runtime 消息 API 的 tabId 寻址 channel backend；每个运行环境只应创建一次。 */
+/**
+ * 创建使用 browser.tabs/runtime 消息 API 的 tabId 寻址 channel backend。
+ * 每个运行环境只应创建一次。
+ */
 export function createTabIpcChannelBackend(): IpcChannelBackend<number> {
 	return createTabIpcChannelRouter(browserTabIpcPlatform);
 }

@@ -618,6 +618,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;
 }
 
+/**
+ * 持有跨侧边栏权威书签树、revision 广播及 storage.local 持久化队列的 background 单例。
+ */
 export const tradeBookmarkBackground = {
 	install,
 };

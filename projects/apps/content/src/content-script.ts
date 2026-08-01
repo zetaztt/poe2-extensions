@@ -11,6 +11,9 @@ export interface InjectExtensionScriptResult {
 	script: HTMLScriptElement;
 }
 
+/**
+ * 在 IPC channel 注册完成后执行 content 入口，并统一消费同步异常和异步 rejection。
+ */
 export function bootstrapContentScript(main: ContentScriptMain): void {
 	try {
 		const result = main();
@@ -24,6 +27,10 @@ export function bootstrapContentScript(main: ContentScriptMain): void {
 	}
 }
 
+/**
+ * 将打包后的扩展脚本注入 MAIN world。
+ * 默认加载后移除标签，keepInDom 仅供需保留节点的脚本使用。
+ */
 export function injectExtensionScript(
 	filepath: string,
 	options: InjectExtensionScriptOptions = {},

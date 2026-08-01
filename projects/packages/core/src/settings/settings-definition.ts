@@ -1,8 +1,14 @@
+/**
+ * 定义设置默认值，以及从持久化边界接收值时使用的领域校验和相等规则。
+ */
 export interface SettingOptions<TValue> {
 	defaultValue: TValue;
 	equals?(left: TValue, right: TValue): boolean;
 }
 
+/**
+ * 已绑定稳定 key 的设置成员；key 同时用于 IPC 和 storage.sync。
+ */
 export interface SettingMember<TValue, TKey extends string> {
 	readonly key: TKey;
 	readonly defaultValue: TValue;
@@ -38,6 +44,9 @@ export type SettingsValues<TDefinition extends { createDefaults(): object }> = R
 	TDefinition["createDefaults"]
 >;
 
+/**
+ * 一组领域设置及其运行时解析能力；members 保持定义顺序，供批量 IPC 请求恢复 tuple 关系。
+ */
 export interface SettingsDefinition<
 	TName extends string = string,
 	TMembers extends Record<string, AnySettingMember> = Record<string, AnySettingMember>,
@@ -56,10 +65,17 @@ type DefinedSettings<TName extends string, TMembers extends Record<string, AnySe
 >
 	& TMembers;
 
+/**
+ * 声明尚未绑定领域名和成员名的设置选项。
+ */
 export function defineSetting<TValue>(options: SettingOptions<TValue>): SettingOptions<TValue> {
 	return options;
 }
 
+/**
+ * 将定义名和成员名绑定成稳定 key，并生成默认值、成员解析和校验能力。
+ * 重命名 definition 或成员前必须为已有 storage.sync key 提供迁移。
+ */
 export function defineSettings<const TDefinition extends { name: string }>(
 	definition: TDefinition & ValidateSettingsDefinition<TDefinition>,
 ): DefinedSettings<TDefinition["name"], BindSettingMembers<TDefinition["name"], TDefinition>> {

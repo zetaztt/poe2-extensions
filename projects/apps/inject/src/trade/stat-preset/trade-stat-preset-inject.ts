@@ -32,6 +32,9 @@ async function initializeTradeStatPreset(): Promise<void> {
 	}
 }
 
+/**
+ * 即时切换筛选预设的全部 DOM、观察器、样式和弹窗副作用。
+ */
 export function setTradeStatPresetEnabled(nextEnabled: boolean): void {
 	if (enabled === nextEnabled) {
 		if (enabled) {

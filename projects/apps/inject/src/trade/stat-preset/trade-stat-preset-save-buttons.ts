@@ -7,11 +7,17 @@ const statGroupBodySelector = ".search-advanced-pane.brown .filter-group-header 
 let observer: MutationObserver | null = null;
 let refreshTimer: number | null = null;
 
+/**
+ * 安装可重复调用的保存按钮和惰性 DOM 观察器。
+ */
 export function installSaveButtons(): void {
 	renderSaveButtons();
 	ensureSaveButtonsObserver();
 }
 
+/**
+ * 断开观察器、取消节流任务并移除全部扩展按钮，恢复关闭状态。
+ */
 export function removeSaveButtons(): void {
 	observer?.disconnect();
 	observer = null;
@@ -29,6 +35,7 @@ export function removeSaveButtons(): void {
 function ensureSaveButtonsObserver(): void {
 	if (observer || !document.body) return;
 
+	// 官方筛选组可动态重建；合并 mutation 后重新扫描，避免重复按钮和高频同步布局读取。
 	observer = new MutationObserver(() => {
 		if (refreshTimer !== null) return;
 

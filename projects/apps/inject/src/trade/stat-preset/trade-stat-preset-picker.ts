@@ -13,6 +13,9 @@ let currentPresets: TradeStatPreset[] = [];
 let observer: MutationObserver | null = null;
 let refreshTimer: number | null = null;
 
+/**
+ * 安装可重复调用的预设选择器和惰性 DOM 观察器。
+ */
 export function installPresetPicker(): void {
 	renderPresetPicker();
 	ensurePresetPickerObserver();
@@ -131,6 +134,9 @@ export function getPresetPickerFilter(): string {
 	return presetInput?.value ?? "";
 }
 
+/**
+ * 完整停止选择器副作用：断开观察器、取消节流任务并移除插入 DOM，供功能即时关闭使用。
+ */
 export function removePresetPicker(): void {
 	observer?.disconnect();
 	observer = null;
@@ -149,6 +155,7 @@ export function removePresetPicker(): void {
 function ensurePresetPickerObserver(): void {
 	if (observer || !document.body) return;
 
+	// 官方 Vue 会重建筛选 DOM；观察器只安排一次短延迟补装，避免每个 mutation 都重新扫描。
 	observer = new MutationObserver(() => {
 		if (refreshTimer !== null) return;
 

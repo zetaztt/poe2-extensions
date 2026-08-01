@@ -1,6 +1,9 @@
 import { TradeStatConfig, TradeStatsGroup, Translated } from "../trade-types";
 import { tradeTranslateDictionaryLoader } from "./trade-translate-dictionary-loader";
 
+/**
+ * 观察动态搜索结果并翻译新插入的物品 DOM；观察器与当前页面生命周期一致。
+ */
 export function observeItemElement() {
 	const itemObserver = new MutationObserver((mutations) => {
 		for (const mutation of mutations) {
@@ -22,6 +25,7 @@ export function observeItemElement() {
 }
 
 async function translateItemElement(itemElement: HTMLElement) {
+	// stat 字段依赖已被 XHR hook 扩展的 stats 缓存，应先保留数值并替换模板，再翻译其余文本节点。
 	const statFieldElements = itemElement.querySelectorAll(`.item-mod > [data-field]`);
 
 	for (let element of statFieldElements) {

@@ -1,6 +1,7 @@
 import { bootstrapContentScript, injectExtensionScript } from "../content-script";
 
 async function injectTradeFeatureScripts(): Promise<void> {
+	// 功能脚本预先注入并各自监听设置即时启停；单个脚本失败不能阻止其他功能安装。
 	const injectPaths = [
 		"projects/apps/inject/src/trade/item-code/trade-item-code-inject.ts",
 		"projects/apps/inject/src/trade/stat-preset/trade-stat-preset-inject.ts",

@@ -11,6 +11,9 @@ import type {
 	TradeBookmarkTreeSnapshot,
 } from "./bookmarks-types";
 
+/**
+ * 书签 background 的具名命令和权威快照通知协议。
+ */
 export const bookmarksIpcProtocol = defineIpcProtocol({
 	name: "bookmarks",
 	load: defineRpc<void, TradeBookmarkTreeSnapshot>(),
