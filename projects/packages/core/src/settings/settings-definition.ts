@@ -47,7 +47,6 @@ export interface SettingsDefinition<
 	readonly members: readonly TMembers[keyof TMembers][];
 	resolve(key: unknown): TMembers[keyof TMembers] | undefined;
 	createDefaults(): TValues;
-	areEqual(left: TValues, right: TValues): boolean;
 }
 
 type DefinedSettings<TName extends string, TMembers extends Record<string, AnySettingMember>> = SettingsDefinition<
@@ -86,11 +85,6 @@ export function defineSettings<const TDefinition extends { name: string }>(
 	settingsDefinition.members = members;
 	settingsDefinition.resolve = (key: unknown) => (typeof key === "string" ? memberByKey.get(key) : undefined);
 	settingsDefinition.createDefaults = () => createDefaults(members, memberNameByMember);
-	settingsDefinition.areEqual = (left: Record<string, unknown>, right: Record<string, unknown>) =>
-		members.every((member) => {
-			const memberName = getMemberName(member, memberNameByMember);
-			return member.equals(left[memberName], right[memberName]);
-		});
 
 	return settingsDefinition as DefinedSettings<
 		TDefinition["name"],

@@ -70,12 +70,9 @@ test("settings 协议公开单项、批量读取和变化通知，trade 协议�
 	assert.equal(tradeIpcProtocol.setStatPresetEnabled.method, "trade/setStatPresetEnabled");
 });
 
-test("设置定义创建默认值并比较聚合值", () => {
+test("设置定义创建默认值", () => {
 	const defaults = settings.createDefaults();
 	assert.deepEqual(defaults, { first: false, second: true });
-	const updated = { ...defaults, first: true };
-	assert.equal(settings.areEqual(defaults, updated), false);
-	assert.equal(settings.areEqual(updated, { ...updated }), true);
 });
 
 test("设置定义支持混合值类型和成员自定义相等比较", () => {
@@ -87,8 +84,8 @@ test("设置定义支持混合值类型和成员自定义相等比较", () => {
 		position: { x: 0, y: 0 },
 	});
 
-	assert.equal(mixedSettings.areEqual(defaults, { ...defaults, position: { x: 0, y: 0 } }), true);
-	assert.equal(mixedSettings.areEqual(defaults, { ...defaults, position: { x: 1, y: 0 } }), false);
+	assert.equal(mixedSettings.position.equals(defaults.position, { x: 0, y: 0 }), true);
+	assert.equal(mixedSettings.position.equals(defaults.position, { x: 1, y: 0 }), false);
 });
 
 test("不同设置前缀生成互不冲突的成员 key", () => {
