@@ -60,7 +60,8 @@ async function getByKey<TKey extends string, TValue>(
 ): Promise<SettingValueSnapshot<TKey, TValue>> {
 	const entry = getEntry(key);
 	if (!entry.loaded) await loadValue(key, entry, defaultValue);
-	return createSnapshot(key, entry.value as TValue);
+	// 消费者按 key 排序快照；读取不能借用其他设置推进的全局 revision，否则会误丢本 key 的通知。
+	return createSnapshot(key, entry.value as TValue, entry.changeRevision);
 }
 
 async function set<TMember extends AnySettingMember>(
@@ -171,14 +172,14 @@ function applyValue<TKey extends string, TValue>(
 	value: TValue,
 ): SettingValueSnapshot<TKey, TValue> {
 	if (entry.loaded && Object.is(entry.value, value)) {
-		return createSnapshot(key, entry.value as TValue);
+		return createSnapshot(key, entry.value as TValue, entry.changeRevision);
 	}
 
 	entry.value = value;
 	entry.loaded = true;
 	settingsRevision += 1;
 	entry.changeRevision = settingsRevision;
-	const snapshot = createSnapshot(key, value);
+	const snapshot = createSnapshot(key, value, entry.changeRevision);
 	void ipcMain.send(settingsIpcProtocol.onChanged, snapshot);
 	return snapshot;
 }
@@ -227,10 +228,14 @@ function scheduleSave(key: string, entry: SettingCacheEntry): void {
 		});
 }
 
-function createSnapshot<TKey extends string, TValue>(key: TKey, value: TValue): SettingValueSnapshot<TKey, TValue> {
+function createSnapshot<TKey extends string, TValue>(
+	key: TKey,
+	value: TValue,
+	revision: number,
+): SettingValueSnapshot<TKey, TValue> {
 	return {
 		instanceId: settingsInstanceId,
-		revision: settingsRevision,
+		revision,
 		key,
 		value,
 	};
