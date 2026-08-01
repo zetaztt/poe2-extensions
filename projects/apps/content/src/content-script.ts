@@ -1,6 +1,5 @@
 import browser from "webextension-polyfill";
-import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
-import { createContentIpcMain, createContentIpcWindow } from "./content-ipc-adapter";
+import "./content-ipc-channels";
 
 export type ContentScriptMain = () => void | Promise<void>;
 
@@ -13,9 +12,6 @@ export interface InjectExtensionScriptResult {
 }
 
 export function bootstrapContentScript(main: ContentScriptMain): void {
-	ipcMain.register(createContentIpcMain);
-	ipcWindow.register(createContentIpcWindow);
-
 	try {
 		const result = main();
 		if (result) {

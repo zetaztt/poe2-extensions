@@ -1,4 +1,4 @@
-import { ipcMain } from "@poe2-extensions/core/ipc";
+import { ipcMain } from "../../inject-ipc-channels";
 import { tradeIpcProtocol, type TradeStatPreset } from "@poe2-extensions/core/trade";
 
 export function requestPresetList(): Promise<TradeStatPreset[]> {

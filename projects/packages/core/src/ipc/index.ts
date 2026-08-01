@@ -1,5 +1,6 @@
 export { IpcConnectionHub } from "./ipc-connection-hub";
-export { ipcMain, ipcWindow } from "./ipc";
+export { IpcChannel, IpcHandlerChannel, ipcMainRegistrationKey, ipcWindowRegistrationKey } from "./ipc";
+export type { IpcChannelBackend, IpcHandlerChannelBackend } from "./ipc";
 export { defineIpcProtocol, defineNotification, defineRpc, IpcProtocolMemberKind } from "./ipc-protocol";
 export type {
 	AnyIpcProtocolMember,

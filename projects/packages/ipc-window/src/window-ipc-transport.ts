@@ -1,40 +1,25 @@
 import {
+	createIpcEnvelope,
 	createIpcConnection,
-	isIpcMessage,
+	isIpcEnvelope,
+	type IpcScope,
+	type IpcTarget,
 	type IpcConnection,
 	type IpcMessage,
 } from "@poe2-extensions/core/ipc/transport";
 
-export enum WindowIpcChannel {
-	Main = "poe2-extensions:ipc:main:v1",
-	Window = "poe2-extensions:ipc:window:v1",
-}
-
-export enum WindowIpcDirection {
-	ContentToMain = "content-to-main",
-	MainToContent = "main-to-content",
-}
-
-interface WindowIpcEnvelope {
-	channel: WindowIpcChannel;
-	direction: WindowIpcDirection;
-	message: IpcMessage;
-}
-
+/**
+ * 创建通过同源 window.postMessage 通信的连接。
+ * Window 没有请求返回通道，response 会按相反逻辑 target 再次发送，入站 target 同时用于过滤自身回声；
+ * 调用方负责在所属入口结束时执行 dispose。
+ */
 export function createWindowIpcConnection(
-	channel: WindowIpcChannel,
-	outgoingDirection: WindowIpcDirection,
-	incomingDirection: WindowIpcDirection,
+	scope: IpcScope,
+	outgoingTarget: IpcTarget,
+	incomingTarget: IpcTarget,
 ): { connection: IpcConnection; dispose: () => void } {
 	const sendMessage = (message: IpcMessage): undefined => {
-		window.postMessage(
-			{
-				channel,
-				direction: outgoingDirection,
-				message,
-			} satisfies WindowIpcEnvelope,
-			window.location.origin,
-		);
+		window.postMessage(createIpcEnvelope(scope, outgoingTarget, message), window.location.origin);
 		return undefined;
 	};
 	const connection = createIpcConnection(sendMessage);
@@ -42,9 +27,7 @@ export function createWindowIpcConnection(
 		if (
 			event.source !== window
 			|| event.origin !== window.location.origin
-			|| !isWindowIpcEnvelope(event.data)
-			|| event.data.channel !== channel
-			|| event.data.direction !== incomingDirection
+			|| !isIpcEnvelope(event.data, scope, incomingTarget)
 		) {
 			return;
 		}
@@ -67,15 +50,4 @@ export function createWindowIpcConnection(
 			connection.dispose();
 		},
 	};
-}
-
-function isWindowIpcEnvelope(value: unknown): value is WindowIpcEnvelope {
-	if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-	const envelope = value as { channel?: unknown; direction?: unknown; message?: unknown };
-	return (
-		(envelope.channel === WindowIpcChannel.Main || envelope.channel === WindowIpcChannel.Window)
-		&& (envelope.direction === WindowIpcDirection.ContentToMain
-			|| envelope.direction === WindowIpcDirection.MainToContent)
-		&& isIpcMessage(envelope.message)
-	);
 }

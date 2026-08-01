@@ -1,13 +1,9 @@
 import browser from "webextension-polyfill";
-import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
-import { createBackgroundIpcMain, createTabIpcWindow } from "./background-ipc-adapter";
+import "./background-ipc-channels";
 import { tradeBookmarkBackground } from "./modules/bookmarks/bookmarks-background";
 import { dictionaryBackground } from "./modules/dictionary/dictionary-background";
 import { settingsBackground } from "./modules/settings/settings-background";
 import { tradeBackground } from "./modules/trade/trade-background";
-
-ipcMain.register(createBackgroundIpcMain);
-ipcWindow.register(createTabIpcWindow);
 
 console.debug("[poe2-extensions] background loaded.", { id: browser.runtime.id });
 void enableSidePanelOnActionClick();

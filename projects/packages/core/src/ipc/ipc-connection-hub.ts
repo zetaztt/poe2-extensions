@@ -3,8 +3,13 @@ import type { Disposable, IpcConnection, IpcRequestContext } from "./ipc-connect
 const ipcPublishedNotificationMethod = "$/ipc/publish";
 const maxRememberedPublishedNotifications = 256;
 
-type RequestHandler = (params: unknown, context: IpcRequestContext) => unknown | Promise<unknown>;
-type NotificationHandler = (params: unknown) => void | Promise<void>;
+type RequestHandler<TAddress> = (
+	address: TAddress,
+	params: unknown,
+	context: IpcRequestContext,
+) => unknown | Promise<unknown>;
+type NotificationHandler<TAddress> = (address: TAddress, params: unknown) => void | Promise<void>;
+type IpcAddressArguments<TAddress> = [TAddress] extends [void] ? [] : [address: TAddress];
 
 interface RegisteredHandler<THandler> {
 	handler: THandler;
@@ -17,11 +22,12 @@ interface PublishedNotification {
 	data?: unknown;
 }
 
-// 一个通道可以连接多个对端；已有 handler 会自动挂载到后续建立的连接。
+/** 聚合一个 channel 的多个连接，并将 handler、通知发布和 relay 应用于整个连接拓扑。 */
 export class IpcConnectionHub<TAddress> {
 	private readonly connections = new Set<IpcConnection>();
-	private readonly requestHandlers = new Map<string, RegisteredHandler<RequestHandler>>();
-	private readonly notificationHandlers = new Map<string, RegisteredHandler<NotificationHandler>>();
+	private readonly connectionAddresses = new Map<IpcConnection, TAddress>();
+	private readonly requestHandlers = new Map<string, RegisteredHandler<RequestHandler<TAddress>>>();
+	private readonly notificationHandlers = new Map<string, RegisteredHandler<NotificationHandler<TAddress>>>();
 	private readonly publishedNotificationDisposables = new Map<IpcConnection, Disposable>();
 	// relay target 可能是惰性 runtime 连接，首次发布经过 source 时才需要解析并加入拓扑。
 	private readonly relayTargets = new Map<IpcConnection, Set<TAddress>>();
@@ -31,15 +37,27 @@ export class IpcConnectionHub<TAddress> {
 
 	public constructor(private readonly resolveConnection: (address: TAddress) => IpcConnection) {}
 
-	public addConnection(connection: IpcConnection): () => void {
+	/** 注册现有连接；有地址 hub 同时记录该连接对应的通知和请求来源。 */
+	public addConnection(connection: IpcConnection, ...args: IpcAddressArguments<TAddress>): () => void {
+		return this.registerConnection(connection, args.length > 0, args[0] as TAddress);
+	}
+
+	private registerConnection(connection: IpcConnection, hasAddress: boolean, address?: TAddress): () => void {
+		if (hasAddress) this.connectionAddresses.set(connection, address as TAddress);
 		if (this.connections.has(connection)) return () => undefined;
 
 		this.connections.add(connection);
 		for (const [method, registration] of this.requestHandlers) {
-			registration.disposables.set(connection, connection.onRequest(method, registration.handler));
+			registration.disposables.set(
+				connection,
+				this.installRequestHandler(connection, method, registration.handler),
+			);
 		}
 		for (const [method, registration] of this.notificationHandlers) {
-			registration.disposables.set(connection, connection.onNotification(method, registration.handler));
+			registration.disposables.set(
+				connection,
+				this.installNotificationHandler(connection, method, registration.handler),
+			);
 		}
 		this.publishedNotificationDisposables.set(
 			connection,
@@ -50,6 +68,7 @@ export class IpcConnectionHub<TAddress> {
 
 		return () => {
 			this.connections.delete(connection);
+			this.connectionAddresses.delete(connection);
 			this.relayTargets.delete(connection);
 			this.publishedNotificationDisposables.get(connection)?.dispose();
 			this.publishedNotificationDisposables.delete(connection);
@@ -64,8 +83,9 @@ export class IpcConnectionHub<TAddress> {
 		};
 	}
 
+	/** 将 source 上未被本地处理的调用转发到按地址惰性解析的目标连接。 */
 	public addRelay(sourceConnection: IpcConnection, targetAddress: TAddress): () => void {
-		this.addConnection(sourceConnection);
+		this.registerConnection(sourceConnection, false);
 		const targets = this.relayTargets.get(sourceConnection) ?? new Set<TAddress>();
 		targets.add(targetAddress);
 		this.relayTargets.set(sourceConnection, targets);
@@ -103,6 +123,7 @@ export class IpcConnectionHub<TAddress> {
 		return data === undefined ? connection.sendNotification(method) : connection.sendNotification(method, data);
 	}
 
+	/** 在本地分发后沿全部连接和 relay 扩散 notification，并使用发布 ID 抑制环路重复。 */
 	public async publish(method: string, data: unknown | undefined): Promise<void> {
 		const notification: PublishedNotification = {
 			id: createPublishedNotificationId(),
@@ -116,15 +137,15 @@ export class IpcConnectionHub<TAddress> {
 		]);
 	}
 
-	public handle(method: string, handler: RequestHandler): () => void {
+	public handle(method: string, handler: RequestHandler<TAddress>): () => void {
 		this.requestHandlers.get(method)?.disposables.forEach((disposable) => disposable.dispose());
-		const registration: RegisteredHandler<RequestHandler> = {
+		const registration: RegisteredHandler<RequestHandler<TAddress>> = {
 			handler,
 			disposables: new Map(),
 		};
 		this.requestHandlers.set(method, registration);
 		for (const connection of this.connections) {
-			registration.disposables.set(connection, connection.onRequest(method, handler));
+			registration.disposables.set(connection, this.installRequestHandler(connection, method, handler));
 		}
 
 		return () => {
@@ -134,15 +155,15 @@ export class IpcConnectionHub<TAddress> {
 		};
 	}
 
-	public on(method: string, handler: NotificationHandler): () => void {
+	public on(method: string, handler: NotificationHandler<TAddress>): () => void {
 		this.notificationHandlers.get(method)?.disposables.forEach((disposable) => disposable.dispose());
-		const registration: RegisteredHandler<NotificationHandler> = {
+		const registration: RegisteredHandler<NotificationHandler<TAddress>> = {
 			handler,
 			disposables: new Map(),
 		};
 		this.notificationHandlers.set(method, registration);
 		for (const connection of this.connections) {
-			registration.disposables.set(connection, connection.onNotification(method, handler));
+			registration.disposables.set(connection, this.installNotificationHandler(connection, method, handler));
 		}
 
 		return () => {
@@ -154,8 +175,28 @@ export class IpcConnectionHub<TAddress> {
 
 	private getConnection(address: TAddress): IpcConnection {
 		const connection = this.resolveConnection(address);
-		this.addConnection(connection);
+		this.registerConnection(connection, true, address);
 		return connection;
+	}
+
+	private installRequestHandler(
+		connection: IpcConnection,
+		method: string,
+		handler: RequestHandler<TAddress>,
+	): Disposable {
+		return connection.onRequest(method, (params, context) => {
+			return handler(this.connectionAddresses.get(connection) as TAddress, params, context);
+		});
+	}
+
+	private installNotificationHandler(
+		connection: IpcConnection,
+		method: string,
+		handler: NotificationHandler<TAddress>,
+	): Disposable {
+		return connection.onNotification(method, (params) => {
+			return handler(this.connectionAddresses.get(connection) as TAddress, params);
+		});
 	}
 
 	private async receivePublishedNotification(source: IpcConnection, value: unknown): Promise<void> {
@@ -163,14 +204,16 @@ export class IpcConnectionHub<TAddress> {
 
 		this.rememberPublishedNotification(value.id);
 		await Promise.allSettled([
-			this.dispatchPublishedNotification(value),
+			this.dispatchPublishedNotification(value, source),
 			this.forwardPublishedNotification(value, source),
 		]);
 	}
 
-	private dispatchPublishedNotification(notification: PublishedNotification): Promise<void> {
+	private dispatchPublishedNotification(notification: PublishedNotification, source?: IpcConnection): Promise<void> {
 		const handler = this.notificationHandlers.get(notification.method)?.handler;
-		return Promise.resolve(handler?.(notification.data));
+		return Promise.resolve(
+			handler?.(this.connectionAddresses.get(source as IpcConnection) as TAddress, notification.data),
+		);
 	}
 
 	private async forwardPublishedNotification(

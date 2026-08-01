@@ -1,6 +1,2 @@
-export {
-	announceRuntimeIpcClient,
-	createRuntimeIpcClient,
-	createTabIpcClient,
-	installRuntimeIpcServer,
-} from "./datagram-ipc-transport";
+export { createRuntimeIpcClient, installRuntimeIpcServer, installTabIpcServer } from "./webextension-ipc-transport";
+export { createTabIpcChannelBackend } from "./tab-ipc-channel-backend";

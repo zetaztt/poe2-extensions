@@ -1,6 +1,6 @@
-import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
 import { settingsIpcProtocol } from "@poe2-extensions/core/settings";
 import { tradeIpcProtocol, tradeSettings } from "@poe2-extensions/core/trade";
+import { ipcMain, ipcWindow } from "../../inject-ipc-channels";
 import { bootstrapInjectScript } from "../../inject-script";
 import { getTradeSearchItemById, logPrefix } from "../trade-utils";
 import { formatTradeItemText } from "./trade-item-code-format";
@@ -13,18 +13,6 @@ let enabled = false;
 let observer: MutationObserver | null = null;
 // 初始化 RPC 与侧边栏即时通知可能并发；一旦收到通知，就不能再用较旧的初始值覆盖它。
 let hasReceivedItemCopyUpdate = false;
-
-export function injectTradeItemCopy(): void {
-	if (window.location.hostname !== "www.pathofexile.com" || !window.location.pathname.startsWith("/trade2")) {
-		return;
-	}
-
-	ipcWindow.on(tradeIpcProtocol.itemCopyUpdated, ({ enabled }) => {
-		hasReceivedItemCopyUpdate = true;
-		setTradeItemCopyEnabled(enabled);
-	});
-	void initializeTradeItemCopy();
-}
 
 async function initializeTradeItemCopy(): Promise<void> {
 	try {
@@ -172,4 +160,14 @@ function isTradeRow(node: HTMLElement): boolean {
 	return node.matches("div.row[data-id]");
 }
 
-bootstrapInjectScript(injectTradeItemCopy, { registerIpcWindow: true });
+bootstrapInjectScript(() => {
+	if (window.location.hostname !== "www.pathofexile.com" || !window.location.pathname.startsWith("/trade2")) {
+		return;
+	}
+
+	ipcWindow.on(tradeIpcProtocol.itemCopyUpdated, ({ enabled }) => {
+		hasReceivedItemCopyUpdate = true;
+		setTradeItemCopyEnabled(enabled);
+	});
+	void initializeTradeItemCopy();
+});

@@ -12,7 +12,7 @@ import {
 	type TradeBookmarkRoot,
 	type TradeBookmarkTreeSnapshot,
 } from "@poe2-extensions/core/bookmarks";
-import { ipcMain } from "@poe2-extensions/core/ipc";
+import { ipcMain } from "../../side-panel-ipc-channels";
 
 type ActiveBrowserTab = {
 	id?: number;

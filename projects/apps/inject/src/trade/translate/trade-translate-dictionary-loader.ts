@@ -1,5 +1,5 @@
 import { dictionaryIpcProtocol, type TranslateDictionary } from "@poe2-extensions/core/dictionary";
-import { ipcMain } from "@poe2-extensions/core/ipc";
+import { ipcMain } from "../../inject-ipc-channels";
 
 let dictionary: TranslateDictionary | null = null;
 let dictionaryPromise: Promise<TranslateDictionary> | null = null;

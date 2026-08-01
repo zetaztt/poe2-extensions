@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { ipcMain } from "@poe2-extensions/core/ipc";
+import { ipcMain } from "../../background-ipc-channels";
 import {
 	settingsIpcProtocol,
 	type AnySettingMember,

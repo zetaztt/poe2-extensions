@@ -10,7 +10,7 @@
 - `projects/apps/content/`：isolated world content 工程，负责编排 runtime/window IPC relay 和 MAIN world 脚本注入。
 - `projects/apps/inject/`：MAIN world 工程，维护 trade2 DOM 功能及其独立入口；不具备 Extension API，不得引入侧边栏页面框架或 store。
 - `projects/apps/side-panel/`：Vue 侧边栏工程。功能组件、store 和 service 统一归入 `src/modules/<feature>/`，根目录只保留组合入口，跨功能 UI 放入 `src/common/`；组件从模块 store 读取状态并调用 store action，只在组件内维护展示和临时交互状态。
-- `projects/packages/core/`：所有运行工程共同依赖的环境无关核心工程；领域子路径导出共享数据契约和 IPC protocol，`ipc/transport` 只公开供 transport 工程复用的内部消息连接基础设施。
+- `projects/packages/core/`：所有运行工程共同依赖的环境无关核心工程；领域子路径导出共享数据契约和 IPC protocol，`ipc/transport` 只公开供 transport 工程复用的 message、connection、envelope 和 connection hub，不创建运行环境 channel 单例。
 - `projects/packages/ipc-window/`：DOM 环境的 `window.postMessage` transport，仅供 content 和 inject 使用。
 - `projects/packages/ipc-webextension/`：Extension 环境的 runtime/tabs transport，仅供 background、content 和 side-panel 使用。
 - `public/`：`icon/` 和 `data/` 保持稳定的扩展路径；页面图片、字体及后续同类静态资源放入 `assets/`，侧边栏资源位于 `assets/side-panel/`。
@@ -34,6 +34,9 @@
 - Workspace 包通过各自的 package exports 和 npm Workspace 链接解析；不要配置 TypeScript `paths`，也不要跨 Workspace 相对导入内部源码。所有 Workspace 都不得依赖 `@poe2-extensions/apps-*` 运行工程。
 - 依赖边界的自动检查以 `eslint.config.ts` 为准；`npm run compile` 先运行 ESLint，再运行 `vue-tsc --build`。ESLint 对所有 Workspace 检查未声明依赖、跨 Workspace 相对导入和 app 包导入，inject 的附加环境依赖限制也只在该配置中维护。
 - 跨 background、side-panel、content 和 MAIN world 的业务通信必须使用 `@poe2-extensions/core/ipc`、对应环境 transport 与具名领域 protocol；不要另建裸 `browser.runtime` 消息或 `window.postMessage` 协议。新增协议成员时同步 core 契约、handler 和调用方。
+- `ipcMain/ipcWindow` 单例由 background、content、inject 和 side-panel 各自创建，core 与 transport 包不得创建或导出运行环境单例。只有 background 的 `ipcMain` 和 inject 的 `ipcWindow` 使用 `IpcHandlerChannel`；其他环境只使用 `IpcChannel`，不得绕过能力边界注册 handler。
+- WebExtension tab IPC 使用无状态 `sendMessage`：RPC response 由对应 `tabs.sendMessage` Promise 原路返回，入站 address 取自 `MessageSender.tab.id`。不得增加握手、心跳、endpoint、peer 注册、在线状态或按 tab 缓存 connection；目标不存在时直接传播发送错误。
+- `ipcMainRegistrationKey`、`ipcWindowRegistrationKey` 和共享 envelope version 属于跨构建兼容约定。registration key 不得随实现重命名；只有不兼容 wire format 变更才升级 envelope version，并同步 Window 与 WebExtension transport。
 - 需要跨页面共享可变状态的业务模块由 background 模块持有权威状态。跨页面状态同步必须区分 background service worker 生命周期，并拒绝重复、过期或乱序状态；不得退化为组件本地副本或 mutation 返回值驱动的长期状态。
 - 模块 store 使用 Pinia Setup Store；action 负责 loading、错误、快照排序、乐观更新和失败恢复，并在 service 返回普通结果后修改自身状态。页面 service 不得导入 Pinia 或 store，也不得保存与 store 重复的可观察状态。
 - Store 只公开页面消费的响应式状态和业务 action；机械 mutation、订阅安装、快照处理及其他流程辅助函数保留在 Setup Store 闭包内。需要页面 store 的 Vue 运行环境在 composition root 创建并安装 Pinia，组件解构状态使用 `storeToRefs`。
@@ -58,7 +61,9 @@
 - 新功能源码使用“模块路径 + 职责”的 `kebab-case` 文件名；Vue 单文件组件使用 `kebab-case.vue`。保留 manifest、Vite 或 HTML 直接引用的现有入口文件名。
 - 单文件专用的 selector、DOM id、timeout、storage key 和文案留在该文件；至少两个职责文件共享时再移入同目录工具或现有业务模块，不为少量常量新建中转文件。
 - 集合遍历优先使用 `for...of`，需要索引时使用 `entries()`；模块级和局部 `const` 使用 camelCase，外部协议名称保持原始大小写。
-- 仅为运行环境限制、兼容策略、非显而易见副作用和状态归属添加注释。涉及异步持久化、并发或乱序处理、缓存与权威状态同步、失败重试或回滚时，必须在关键状态或分支处说明不变量、设计原因和维护风险；不要用注释复述代码表面行为。
+- 注释面向代码的使用者和审核者说明意图，不要复述类、变量、方法、属性或参数的名称。新增或实质修改的定义只要无法由名称和类型一目了然地判断职责，就必须添加说明，无论是否导出或是否为 private；导出定义优先使用 JSDoc，私有定义和局部实现按场景使用行注释。
+- 涉及运行环境限制、跨环境边界、兼容协议、非显而易见副作用、状态归属、异步持久化、并发或乱序、生命周期、缓存与权威状态同步、失败重试或回滚时，必须在关键定义或实现处说明不变量、设计原因和维护风险。
+- TypeScript 或 Vue 改动在验证前必须审查本次新增和实质修改定义的注释完整性，不为任务无关旧代码批量补注释。交付说明必须报告审查结果；没有新增注释时，需确认本次仅包含能由代码直接表达的机械修改。
 - 页面可见错误和日志可以使用中文；新增状态码或错误类型时沿用所在模块现有 enum 与映射方式，不在协议值中混入 UI 文案。
 
 ## 测试与验证

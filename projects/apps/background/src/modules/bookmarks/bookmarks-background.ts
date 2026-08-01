@@ -15,7 +15,7 @@ import {
 	type TradeBookmarkRoot,
 	type TradeBookmarkTreeSnapshot,
 } from "@poe2-extensions/core/bookmarks";
-import { ipcMain } from "@poe2-extensions/core/ipc";
+import { ipcMain } from "../../background-ipc-channels";
 
 const tradeBookmarkTreeStorageKey = "tradeBookmarkTree";
 const tradeBookmarkExportSource = "poe2-extensions-trade-bookmarks";

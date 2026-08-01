@@ -1,4 +1,4 @@
-import { ipcMain } from "@poe2-extensions/core/ipc";
+import { ipcMain } from "../../side-panel-ipc-channels";
 import {
 	settingsIpcProtocol,
 	type AnySettingMember,

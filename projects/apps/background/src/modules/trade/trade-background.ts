@@ -1,5 +1,6 @@
 import browser from "webextension-polyfill";
-import { ipcMain, ipcWindow, type IpcNotificationDefinition } from "@poe2-extensions/core/ipc";
+import type { IpcNotificationDefinition } from "@poe2-extensions/core/ipc";
+import { ipcMain, ipcWindow } from "../../background-ipc-channels";
 import { tradeIpcProtocol, tradeSettings, type TradeFeatureUpdateData } from "@poe2-extensions/core/trade";
 import { settingsBackground } from "../settings/settings-background";
 import { tradeStatPresetBackground } from "./stat-preset/stat-preset-background";
@@ -87,7 +88,7 @@ async function applyTradeNotification(
 	try {
 		const tabId = await getActiveTradeTabId();
 		if (tabId === null) return false;
-		await ipcWindow.to(tabId).send(notification, { enabled });
+		await ipcWindow.send(tabId, notification, { enabled });
 		return true;
 	} catch (error) {
 		console.warn("[poe2-extensions] trade2 页面设置同步失败", error);

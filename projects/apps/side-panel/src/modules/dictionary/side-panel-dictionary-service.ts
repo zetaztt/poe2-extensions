@@ -3,7 +3,7 @@ import {
 	type DictionarySearchResult,
 	type TranslateDictionary,
 } from "@poe2-extensions/core/dictionary";
-import { ipcMain } from "@poe2-extensions/core/ipc";
+import { ipcMain } from "../../side-panel-ipc-channels";
 
 interface DictionarySearchEntry extends DictionarySearchResult {
 	normalizedOriginal: string;

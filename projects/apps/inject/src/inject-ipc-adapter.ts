@@ -1,27 +1,16 @@
 import { IpcConnectionHub } from "@poe2-extensions/core/ipc";
-import { createWindowIpcConnection, WindowIpcChannel, WindowIpcDirection } from "@poe2-extensions/ipc-window";
+import { createWindowIpcConnection, IpcScope, IpcTarget } from "@poe2-extensions/ipc-window";
 
 export function createMainWorldIpcMain(): IpcConnectionHub<void> {
-	const windowTransport = createWindowIpcConnection(
-		WindowIpcChannel.Main,
-		WindowIpcDirection.MainToContent,
-		WindowIpcDirection.ContentToMain,
-	);
+	const windowTransport = createWindowIpcConnection(IpcScope.Main, IpcTarget.Server, IpcTarget.Clients);
 	const hub = new IpcConnectionHub<void>(() => windowTransport.connection);
 	hub.addConnection(windowTransport.connection);
 	return hub;
 }
 
-export function createMainWorldIpcWindow(): IpcConnectionHub<number | undefined> {
-	const windowTransport = createWindowIpcConnection(
-		WindowIpcChannel.Window,
-		WindowIpcDirection.MainToContent,
-		WindowIpcDirection.ContentToMain,
-	);
-	const hub = new IpcConnectionHub<number | undefined>((tabId) => {
-		if (tabId !== undefined) throw new Error("main world 不能通过 ipcWindow.to(tabId) 寻址其他标签页");
-		return windowTransport.connection;
-	});
+export function createMainWorldIpcWindow(): IpcConnectionHub<void> {
+	const windowTransport = createWindowIpcConnection(IpcScope.Window, IpcTarget.Clients, IpcTarget.Server);
+	const hub = new IpcConnectionHub<void>(() => windowTransport.connection);
 	hub.addConnection(windowTransport.connection);
 	return hub;
 }

@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import { dictionaryIpcProtocol, type TranslateDictionary } from "@poe2-extensions/core/dictionary";
-import { ipcMain } from "@poe2-extensions/core/ipc";
+import { ipcMain } from "../../background-ipc-channels";
 
 const translateDictionaryUrl = "https://zetaztt.github.io/poe2-extensions/translate.json";
 const translateDictionaryMetaUrl = "https://zetaztt.github.io/poe2-extensions/translate-meta.json";
