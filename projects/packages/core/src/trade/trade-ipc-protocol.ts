@@ -21,6 +21,9 @@ export const tradeIpcProtocol = defineIpcProtocol({
 	saveStatPreset: defineRpc<SaveStatPresetParams, TradeStatPreset[]>(),
 	renameStatPreset: defineRpc<RenameStatPresetParams, TradeStatPreset[]>(),
 	deleteStatPreset: defineRpc<DeleteStatPresetParams, TradeStatPreset[]>(),
+	setTranslateEnabled: defineRpc<TradeFeatureUpdateData, boolean>(),
+	setItemCopyEnabled: defineRpc<TradeFeatureUpdateData, boolean>(),
+	setStatPresetEnabled: defineRpc<TradeFeatureUpdateData, boolean>(),
 	itemCopyUpdated: defineNotification<TradeFeatureUpdateData>(),
 	statPresetUpdated: defineNotification<TradeFeatureUpdateData>(),
 });

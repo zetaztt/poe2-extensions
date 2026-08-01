@@ -2,7 +2,7 @@
 import { storeToRefs } from "pinia";
 import { computed, onActivated, onBeforeUnmount, onDeactivated, ref, watch } from "vue";
 import type { DictionarySearchResult } from "@poe2-extensions/core/dictionary";
-import { useDictionaryStore } from "../modules/dictionary/dictionary-store";
+import { useDictionaryStore } from "./dictionary-store";
 
 const searchDebounceMs = 300;
 

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { computed, ref, type Component } from "vue";
-import BookmarkTab from "./bookmarks/bookmark-tab.vue";
-import DictionaryTab from "./dictionary/dictionary-tab.vue";
-import SettingsTab from "./settings/settings-tab.vue";
+import BookmarkTab from "./modules/bookmarks/bookmark-tab.vue";
+import DictionaryTab from "./modules/dictionary/dictionary-tab.vue";
+import SettingsTab from "./modules/settings/settings-tab.vue";
 
 enum SidepanelTab {
 	Bookmarks = 1,

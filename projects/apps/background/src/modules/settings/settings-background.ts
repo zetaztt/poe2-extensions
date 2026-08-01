@@ -1,291 +1,252 @@
 import browser from "webextension-polyfill";
-import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
+import { ipcMain } from "@poe2-extensions/core/ipc";
 import {
 	settingsIpcProtocol,
-	TradeSetting,
-	type TradeSettings,
-	type TradeSettingsSnapshot,
-	type TradeSettingsUpdateResult,
+	type AnySettingMember,
+	type SettingMemberSnapshot,
+	type SettingMemberValue,
+	type SettingValueSnapshot,
 } from "@poe2-extensions/core/settings";
-import { tradeIpcProtocol } from "@poe2-extensions/core/trade";
 
-const tradeTranslateContentScriptId = "poe2-trade-translate-inject";
-const tradeTranslateContentScriptPath = "projects/apps/inject/src/trade/translate/trade-translate-inject.ts";
-const tradeTranslateEnabledKey = "tradeTranslateEnabled";
-const tradeItemCopyEnabledKey = "tradeItemCopyEnabled";
-const tradeStatPresetEnabledKey = "tradeStatPresetEnabled";
-const defaultTradeSettings: TradeSettings = {
-	translateEnabled: false,
-	itemCopyEnabled: false,
-	statPresetEnabled: false,
-};
 const settingsStorage = browser.storage.sync;
-const settingsServiceInstanceId = createId();
-
-// background 生命周期内的权威设置快照；所有 sidepanel 只消费带 revision 的副本。
-let currentSettings: TradeSettings | null = null;
-let currentSettingsPromise: Promise<TradeSettings> | null = null;
-// revision 同时覆盖主动写入和 storage.sync 外部变化，防止多窗口乱序覆盖。
+// 缓存是当前 service worker 生命周期内的权威状态；instanceId 和 revision 让消费者隔离重启及乱序消息。
+const settingsInstanceId = createId();
+const settingsByKey = new Map<string, SettingCacheEntry>();
+const changeRegistrationsByKey = new Map<string, SettingChangeRegistration>();
 let settingsRevision = 0;
-let translateInjectionSyncPromise: Promise<void> = Promise.resolve();
-let lastSyncedTranslateEnabled: boolean | null = null;
+let installed = false;
+
+interface SettingCacheEntry {
+	value: unknown;
+	loaded: boolean;
+	loadPromise?: Promise<unknown>;
+	// changeRevision 跟踪任意来源的权威值变化；write revision 只跟踪本 worker 发起的待持久化版本。
+	changeRevision: number;
+	writeRevision: number;
+	// 保存失败通知必须关联发起写入时的 snapshot，而不能使用之后被其他 key 推进的全局 revision。
+	writeSnapshotRevision: number;
+	persistedWriteRevision: number;
+	// 每个 key 同时只允许一个 storage 写入；期间的新版本由完成分支继续补写。
+	savePromise: Promise<void> | null;
+}
+
+type SettingsChangedListener = (snapshot: SettingValueSnapshot) => void | Promise<void>;
+
+interface SettingChangeRegistration {
+	member: AnySettingMember;
+	listeners: Set<SettingsChangedListener>;
+}
 
 function install(): void {
-	ipcMain.handle(settingsIpcProtocol.load, loadSettingsSnapshot);
-	ipcMain.handle(settingsIpcProtocol.update, ({ setting, enabled }) => updateSetting(setting, enabled));
-	browser.storage.onChanged.addListener(onStorageChanged);
-
-	void getCurrentSettings()
-		.then((settings) => queueTranslateInjectionSync(settings.translateEnabled))
-		.catch((error) => console.warn("[poe2-extensions] 翻译脚本注册初始化失败", error));
+	if (installed) throw new Error("settings background 已安装");
+	installed = true;
+	ipcMain.handle(settingsIpcProtocol.get, ({ key, defaultValue }) => getByKey(key, defaultValue));
+	ipcMain.handle(settingsIpcProtocol.getValues, ({ settings }) =>
+		Promise.all(settings.map(({ key, defaultValue }) => getByKey(key, defaultValue))),
+	);
+	browser.storage.onChanged.addListener(handleStorageChanged);
 }
 
-async function loadSettingsSnapshot(): Promise<TradeSettingsSnapshot> {
-	return createSnapshot(await getCurrentSettings());
-}
-
-async function updateSetting(setting: TradeSetting, enabled: boolean): Promise<TradeSettingsUpdateResult> {
-	assertTradeSetting(setting);
-	await getCurrentSettings();
-	await setTradeSettingEnabled(setting, enabled);
-
-	const nextSettings = applyStoredTradeSetting(currentSettings!, setting, enabled);
-	const snapshot = applySettings(nextSettings);
-	const activeTradeTabUpdated = await applySettingToActiveTradeTab(setting, enabled);
-	return { ...snapshot, activeTradeTabUpdated };
-}
-
-async function getCurrentSettings(): Promise<TradeSettings> {
-	if (currentSettings) return currentSettings;
-
-	currentSettingsPromise ??= loadTradeSettings()
-		.then((settings) => {
-			currentSettings = settings;
-			return settings;
-		})
-		.catch((error) => {
-			currentSettingsPromise = null;
-			throw error;
-		});
-	return currentSettingsPromise;
-}
-
-async function getSettingEnabled(setting: TradeSetting): Promise<boolean> {
-	assertTradeSetting(setting);
-	try {
-		return getTradeSettingValue(await getCurrentSettings(), setting);
-	} catch (error) {
-		console.warn(`[poe2-extensions] ${getTradeSettingReadErrorMessage(setting)}`, error);
-		return getDefaultTradeSettingValue(setting);
-	}
-}
-
-async function loadTradeSettings(): Promise<TradeSettings> {
-	const values = await settingsStorage.get([
-		tradeTranslateEnabledKey,
-		tradeItemCopyEnabledKey,
-		tradeStatPresetEnabledKey,
-	]);
-
-	return {
-		translateEnabled: getBooleanOrDefault(values[tradeTranslateEnabledKey], defaultTradeSettings.translateEnabled),
-		itemCopyEnabled: getBooleanOrDefault(values[tradeItemCopyEnabledKey], defaultTradeSettings.itemCopyEnabled),
-		statPresetEnabled: getBooleanOrDefault(
-			values[tradeStatPresetEnabledKey],
-			defaultTradeSettings.statPresetEnabled,
-		),
-	};
-}
-
-async function setTradeSettingEnabled(setting: TradeSetting, enabled: boolean): Promise<void> {
-	await settingsStorage.set({ [getTradeSettingStorageKey(setting)]: enabled });
-}
-
-function getTradeSettingStorageKey(setting: TradeSetting): string {
-	if (setting === TradeSetting.Translate) return tradeTranslateEnabledKey;
-	if (setting === TradeSetting.ItemCopy) return tradeItemCopyEnabledKey;
-	if (setting === TradeSetting.StatPreset) return tradeStatPresetEnabledKey;
-	throw new Error("未知的 trade 设置项");
-}
-
-function applyStoredTradeSetting(settings: TradeSettings, setting: TradeSetting, value: unknown): TradeSettings {
-	const enabled = typeof value === "boolean" ? value : getDefaultTradeSettingValue(setting);
-	if (setting === TradeSetting.Translate) return { ...settings, translateEnabled: enabled };
-	if (setting === TradeSetting.ItemCopy) return { ...settings, itemCopyEnabled: enabled };
-	if (setting === TradeSetting.StatPreset) return { ...settings, statPresetEnabled: enabled };
-	throw new Error("未知的 trade 设置项");
-}
-
-function getTradeSettingValue(settings: TradeSettings, setting: TradeSetting): boolean {
-	if (setting === TradeSetting.Translate) return settings.translateEnabled;
-	if (setting === TradeSetting.ItemCopy) return settings.itemCopyEnabled;
-	if (setting === TradeSetting.StatPreset) return settings.statPresetEnabled;
-	throw new Error("未知的 trade 设置项");
-}
-
-function getDefaultTradeSettingValue(setting: TradeSetting): boolean {
-	if (setting === TradeSetting.Translate) return defaultTradeSettings.translateEnabled;
-	if (setting === TradeSetting.ItemCopy) return defaultTradeSettings.itemCopyEnabled;
-	if (setting === TradeSetting.StatPreset) return defaultTradeSettings.statPresetEnabled;
-	throw new Error("未知的 trade 设置项");
-}
-
-function getTradeSettingReadErrorMessage(setting: TradeSetting): string {
-	if (setting === TradeSetting.Translate) return "中文翻译设置读取失败";
-	if (setting === TradeSetting.ItemCopy) return "复制物品文本设置读取失败";
-	return "筛选预设保存设置读取失败";
-}
-
-function getBooleanOrDefault(value: unknown, fallback: boolean): boolean {
-	return typeof value === "boolean" ? value : fallback;
-}
-
-function applySettings(settings: TradeSettings): TradeSettingsSnapshot {
-	if (currentSettings && areSettingsEqual(currentSettings, settings)) return createSnapshot(currentSettings);
-
-	currentSettings = settings;
-	settingsRevision += 1;
-	const snapshot = createSnapshot(settings);
-	void ipcMain.send(settingsIpcProtocol.changed, snapshot);
-	return snapshot;
-}
-
-function createSnapshot(settings: TradeSettings): TradeSettingsSnapshot {
-	return {
-		instanceId: settingsServiceInstanceId,
-		revision: settingsRevision,
-		settings: { ...settings },
-	};
-}
-
-async function onStorageChanged(changes: Record<string, { newValue?: unknown }>, areaName: string): Promise<void> {
-	if (areaName !== "sync") return;
-	const changedSettings = getChangedSettings(changes);
-	if (changedSettings.length === 0) return;
-
-	try {
-		let settings = await getCurrentSettings();
-		for (const [setting, value] of changedSettings) {
-			settings = applyStoredTradeSetting(settings, setting, value);
-		}
-		applySettings(settings);
-
-		const translateChange = changedSettings.find(([setting]) => setting === TradeSetting.Translate);
-		if (translateChange) {
-			await queueTranslateInjectionSync(settings.translateEnabled);
-		}
-	} catch (error) {
-		console.warn("[poe2-extensions] 同步外部设置变化失败", error);
-	}
-}
-
-function getChangedSettings(changes: Record<string, { newValue?: unknown }>): Array<[TradeSetting, unknown]> {
-	const changedSettings: Array<[TradeSetting, unknown]> = [];
-	if (changes[tradeTranslateEnabledKey]) {
-		changedSettings.push([TradeSetting.Translate, changes[tradeTranslateEnabledKey].newValue]);
-	}
-	if (changes[tradeItemCopyEnabledKey]) {
-		changedSettings.push([TradeSetting.ItemCopy, changes[tradeItemCopyEnabledKey].newValue]);
-	}
-	if (changes[tradeStatPresetEnabledKey]) {
-		changedSettings.push([TradeSetting.StatPreset, changes[tradeStatPresetEnabledKey].newValue]);
-	}
-	return changedSettings;
-}
-
-async function applySettingToActiveTradeTab(setting: TradeSetting, enabled: boolean): Promise<boolean> {
-	try {
-		if (setting === TradeSetting.Translate) await queueTranslateInjectionSync(enabled);
-
-		const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-		if (!tab?.id || !isTrade2Url(tab.url)) return false;
-
-		if (setting === TradeSetting.Translate) {
-			await browser.tabs.reload(tab.id);
-			return true;
-		}
-
-		const notification =
-			setting === TradeSetting.ItemCopy ? tradeIpcProtocol.itemCopyUpdated : tradeIpcProtocol.statPresetUpdated;
-		await ipcWindow.to(tab.id).send(notification, { enabled });
-		return true;
-	} catch (error) {
-		console.warn("[poe2-extensions] trade2 页面设置同步失败", error);
-		return false;
-	}
-}
-
-function queueTranslateInjectionSync(enabled: boolean): Promise<void> {
-	translateInjectionSyncPromise = translateInjectionSyncPromise
-		.catch(() => undefined)
-		.then(async () => {
-			if (lastSyncedTranslateEnabled === enabled) return;
-			await syncTradeTranslateInjection(enabled);
-			lastSyncedTranslateEnabled = enabled;
-		});
-	return translateInjectionSyncPromise;
-}
-
-async function syncTradeTranslateInjection(enabled: boolean): Promise<void> {
-	if (!CHROME) {
-		console.warn("[poe2-extensions] 当前浏览器不支持动态注册翻译脚本");
-		return;
-	}
-
-	const registeredScripts = await chrome.scripting.getRegisteredContentScripts({
-		ids: [tradeTranslateContentScriptId],
-	});
-	if (registeredScripts.length > 0) {
-		await chrome.scripting.unregisterContentScripts({ ids: [tradeTranslateContentScriptId] });
-	}
-
-	if (!enabled) return;
-	await chrome.scripting.registerContentScripts([
-		{
-			id: tradeTranslateContentScriptId,
-			matches: ["https://www.pathofexile.com/trade2*"],
-			js: [tradeTranslateContentScriptPath.slice(0, -".ts".length) + ".js"],
-			runAt: "document_start",
-			world: "MAIN",
-			allFrames: false,
-			persistAcrossSessions: true,
-		},
-	]);
-}
-
-function assertTradeSetting(setting: TradeSetting): void {
-	if (
-		setting !== TradeSetting.Translate
-		&& setting !== TradeSetting.ItemCopy
-		&& setting !== TradeSetting.StatPreset
-	) {
-		throw new Error("未知的 trade 设置项");
-	}
-}
-
-function areSettingsEqual(left: TradeSettings, right: TradeSettings): boolean {
-	return (
-		left.translateEnabled === right.translateEnabled
-		&& left.itemCopyEnabled === right.itemCopyEnabled
-		&& left.statPresetEnabled === right.statPresetEnabled
+function get<TMember extends AnySettingMember>(member: TMember): Promise<SettingMemberSnapshot<TMember>> {
+	return getByKey<TMember["key"], SettingMemberValue<TMember>>(
+		member.key,
+		member.defaultValue as SettingMemberValue<TMember>,
 	);
 }
 
-function isTrade2Url(url: string | undefined): boolean {
-	if (!url) return false;
-	try {
-		const parsedUrl = new URL(url);
-		return parsedUrl.origin === "https://www.pathofexile.com" && parsedUrl.pathname.startsWith("/trade2");
-	} catch {
-		return false;
+async function getByKey<TKey extends string, TValue>(
+	key: TKey,
+	defaultValue: TValue,
+): Promise<SettingValueSnapshot<TKey, TValue>> {
+	const entry = getEntry(key);
+	if (!entry.loaded) await loadValue(key, entry, defaultValue);
+	return createSnapshot(key, entry.value as TValue);
+}
+
+async function set<TMember extends AnySettingMember>(
+	member: TMember,
+	value: SettingMemberValue<TMember>,
+): Promise<SettingMemberSnapshot<TMember>> {
+	const entry = getEntry(member.key);
+	await get(member);
+	// 内存缓存是当前 service worker 的权威状态，页面更新不等待可能较慢的 storage.sync。
+	const snapshot = applyValue(member.key, entry, value);
+	entry.writeRevision += 1;
+	entry.writeSnapshotRevision = snapshot.revision;
+	scheduleSave(member.key, entry);
+	return snapshot;
+}
+
+function onChanged<TMember extends AnySettingMember>(
+	member: TMember,
+	listener: (snapshot: SettingMemberSnapshot<TMember>) => void | Promise<void>,
+): () => void {
+	// storage 删除事件不携带默认值；保留 member 才能恢复默认值并使用领域定义的相等规则。
+	let registration = changeRegistrationsByKey.get(member.key);
+	if (!registration) {
+		registration = { member, listeners: new Set() };
+		changeRegistrationsByKey.set(member.key, registration);
+	} else if (registration.member !== member) {
+		throw new Error(`设置 key 已绑定到其他成员: ${member.key}`);
 	}
+
+	// registration 已用同一个 member 固定 key/value 关系，存入异构集合时才擦除具体值类型。
+	const changedListener = listener as SettingsChangedListener;
+	registration.listeners.add(changedListener);
+	return () => {
+		registration.listeners.delete(changedListener);
+		if (registration.listeners.size === 0) changeRegistrationsByKey.delete(member.key);
+	};
+}
+
+function getEntry(key: string): SettingCacheEntry {
+	let entry = settingsByKey.get(key);
+	if (!entry) {
+		entry = {
+			value: undefined,
+			loaded: false,
+			changeRevision: 0,
+			writeRevision: 0,
+			writeSnapshotRevision: 0,
+			persistedWriteRevision: 0,
+			savePromise: null,
+		};
+		settingsByKey.set(key, entry);
+	}
+	return entry;
+}
+
+function handleStorageChanged(changes: Record<string, { newValue?: unknown }>, areaName: string): void {
+	if (areaName !== "sync") return;
+
+	for (const [key, change] of Object.entries(changes)) {
+		// 只有显式订阅的领域设置才具备默认值和副作用处理器，其他 sync 数据不属于本模块。
+		const registration = changeRegistrationsByKey.get(key);
+		if (!registration) continue;
+		applyStorageChange(key, getEntry(key), registration, change);
+	}
+}
+
+function applyStorageChange(
+	key: string,
+	entry: SettingCacheEntry,
+	registration: SettingChangeRegistration,
+	change: { newValue?: unknown },
+): void {
+	const value = Object.hasOwn(change, "newValue") ? change.newValue : registration.member.defaultValue;
+	if (entry.loaded && registration.member.equals(entry.value, value)) return;
+
+	const snapshot = applyValue(key, entry, value);
+	for (const listener of registration.listeners) {
+		try {
+			void Promise.resolve(listener(snapshot)).catch(logListenerError);
+		} catch (error) {
+			logListenerError(error);
+		}
+	}
+}
+
+function loadValue(key: string, entry: SettingCacheEntry, defaultValue: unknown): Promise<unknown> {
+	if (entry.loadPromise) return entry.loadPromise;
+
+	entry.loadPromise = settingsStorage
+		.get(key)
+		.then((values) => {
+			// 加载期间到达的 storage change 已经更新了权威缓存，不能再被较旧的读取结果覆盖。
+			if (!entry.loaded) {
+				entry.value = Object.hasOwn(values, key) ? values[key] : defaultValue;
+				entry.loaded = true;
+			}
+			return entry.value;
+		})
+		.finally(() => {
+			entry.loadPromise = undefined;
+		});
+	return entry.loadPromise;
+}
+
+function applyValue<TKey extends string, TValue>(
+	key: TKey,
+	entry: SettingCacheEntry,
+	value: TValue,
+): SettingValueSnapshot<TKey, TValue> {
+	if (entry.loaded && Object.is(entry.value, value)) {
+		return createSnapshot(key, entry.value as TValue);
+	}
+
+	entry.value = value;
+	entry.loaded = true;
+	settingsRevision += 1;
+	entry.changeRevision = settingsRevision;
+	const snapshot = createSnapshot(key, value);
+	void ipcMain.send(settingsIpcProtocol.onChanged, snapshot);
+	return snapshot;
+}
+
+function scheduleSave(key: string, entry: SettingCacheEntry): void {
+	if (entry.savePromise) return;
+
+	const attemptedWriteRevision = entry.writeRevision;
+	const attemptedChangeRevision = entry.changeRevision;
+	const attemptedSnapshotRevision = entry.writeSnapshotRevision;
+	// 设置值未来可为对象；独立快照避免后续内存修改改变正在持久化的版本。
+	const value = structuredClone(entry.value);
+	let saveSucceeded = false;
+	let saveError: unknown;
+
+	entry.savePromise = settingsStorage
+		.set({ [key]: value })
+		.then(() => {
+			entry.persistedWriteRevision = attemptedWriteRevision;
+			saveSucceeded = true;
+		})
+		.catch((error: unknown) => {
+			saveError = error;
+			console.error("[poe2-extensions] 设置异步保存失败", error);
+		})
+		.finally(() => {
+			entry.savePromise = null;
+			const changedDuringSave = entry.writeRevision > attemptedWriteRevision;
+			const hasNewerUnpersistedRevision = entry.writeRevision > entry.persistedWriteRevision;
+			// 旧版本成功或失败都不能结束队列；只要出现更新的本地版本，就继续保存最新快照。
+			if ((saveSucceeded || changedDuringSave) && hasNewerUnpersistedRevision) {
+				scheduleSave(key, entry);
+				return;
+			}
+
+			const supersededByExternalChange = entry.changeRevision > attemptedChangeRevision;
+			// 外部同步已经取代本次失败值时，报告旧失败会误导用户当前状态仍未持久化。
+			if (!saveSucceeded && !supersededByExternalChange) {
+				void ipcMain.send(settingsIpcProtocol.persistenceFailed, {
+					instanceId: settingsInstanceId,
+					revision: attemptedSnapshotRevision,
+					key,
+					message: saveError instanceof Error ? saveError.message : "设置尚未保存到同步存储。",
+				});
+			}
+		});
+}
+
+function createSnapshot<TKey extends string, TValue>(key: TKey, value: TValue): SettingValueSnapshot<TKey, TValue> {
+	return {
+		instanceId: settingsInstanceId,
+		revision: settingsRevision,
+		key,
+		value,
+	};
 }
 
 function createId(): string {
 	return globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
+function logListenerError(error: unknown): void {
+	console.warn("[poe2-extensions] 设置变化处理失败", error);
+}
+
 export const settingsBackground = {
 	install,
-	getSettingEnabled,
+	get,
+	set,
+	onChanged,
 };

@@ -1,7 +1,7 @@
 import { ensureBodyReady } from "../../utils";
 import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
 import { settingsIpcProtocol } from "@poe2-extensions/core/settings";
-import { tradeIpcProtocol } from "@poe2-extensions/core/trade";
+import { tradeIpcProtocol, tradeSettings } from "@poe2-extensions/core/trade";
 import { bootstrapInjectScript } from "../../inject-script";
 import { logPrefix } from "../trade-utils";
 import { resetStatPresetModal } from "./trade-stat-preset-modal";
@@ -33,7 +33,11 @@ export function injectTradeStatPreset(): void {
 
 async function initializeTradeStatPreset(): Promise<void> {
 	try {
-		const initialEnabled = (await ipcMain.invoke(settingsIpcProtocol.load)).settings.statPresetEnabled;
+		const snapshot = await ipcMain.invoke(settingsIpcProtocol.get, {
+			key: tradeSettings.statPreset.key,
+			defaultValue: tradeSettings.statPreset.defaultValue,
+		});
+		const initialEnabled = snapshot.value as boolean;
 		if (!hasReceivedStatPresetUpdate) setTradeStatPresetEnabled(initialEnabled);
 	} catch (error) {
 		console.warn(`${logPrefix} 筛选预设初始状态读取失败`, error);

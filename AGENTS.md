@@ -9,7 +9,7 @@
 - `projects/apps/background/`：background service worker 工程，持有浏览器行为、跨页面权威状态、持久化和业务 handler；入口只负责环境注册与模块安装。
 - `projects/apps/content/`：isolated world content 工程，负责编排 runtime/window IPC relay 和 MAIN world 脚本注入。
 - `projects/apps/inject/`：MAIN world 工程，维护 trade2 DOM 功能及其独立入口；不具备 Extension API，不得引入侧边栏页面框架或 store。
-- `projects/apps/sidepanel/`：Vue 侧边栏工程。组件从模块 store 读取状态并调用 store action，只在组件内维护展示和临时交互状态。
+- `projects/apps/sidepanel/`：Vue 侧边栏工程。功能组件、store 和 service 统一归入 `src/modules/<feature>/`，根目录只保留组合入口，跨功能 UI 放入 `src/common/`；组件从模块 store 读取状态并调用 store action，只在组件内维护展示和临时交互状态。
 - `projects/packages/core/`：所有运行工程共同依赖的环境无关核心工程；领域子路径导出共享数据契约和 IPC protocol，`ipc/transport` 只公开供 transport 工程复用的内部消息连接基础设施。
 - `projects/packages/ipc-window/`：DOM 环境的 `window.postMessage` transport，仅供 content 和 inject 使用。
 - `projects/packages/ipc-webextension/`：Extension 环境的 runtime/tabs transport，仅供 background、content 和 sidepanel 使用。
@@ -40,6 +40,9 @@
 - MAIN world 不得直接或间接引入页面框架或模块 store；不消费响应式状态的加载、缓存和请求去重使用该入口目录内的普通运行时对象，避免把页面框架打入注入脚本。
 - 页面 service 和 background 模块各自只导出一个具名的单例对象，并将该对象声明为文件最后一个顶层成员；业务方法作为对象成员公开，共享 enum 和数据契约放入对应 core 领域子路径，不要为同一能力同时保留独立函数导出。
 - `browser.storage.sync` 只用于体积小且需要跨设备同步的用户设置；业务数据、大体积数据和缓存使用 `browser.storage.local`。更改既有 storage key、数据版本或 IPC method 属于兼容性变更，必须同时提供迁移或明确的兼容策略。
+- 设置定义放在对应的 core 领域子路径；通用 core settings 与 background settings 不得依赖具体领域。`SettingMember.key` 同时作为 IPC 和 `storage.sync` 的稳定标识，由定义名称和成员名生成；重命名任一部分必须按 storage key 兼容性变更处理。
+- 通用 settings IPC 只提供读取、变化和持久化失败通知，不提供任意 key/value 写入。设置写入由领域 background 通过具名领域 RPC 接收，在调用通用 settings 状态模块后执行页面或浏览器副作用；页面不得绕过领域 background 直接写设置。
+- settings background 的内存缓存是当前 service worker 生命周期内的权威状态；写入先更新缓存、递增 revision 并广播，再按 key 串行异步写入 `storage.sync`。持久化失败只发送失败通知而不回滚当前值，调用方不得把设置 RPC 返回视为持久化已经完成。
 - 翻译通过 background 动态注册 `world: "MAIN"` 的 content script，仅在开启时加载；切换翻译设置通过注册状态同步和刷新活动 trade2 标签页生效。当前 hook 不支持卸载，不得改成无刷新即时切换，除非同时实现完整回滚。
 - 物品复制和筛选预设脚本会预先注入，但必须按设置即时启停。关闭时恢复官方按钮行为，移除或停用扩展事件、观察器、样式、弹窗和插入 DOM；保留的惰性观察器不得继续产生功能副作用或重复绑定。
 - MAIN world hook 的影响范围必须限定在 `https://www.pathofexile.com/trade2`。翻译缓存必须与官方缓存隔离，避免中文数据污染英文缓存；现有 `_zh` namespace 属于持久化兼容约定，变更时必须提供迁移策略。
@@ -55,7 +58,7 @@
 - 新功能源码使用“模块路径 + 职责”的 `kebab-case` 文件名；Vue 单文件组件使用 `kebab-case.vue`。保留 manifest、Vite 或 HTML 直接引用的现有入口文件名。
 - 单文件专用的 selector、DOM id、timeout、storage key 和文案留在该文件；至少两个职责文件共享时再移入同目录工具或现有业务模块，不为少量常量新建中转文件。
 - 集合遍历优先使用 `for...of`，需要索引时使用 `entries()`；模块级和局部 `const` 使用 camelCase，外部协议名称保持原始大小写。
-- 仅为运行环境限制、兼容策略、非显而易见副作用和状态归属添加注释，并说明原因或维护风险；不要用注释复述代码。
+- 仅为运行环境限制、兼容策略、非显而易见副作用和状态归属添加注释。涉及异步持久化、并发或乱序处理、缓存与权威状态同步、失败重试或回滚时，必须在关键状态或分支处说明不变量、设计原因和维护风险；不要用注释复述代码表面行为。
 - 页面可见错误和日志可以使用中文；新增状态码或错误类型时沿用所在模块现有 enum 与映射方式，不在协议值中混入 UI 文案。
 
 ## 测试与验证

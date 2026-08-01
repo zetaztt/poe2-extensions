@@ -1,6 +1,6 @@
 import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
 import { settingsIpcProtocol } from "@poe2-extensions/core/settings";
-import { tradeIpcProtocol } from "@poe2-extensions/core/trade";
+import { tradeIpcProtocol, tradeSettings } from "@poe2-extensions/core/trade";
 import { bootstrapInjectScript } from "../../inject-script";
 import { getTradeSearchItemById, logPrefix } from "../trade-utils";
 import { formatTradeItemText } from "./trade-item-code-format";
@@ -28,7 +28,11 @@ export function injectTradeItemCopy(): void {
 
 async function initializeTradeItemCopy(): Promise<void> {
 	try {
-		const initialEnabled = (await ipcMain.invoke(settingsIpcProtocol.load)).settings.itemCopyEnabled;
+		const snapshot = await ipcMain.invoke(settingsIpcProtocol.get, {
+			key: tradeSettings.itemCopy.key,
+			defaultValue: tradeSettings.itemCopy.defaultValue,
+		});
+		const initialEnabled = snapshot.value as boolean;
 		if (!hasReceivedItemCopyUpdate) setTradeItemCopyEnabled(initialEnabled);
 	} catch (error) {
 		console.warn(`${logPrefix} 复制物品文本初始状态读取失败`, error);

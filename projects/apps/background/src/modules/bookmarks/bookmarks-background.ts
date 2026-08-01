@@ -269,8 +269,7 @@ async function getStoredBookmarkTree(): Promise<StoredTradeBookmarkTree> {
 }
 
 async function loadBookmarkTree(): Promise<StoredTradeBookmarkTree> {
-	const values = await storage.get(tradeBookmarkTreeStorageKey);
-	const value = values[tradeBookmarkTreeStorageKey];
+	const { [tradeBookmarkTreeStorageKey]: value } = await storage.get(tradeBookmarkTreeStorageKey);
 
 	if (isStoredBookmarkTree(value)) return value;
 

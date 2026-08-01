@@ -7,13 +7,13 @@ import {
 	type TradeBookmarkItem,
 	type TradeBookmarkRoot,
 } from "@poe2-extensions/core/bookmarks";
-import { useTradeBookmarkStore } from "../modules/bookmarks/bookmarks-store";
-import { closeMenu, openMenu as openSidepanelMenu } from "../common/menu/sidepanel-menu";
-import { dismissSnackBar, showSnackBar, SidepanelSnackBarType } from "../common/snack-bar/sidepanel-snack-bar";
+import { useTradeBookmarkStore } from "./bookmarks-store";
+import { closeMenu, openMenu as openSidepanelMenu } from "../../common/menu/sidepanel-menu";
+import { dismissSnackBar, showSnackBar, SidepanelSnackBarType } from "../../common/snack-bar/sidepanel-snack-bar";
 import BookmarkFolder from "./bookmark-folder.vue";
 import BookmarkItem from "./bookmark-item.vue";
 import BookmarkTreeHeader from "./bookmark-tree-header.vue";
-import { SidepanelMenuOptions, SidepanelMenuItem, SidepanelMenuAlign } from "../common/menu/sidepanel-menu-types.ts";
+import { SidepanelMenuOptions, SidepanelMenuItem, SidepanelMenuAlign } from "../../common/menu/sidepanel-menu-types.ts";
 
 enum BookmarkDragItemType {
 	Folder = 1,

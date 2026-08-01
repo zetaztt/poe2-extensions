@@ -1,26 +1,24 @@
 import browser from "webextension-polyfill";
 import { ipcMain } from "@poe2-extensions/core/ipc";
-import { TradeSetting } from "@poe2-extensions/core/settings";
 import { tradeIpcProtocol, type TradeStatPreset, type TradeStatPresetQuery } from "@poe2-extensions/core/trade";
-import { settingsBackground } from "../settings/settings-background";
 
 const tradeStatPresetStorageKey = "tradeStatPresets";
 
-function install(): void {
+function install(getStatPresetEnabled: () => Promise<boolean>): void {
 	ipcMain.handle(tradeIpcProtocol.listStatPresets, async () => {
-		await ensureStatPresetEnabled();
+		await ensureStatPresetEnabled(getStatPresetEnabled);
 		return getStoredTradeStatPresets();
 	});
 	ipcMain.handle(tradeIpcProtocol.saveStatPreset, async ({ preset }) => {
-		await ensureStatPresetEnabled();
+		await ensureStatPresetEnabled(getStatPresetEnabled);
 		return saveStatPreset(preset);
 	});
 	ipcMain.handle(tradeIpcProtocol.renameStatPreset, async ({ oldName, newName }) => {
-		await ensureStatPresetEnabled();
+		await ensureStatPresetEnabled(getStatPresetEnabled);
 		return renameStatPreset(oldName, newName);
 	});
 	ipcMain.handle(tradeIpcProtocol.deleteStatPreset, async ({ name }) => {
-		await ensureStatPresetEnabled();
+		await ensureStatPresetEnabled(getStatPresetEnabled);
 		return deleteStatPreset(name);
 	});
 }
@@ -70,8 +68,8 @@ async function deleteStatPreset(name: string): Promise<TradeStatPreset[]> {
 	return nextPresets;
 }
 
-async function ensureStatPresetEnabled(): Promise<void> {
-	if (!(await settingsBackground.getSettingEnabled(TradeSetting.StatPreset))) {
+async function ensureStatPresetEnabled(getStatPresetEnabled: () => Promise<boolean>): Promise<void> {
+	if (!(await getStatPresetEnabled())) {
 		throw new Error("筛选预设保存已关闭");
 	}
 }

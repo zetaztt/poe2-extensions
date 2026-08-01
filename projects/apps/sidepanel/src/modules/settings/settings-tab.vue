@@ -1,15 +1,15 @@
 <script lang="ts" setup>
 import { storeToRefs } from "pinia";
 import { computed, onActivated, ref, watch } from "vue";
-import { SettingsServiceErrorCode, TradeSetting } from "@poe2-extensions/core/settings";
-import { useSettingsStore } from "../modules/settings/settings-store";
+import { SettingsServiceErrorCode, tradeSettings, type TradeSetting } from "@poe2-extensions/core/trade";
+import { useSettingsStore } from "./settings-store";
 
 const settingsStore = useSettingsStore();
 const { settings, isLoading: isLoadingSettings, isSaving: isSavingSettings, lastError } = storeToRefs(settingsStore);
 const settingsStatusText = ref("");
-const tradeTranslateEnabled = computed(() => settings.value?.translateEnabled ?? false);
-const tradeItemCopyEnabled = computed(() => settings.value?.itemCopyEnabled ?? false);
-const tradeStatPresetEnabled = computed(() => settings.value?.statPresetEnabled ?? false);
+const tradeTranslateEnabled = computed(() => settings.value?.translate ?? false);
+const tradeItemCopyEnabled = computed(() => settings.value?.itemCopy ?? false);
+const tradeStatPresetEnabled = computed(() => settings.value?.statPreset ?? false);
 
 const statusLabel = computed(() => {
 	const translate = tradeTranslateEnabled.value ? "翻译已开启" : "翻译已关闭";
@@ -34,26 +34,31 @@ watch(lastError, (error) => {
 			: "设置保存失败，请稍后重试。";
 });
 
-function onCheckboxChange(event: Event, setting: TradeSetting): void {
-	const input = event.target as HTMLInputElement;
-	void onSettingToggle(setting, input.checked);
+function onTranslateChange(event: Event): void {
+	void onSettingToggle(event, tradeSettings.translate);
 }
 
-async function onSettingToggle(setting: TradeSetting, enabled: boolean): Promise<void> {
+function onItemCopyChange(event: Event): void {
+	void onSettingToggle(event, tradeSettings.itemCopy);
+}
+
+function onStatPresetChange(event: Event): void {
+	void onSettingToggle(event, tradeSettings.statPreset);
+}
+
+async function onSettingToggle(event: Event, setting: TradeSetting): Promise<void> {
 	settingsStatusText.value = "";
+	const enabled = (event.target as HTMLInputElement).checked;
 
 	try {
-		const activeTradeTabUpdated = await settingsStore.updateSetting(setting, enabled);
-		settingsStatusText.value = getSettingUpdatedMessage(setting, activeTradeTabUpdated);
+		const activeTradeTabUpdated = await settingsStore.setSetting(setting, enabled);
+		settingsStatusText.value = activeTradeTabUpdated
+			? "设置已保存，trade2 页面已更新。"
+			: "设置已保存，打开或刷新 trade2 页面后生效。";
 	} catch (error) {
 		settingsStatusText.value = "设置保存失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 设置保存失败", error);
 	}
-}
-
-function getSettingUpdatedMessage(setting: TradeSetting, activeTradeTabUpdated: boolean): string {
-	if (!activeTradeTabUpdated) return "设置已保存，打开或刷新 trade2 页面后生效。";
-	return setting === TradeSetting.Translate ? "设置已保存，trade2 页面已刷新。" : "设置已保存，trade2 页面已更新。";
 }
 </script>
 
@@ -71,7 +76,7 @@ function getSettingUpdatedMessage(setting: TradeSetting, activeTradeTabUpdated: 
 					type="checkbox"
 					:checked="tradeTranslateEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, TradeSetting.Translate)" />
+					@change="onTranslateChange" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
@@ -86,7 +91,7 @@ function getSettingUpdatedMessage(setting: TradeSetting, activeTradeTabUpdated: 
 					type="checkbox"
 					:checked="tradeItemCopyEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, TradeSetting.ItemCopy)" />
+					@change="onItemCopyChange" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 
@@ -101,7 +106,7 @@ function getSettingUpdatedMessage(setting: TradeSetting, activeTradeTabUpdated: 
 					type="checkbox"
 					:checked="tradeStatPresetEnabled"
 					:disabled="isLoadingSettings || isSavingSettings"
-					@change="onCheckboxChange($event, TradeSetting.StatPreset)" />
+					@change="onStatPresetChange" />
 				<span class="switch" aria-hidden="true"></span>
 			</label>
 

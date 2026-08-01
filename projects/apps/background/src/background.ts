@@ -4,17 +4,17 @@ import { createBackgroundIpcMain, createTabIpcWindow } from "./ipc-adapter";
 import { tradeBookmarkBackground } from "./modules/bookmarks/bookmarks-background";
 import { dictionaryBackground } from "./modules/dictionary/dictionary-background";
 import { settingsBackground } from "./modules/settings/settings-background";
-import { tradeStatPresetBackground } from "./modules/stat-preset/stat-preset-background";
+import { tradeBackground } from "./modules/trade/trade-background";
 
 ipcMain.register(createBackgroundIpcMain);
 ipcWindow.register(createTabIpcWindow);
 
 console.debug("[poe2-extensions] background loaded.", { id: browser.runtime.id });
 void enableSidePanelOnActionClick();
+settingsBackground.install();
 tradeBookmarkBackground.install();
 dictionaryBackground.install();
-settingsBackground.install();
-tradeStatPresetBackground.install();
+tradeBackground.install();
 
 async function enableSidePanelOnActionClick(): Promise<void> {
 	if (CHROME) {
