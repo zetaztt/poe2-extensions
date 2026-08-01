@@ -28,10 +28,13 @@ onActivated(() => {
 
 watch(lastError, (error) => {
 	if (!error) return;
-	settingsStatusText.value =
-		error.code === SettingsServiceErrorCode.LoadFailed
-			? "设置读取失败，请稍后重试。"
-			: "设置保存失败，请稍后重试。";
+	if (error.code === SettingsServiceErrorCode.LoadFailed) {
+		settingsStatusText.value = "设置读取失败，请稍后重试。";
+	} else if (error.code === SettingsServiceErrorCode.PersistenceFailed) {
+		settingsStatusText.value = "设置未能保存到同步存储，请稍后重试。";
+	} else {
+		settingsStatusText.value = "设置应用失败，请稍后重试。";
+	}
 });
 
 function onTranslateChange(event: Event): void {
@@ -53,10 +56,10 @@ async function onSettingToggle(event: Event, setting: TradeSetting): Promise<voi
 	try {
 		const activeTradeTabUpdated = await settingsStore.setSetting(setting, enabled);
 		settingsStatusText.value = activeTradeTabUpdated
-			? "设置已保存，trade2 页面已更新。"
-			: "设置已保存，打开或刷新 trade2 页面后生效。";
+			? "设置已应用，trade2 页面已更新。"
+			: "设置已应用，打开或刷新 trade2 页面后生效。";
 	} catch (error) {
-		settingsStatusText.value = "设置保存失败，请稍后重试。";
+		settingsStatusText.value = "设置应用失败，请稍后重试。";
 		console.error("[poe2-extensions] trade 设置保存失败", error);
 	}
 }
