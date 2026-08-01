@@ -1,5 +1,5 @@
 import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
-import { createMainWorldIpcMain, createMainWorldIpcWindow } from "./ipc-adapter";
+import { createMainWorldIpcMain, createMainWorldIpcWindow } from "./inject-ipc-adapter";
 
 export type InjectScriptMain = () => void | Promise<void>;
 

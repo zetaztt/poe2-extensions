@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, watch, type Directive } from "vue";
 import type { TradeBookmarkItem } from "@poe2-extensions/core/bookmarks";
-import BookmarkIconButton from "./bookmark-icon-button.vue";
+import SidePanelBookmarkIconButton from "./side-panel-bookmark-icon-button.vue";
 
 const props = defineProps<{
 	bookmark: TradeBookmarkItem;
@@ -130,15 +130,15 @@ function cancelRename(): void {
 				</span>
 			</span>
 		</span>
-		<BookmarkIconButton
+		<SidePanelBookmarkIconButton
 			class="bookmark-item-row-action"
-			icon="/assets/sidepanel/bookmark-rename.png"
+			icon="/assets/side-panel/bookmark-rename.png"
 			:disabled="busy"
 			title="重命名书签"
 			:on-click="startRename" />
-		<BookmarkIconButton
+		<SidePanelBookmarkIconButton
 			class="bookmark-item-row-action"
-			icon="/assets/sidepanel/bookmark-more.png"
+			icon="/assets/side-panel/bookmark-more.png"
 			:disabled="busy"
 			title="更多"
 			:on-click="openMenu" />

@@ -2,18 +2,18 @@
 
 ## 项目概览
 
-本仓库是面向 Path of Exile 2 `trade2` 页面的 Chromium Manifest V3 扩展。代码跨越 background service worker、sidepanel 扩展页面、isolated world content script 和 MAIN world 注入环境；修改前必须确认代码所属环境及跨环境边界。
+本仓库是面向 Path of Exile 2 `trade2` 页面的 Chromium Manifest V3 扩展。代码跨越 background service worker、side-panel 扩展页面、isolated world content script 和 MAIN world 注入环境；修改前必须确认代码所属环境及跨环境边界。
 
 ## 仓库结构
 
 - `projects/apps/background/`：background service worker 工程，持有浏览器行为、跨页面权威状态、持久化和业务 handler；入口只负责环境注册与模块安装。
 - `projects/apps/content/`：isolated world content 工程，负责编排 runtime/window IPC relay 和 MAIN world 脚本注入。
 - `projects/apps/inject/`：MAIN world 工程，维护 trade2 DOM 功能及其独立入口；不具备 Extension API，不得引入侧边栏页面框架或 store。
-- `projects/apps/sidepanel/`：Vue 侧边栏工程。功能组件、store 和 service 统一归入 `src/modules/<feature>/`，根目录只保留组合入口，跨功能 UI 放入 `src/common/`；组件从模块 store 读取状态并调用 store action，只在组件内维护展示和临时交互状态。
+- `projects/apps/side-panel/`：Vue 侧边栏工程。功能组件、store 和 service 统一归入 `src/modules/<feature>/`，根目录只保留组合入口，跨功能 UI 放入 `src/common/`；组件从模块 store 读取状态并调用 store action，只在组件内维护展示和临时交互状态。
 - `projects/packages/core/`：所有运行工程共同依赖的环境无关核心工程；领域子路径导出共享数据契约和 IPC protocol，`ipc/transport` 只公开供 transport 工程复用的内部消息连接基础设施。
 - `projects/packages/ipc-window/`：DOM 环境的 `window.postMessage` transport，仅供 content 和 inject 使用。
-- `projects/packages/ipc-webextension/`：Extension 环境的 runtime/tabs transport，仅供 background、content 和 sidepanel 使用。
-- `public/`：`icon/` 和 `data/` 保持稳定的扩展路径；页面图片、字体及后续同类静态资源放入 `assets/`，侧边栏资源位于 `assets/sidepanel/`。
+- `projects/packages/ipc-webextension/`：Extension 环境的 runtime/tabs transport，仅供 background、content 和 side-panel 使用。
+- `public/`：`icon/` 和 `data/` 保持稳定的扩展路径；页面图片、字体及后续同类静态资源放入 `assets/`，侧边栏资源位于 `assets/side-panel/`。
 - `data/trade-texts.po`：翻译人工维护源；`public/data/translate.json` 和 `public/data/translate-meta.json` 是生成产物及扩展内置 fallback。
 - `scripts/translate/`：拉取 trade 数据和生成字典；`projects/packages/trade-translate-tools/` 是 npm workspace 中供脚本和发布分支复用的源码包。
 
@@ -30,10 +30,10 @@
 
 ## 架构规则
 
-- 内部 Workspace 依赖矩阵固定为 background → core + ipc-webextension、content → core + 两种 transport、inject → core + ipc-window、sidepanel → core + ipc-webextension；内部包必须同时声明于工程的 `package.json` dependencies 和 `tsconfig.json` references。
+- 内部 Workspace 依赖矩阵固定为 background → core + ipc-webextension、content → core + 两种 transport、inject → core + ipc-window、side-panel → core + ipc-webextension；内部包必须同时声明于工程的 `package.json` dependencies 和 `tsconfig.json` references。
 - Workspace 包通过各自的 package exports 和 npm Workspace 链接解析；不要配置 TypeScript `paths`，也不要跨 Workspace 相对导入内部源码。所有 Workspace 都不得依赖 `@poe2-extensions/apps-*` 运行工程。
 - 依赖边界的自动检查以 `eslint.config.ts` 为准；`npm run compile` 先运行 ESLint，再运行 `vue-tsc --build`。ESLint 对所有 Workspace 检查未声明依赖、跨 Workspace 相对导入和 app 包导入，inject 的附加环境依赖限制也只在该配置中维护。
-- 跨 background、sidepanel、content 和 MAIN world 的业务通信必须使用 `@poe2-extensions/core/ipc`、对应环境 transport 与具名领域 protocol；不要另建裸 `browser.runtime` 消息或 `window.postMessage` 协议。新增协议成员时同步 core 契约、handler 和调用方。
+- 跨 background、side-panel、content 和 MAIN world 的业务通信必须使用 `@poe2-extensions/core/ipc`、对应环境 transport 与具名领域 protocol；不要另建裸 `browser.runtime` 消息或 `window.postMessage` 协议。新增协议成员时同步 core 契约、handler 和调用方。
 - 需要跨页面共享可变状态的业务模块由 background 模块持有权威状态。跨页面状态同步必须区分 background service worker 生命周期，并拒绝重复、过期或乱序状态；不得退化为组件本地副本或 mutation 返回值驱动的长期状态。
 - 模块 store 使用 Pinia Setup Store；action 负责 loading、错误、快照排序、乐观更新和失败恢复，并在 service 返回普通结果后修改自身状态。页面 service 不得导入 Pinia 或 store，也不得保存与 store 重复的可观察状态。
 - Store 只公开页面消费的响应式状态和业务 action；机械 mutation、订阅安装、快照处理及其他流程辅助函数保留在 Setup Store 闭包内。需要页面 store 的 Vue 运行环境在 composition root 创建并安装 Pinia，组件解构状态使用 `storeToRefs`。
@@ -73,7 +73,7 @@
 
 - 仅文档或注释：对改动文件运行 Prettier check；不需要构建。
 - TypeScript 或 Vue：`npm run compile`。
-- manifest、入口、IPC transport、sidepanel 或 trade 注入链路：`npm run compile` 和 `npm run build`。
+- manifest、入口、IPC transport、side-panel 或 trade 注入链路：`npm run compile` 和 `npm run build`。
 - `projects/packages/trade-translate-tools/`：除根类型检查外运行 `npx tsc --noEmit -p projects/packages/trade-translate-tools/tsconfig.json`。
 - 翻译源：运行 `npm run build-translate`，确认两个字典产物同时更新，且内容未变化时 meta version 不应变化。
 - 所有纳管文件的格式检查使用 `npm run format:check`；只检查单个文档可使用 `npx prettier --check <file>`。

@@ -2,28 +2,28 @@
 	font-family: FontinRegular;
 	font-style: normal;
 	font-weight: 400;
-	src: url("/assets/sidepanel/fontin-regular.woff") format("woff");
+	src: url("/assets/side-panel/fontin-regular.woff") format("woff");
 }
 
 @font-face {
 	font-family: FontinSmallCaps;
 	font-style: normal;
 	font-weight: 400;
-	src: url("/assets/sidepanel/fontin-smallcaps.woff") format("woff");
+	src: url("/assets/side-panel/fontin-smallcaps.woff") format("woff");
 }
 
 @font-face {
 	font-family: FontinBold;
 	font-style: normal;
 	font-weight: 400;
-	src: url("/assets/sidepanel/fontin-bold.woff") format("woff");
+	src: url("/assets/side-panel/fontin-bold.woff") format("woff");
 }
 
 @font-face {
 	font-family: Cinzel;
 	font-style: normal;
 	font-weight: 400;
-	src: url("/assets/sidepanel/cinzel-regular.woff") format("woff");
+	src: url("/assets/side-panel/cinzel-regular.woff") format("woff");
 }
 
 :root {
@@ -71,6 +71,6 @@
 body {
 	min-width: 320px;
 	margin: 0;
-	background: #0e1115 url("/assets/sidepanel/act4.webp") no-repeat fixed top center;
+	background: #0e1115 url("/assets/side-panel/act4.webp") no-repeat fixed top center;
 	background-size: auto 100vh;
 }

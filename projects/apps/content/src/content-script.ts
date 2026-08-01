@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
-import { createContentIpcMain, createContentIpcWindow } from "./ipc-adapter";
+import { createContentIpcMain, createContentIpcWindow } from "./content-ipc-adapter";
 
 export type ContentScriptMain = () => void | Promise<void>;
 

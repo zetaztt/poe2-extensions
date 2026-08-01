@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { SidepanelMenuState, SidepanelMenuAlign, SidepanelMenuItem } from "./sidepanel-menu-types";
+import { SidePanelMenuState, SidePanelMenuAlign, SidePanelMenuItem } from "./side-panel-menu-types";
 
 type PopoverElement = HTMLElement & {
 	popover: string | null;
@@ -9,7 +9,7 @@ type PopoverElement = HTMLElement & {
 };
 
 const props = defineProps<{
-	state: SidepanelMenuState;
+	state: SidePanelMenuState;
 	closeMenu: () => void;
 }>();
 
@@ -18,7 +18,7 @@ const menuRoot = ref<PopoverElement | null>(null);
 const menuStyle = computed<Record<string, string>>(() => ({
 	left: `${props.state.x}px`,
 	top: `${props.state.y}px`,
-	transform: props.state.align === SidepanelMenuAlign.End ? "translateX(-100%)" : "",
+	transform: props.state.align === SidePanelMenuAlign.End ? "translateX(-100%)" : "",
 }));
 
 watch(
@@ -70,7 +70,7 @@ function onGlobalDragStart(): void {
 	if (props.state.open) props.closeMenu();
 }
 
-async function runMenuItem(item: SidepanelMenuItem, event: MouseEvent): Promise<void> {
+async function runMenuItem(item: SidePanelMenuItem, event: MouseEvent): Promise<void> {
 	event.stopPropagation();
 	if (item.disabled) return;
 
@@ -83,11 +83,11 @@ async function runMenuItem(item: SidepanelMenuItem, event: MouseEvent): Promise<
 </script>
 
 <template>
-	<div ref="menuRoot" class="sidepanel-menu" popover="manual" :style="menuStyle" @click.stop @contextmenu.stop>
-		<ul class="sidepanel-menu-list">
-			<li v-for="item in state.items" :key="item.id" class="sidepanel-menu-item">
+	<div ref="menuRoot" class="side-panel-menu" popover="manual" :style="menuStyle" @click.stop @contextmenu.stop>
+		<ul class="side-panel-menu-list">
+			<li v-for="item in state.items" :key="item.id" class="side-panel-menu-item">
 				<button
-					class="sidepanel-menu-button"
+					class="side-panel-menu-button"
 					type="button"
 					:disabled="Boolean(item.disabled)"
 					@click="runMenuItem(item, $event)">
@@ -99,7 +99,7 @@ async function runMenuItem(item: SidepanelMenuItem, event: MouseEvent): Promise<
 </template>
 
 <style>
-.sidepanel-menu {
+.side-panel-menu {
 	position: fixed;
 	inset: auto;
 	z-index: 1000;
@@ -116,11 +116,11 @@ async function runMenuItem(item: SidepanelMenuItem, event: MouseEvent): Promise<
 	background: #000;
 }
 
-.sidepanel-menu::backdrop {
+.side-panel-menu::backdrop {
 	background: transparent;
 }
 
-.sidepanel-menu-list {
+.side-panel-menu-list {
 	display: inline-block;
 	min-width: 100%;
 	margin: 0;
@@ -131,11 +131,11 @@ async function runMenuItem(item: SidepanelMenuItem, event: MouseEvent): Promise<
 	list-style: none;
 }
 
-.sidepanel-menu-item {
+.side-panel-menu-item {
 	display: block;
 }
 
-.sidepanel-menu-button {
+.side-panel-menu-button {
 	display: block;
 	width: 100%;
 	height: 30px;
@@ -152,14 +152,14 @@ async function runMenuItem(item: SidepanelMenuItem, event: MouseEvent): Promise<
 	white-space: nowrap;
 }
 
-.sidepanel-menu-button:hover:not(:disabled),
-.sidepanel-menu-button:focus-visible:not(:disabled) {
+.side-panel-menu-button:hover:not(:disabled),
+.side-panel-menu-button:focus-visible:not(:disabled) {
 	color: #e2e2e2;
 	background-color: #465260;
 	outline: 0;
 }
 
-.sidepanel-menu-button:disabled {
+.side-panel-menu-button:disabled {
 	color: #777;
 	background-color: #000;
 	cursor: default;

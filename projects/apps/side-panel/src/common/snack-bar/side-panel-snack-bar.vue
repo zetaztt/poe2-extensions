@@ -1,27 +1,27 @@
 <script lang="ts" setup>
-import { SidepanelSnackBarType, type SidepanelSnackBarState } from "./sidepanel-snack-bar-types";
+import { SidePanelSnackBarType, type SidePanelSnackBarState } from "./side-panel-snack-bar-types";
 
 defineProps<{
-	state: SidepanelSnackBarState;
+	state: SidePanelSnackBarState;
 	dismissSnackBar: () => void;
 }>();
 </script>
 
 <template>
-	<div class="sidepanel-snack-bar-region" aria-live="polite" aria-atomic="true">
-		<Transition name="sidepanel-snack-bar">
+	<div class="side-panel-snack-bar-region" aria-live="polite" aria-atomic="true">
+		<Transition name="side-panel-snack-bar">
 			<div
 				v-if="state.open"
-				class="sidepanel-snack-bar"
+				class="side-panel-snack-bar"
 				:class="{
-					'sidepanel-snack-bar-success': state.type === SidepanelSnackBarType.Success,
-					'sidepanel-snack-bar-error': state.type === SidepanelSnackBarType.Error,
+					'side-panel-snack-bar-success': state.type === SidePanelSnackBarType.Success,
+					'side-panel-snack-bar-error': state.type === SidePanelSnackBarType.Error,
 				}"
 				role="status">
-				<span class="sidepanel-snack-bar-message">{{ state.message }}</span>
+				<span class="side-panel-snack-bar-message">{{ state.message }}</span>
 				<button
-					v-if="state.type === SidepanelSnackBarType.Error"
-					class="sidepanel-snack-bar-action"
+					v-if="state.type === SidePanelSnackBarType.Error"
+					class="side-panel-snack-bar-action"
 					type="button"
 					aria-label="关闭错误提示"
 					@click="dismissSnackBar">
@@ -33,7 +33,7 @@ defineProps<{
 </template>
 
 <style>
-.sidepanel-snack-bar-region {
+.side-panel-snack-bar-region {
 	position: fixed;
 	right: 0;
 	bottom: 16px;
@@ -44,7 +44,7 @@ defineProps<{
 	pointer-events: none;
 }
 
-.sidepanel-snack-bar {
+.side-panel-snack-bar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -60,22 +60,22 @@ defineProps<{
 	pointer-events: auto;
 }
 
-.sidepanel-snack-bar-success {
+.side-panel-snack-bar-success {
 	border-color: var(--color-success);
 }
 
-.sidepanel-snack-bar-error {
+.side-panel-snack-bar-error {
 	border-color: var(--color-danger);
 }
 
-.sidepanel-snack-bar-message {
+.side-panel-snack-bar-message {
 	min-width: 0;
 	font-size: 12px;
 	line-height: 1.5;
 	overflow-wrap: anywhere;
 }
 
-.sidepanel-snack-bar-action {
+.side-panel-snack-bar-action {
 	flex: 0 0 auto;
 	min-height: 28px;
 	padding: 4px 8px;
@@ -87,33 +87,33 @@ defineProps<{
 	cursor: pointer;
 }
 
-.sidepanel-snack-bar-action:hover,
-.sidepanel-snack-bar-action:focus-visible {
+.side-panel-snack-bar-action:hover,
+.side-panel-snack-bar-action:focus-visible {
 	color: #fff;
 	background: rgb(255 255 255 / 8%);
 }
 
-.sidepanel-snack-bar-enter-active {
+.side-panel-snack-bar-enter-active {
 	transition:
 		opacity 160ms ease-out,
 		transform 160ms ease-out;
 }
 
-.sidepanel-snack-bar-leave-active {
+.side-panel-snack-bar-leave-active {
 	transition:
 		opacity 120ms ease-in,
 		transform 120ms ease-in;
 }
 
-.sidepanel-snack-bar-enter-from,
-.sidepanel-snack-bar-leave-to {
+.side-panel-snack-bar-enter-from,
+.side-panel-snack-bar-leave-to {
 	opacity: 0;
 	transform: translateY(12px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.sidepanel-snack-bar-enter-active,
-	.sidepanel-snack-bar-leave-active {
+	.side-panel-snack-bar-enter-active,
+	.side-panel-snack-bar-leave-active {
 		transition: none;
 	}
 }

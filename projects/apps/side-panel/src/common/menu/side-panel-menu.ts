@@ -1,8 +1,8 @@
 import { createVNode, reactive, render, type VNode } from "vue";
-import { SidepanelMenuState, SidepanelMenuItem, SidepanelMenuOptions } from "./sidepanel-menu-types.ts";
-import SidepanelMenu from "./sidepanel-menu.vue";
+import { SidePanelMenuState, SidePanelMenuItem, SidePanelMenuOptions } from "./side-panel-menu-types.ts";
+import SidePanelMenu from "./side-panel-menu.vue";
 
-const menuState = reactive<SidepanelMenuState>({
+const menuState = reactive<SidePanelMenuState>({
 	open: false,
 	items: [],
 	x: 0,
@@ -13,7 +13,7 @@ const menuState = reactive<SidepanelMenuState>({
 let menuContainer: HTMLElement | null = null;
 let menuVNode: VNode | null = null;
 
-export function openMenu(items: SidepanelMenuItem[], options: SidepanelMenuOptions): void {
+export function openMenu(items: SidePanelMenuItem[], options: SidePanelMenuOptions): void {
 	ensureMenu();
 
 	menuState.items = items;
@@ -32,10 +32,10 @@ function ensureMenu(): void {
 	if (menuContainer?.isConnected && menuVNode) return;
 
 	menuContainer = document.createElement("div");
-	menuContainer.className = "sidepanel-menu-container";
+	menuContainer.className = "side-panel-menu-container";
 	document.body.append(menuContainer);
 
-	menuVNode = createVNode(SidepanelMenu, {
+	menuVNode = createVNode(SidePanelMenu, {
 		state: menuState,
 		closeMenu,
 	});

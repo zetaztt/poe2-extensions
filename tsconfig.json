@@ -23,7 +23,7 @@
 		{ "path": "./projects/apps/background" },
 		{ "path": "./projects/apps/content" },
 		{ "path": "./projects/apps/inject" },
-		{ "path": "./projects/apps/sidepanel" },
+		{ "path": "./projects/apps/side-panel" },
 		{ "path": "./projects/packages/trade-translate-tools" }
 	]
 }

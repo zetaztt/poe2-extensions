@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { TradeBookmarkRoot } from "@poe2-extensions/core/bookmarks";
-import BookmarkIconButton from "./bookmark-icon-button.vue";
+import SidePanelBookmarkIconButton from "./side-panel-bookmark-icon-button.vue";
 
 const props = defineProps<{
 	folder: TradeBookmarkRoot;
@@ -54,15 +54,15 @@ function onDragEnd(): void {
 					<span class="bookmark-tree-header-title" @dblclick.stop>
 						<span class="bookmark-tree-header-title-text">Trade 书签</span>
 					</span>
-					<BookmarkIconButton
+					<SidePanelBookmarkIconButton
 						class="bookmark-tree-header-action bookmark-tree-header-add-action"
-						icon="/assets/sidepanel/bookmark-folder-add.png"
+						icon="/assets/side-panel/bookmark-folder-add.png"
 						:disabled="busy"
 						title="添加文件夹"
 						:on-click="createFolder" />
-					<BookmarkIconButton
+					<SidePanelBookmarkIconButton
 						class="bookmark-tree-header-action bookmark-tree-header-menu-action"
-						icon="/assets/sidepanel/bookmark-more.png"
+						icon="/assets/side-panel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
 						:on-click="openMenu" />

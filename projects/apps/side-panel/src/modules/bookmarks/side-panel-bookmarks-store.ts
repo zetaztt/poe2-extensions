@@ -10,7 +10,7 @@ import {
 	type TradeBookmarkRoot,
 	type TradeBookmarkTreeSnapshot,
 } from "@poe2-extensions/core/bookmarks";
-import { tradeBookmarkService } from "./bookmarks-service";
+import { tradeBookmarkService } from "./side-panel-bookmarks-service";
 
 interface TradeBookmarkStoreError {
 	sequence: number;

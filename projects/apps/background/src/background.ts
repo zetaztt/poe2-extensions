@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import { ipcMain, ipcWindow } from "@poe2-extensions/core/ipc";
-import { createBackgroundIpcMain, createTabIpcWindow } from "./ipc-adapter";
+import { createBackgroundIpcMain, createTabIpcWindow } from "./background-ipc-adapter";
 import { tradeBookmarkBackground } from "./modules/bookmarks/bookmarks-background";
 import { dictionaryBackground } from "./modules/dictionary/dictionary-background";
 import { settingsBackground } from "./modules/settings/settings-background";

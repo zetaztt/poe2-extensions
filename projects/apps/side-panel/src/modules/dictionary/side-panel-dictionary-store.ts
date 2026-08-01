@@ -1,7 +1,7 @@
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 import type { DictionarySearchResult, TranslateDictionary } from "@poe2-extensions/core/dictionary";
-import { dictionaryService } from "./dictionary-service";
+import { dictionaryService } from "./side-panel-dictionary-service";
 
 interface DictionaryStoreError {
 	sequence: number;

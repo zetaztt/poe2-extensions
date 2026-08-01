@@ -1,25 +1,25 @@
 <script lang="ts" setup>
 import { computed, ref, type Component } from "vue";
-import BookmarkTab from "./modules/bookmarks/bookmark-tab.vue";
-import DictionaryTab from "./modules/dictionary/dictionary-tab.vue";
-import SettingsTab from "./modules/settings/settings-tab.vue";
+import SidePanelBookmarkTab from "./modules/bookmarks/side-panel-bookmark-tab.vue";
+import SidePanelDictionaryTab from "./modules/dictionary/side-panel-dictionary-tab.vue";
+import SidePanelSettingsTab from "./modules/settings/side-panel-settings-tab.vue";
 
-enum SidepanelTab {
+enum SidePanelTab {
 	Bookmarks = 1,
 	Dictionary = 2,
 	Settings = 3,
 }
 
-const tabComponents: Record<SidepanelTab, Component> = {
-	[SidepanelTab.Bookmarks]: BookmarkTab,
-	[SidepanelTab.Dictionary]: DictionaryTab,
-	[SidepanelTab.Settings]: SettingsTab,
+const tabComponents: Record<SidePanelTab, Component> = {
+	[SidePanelTab.Bookmarks]: SidePanelBookmarkTab,
+	[SidePanelTab.Dictionary]: SidePanelDictionaryTab,
+	[SidePanelTab.Settings]: SidePanelSettingsTab,
 };
 
-const activeTab = ref<SidepanelTab>(SidepanelTab.Bookmarks);
+const activeTab = ref<SidePanelTab>(SidePanelTab.Bookmarks);
 const activeComponent = computed(() => tabComponents[activeTab.value]);
 
-function setActiveTab(tab: SidepanelTab): void {
+function setActiveTab(tab: SidePanelTab): void {
 	activeTab.value = tab;
 }
 </script>
@@ -34,23 +34,23 @@ function setActiveTab(tab: SidepanelTab): void {
 		<nav class="tabs" aria-label="侧边栏页面">
 			<button
 				class="tab-button"
-				:class="{ active: activeTab === SidepanelTab.Bookmarks }"
+				:class="{ active: activeTab === SidePanelTab.Bookmarks }"
 				type="button"
-				@click="setActiveTab(SidepanelTab.Bookmarks)">
+				@click="setActiveTab(SidePanelTab.Bookmarks)">
 				书签
 			</button>
 			<button
 				class="tab-button"
-				:class="{ active: activeTab === SidepanelTab.Dictionary }"
+				:class="{ active: activeTab === SidePanelTab.Dictionary }"
 				type="button"
-				@click="setActiveTab(SidepanelTab.Dictionary)">
+				@click="setActiveTab(SidePanelTab.Dictionary)">
 				词典
 			</button>
 			<button
 				class="tab-button"
-				:class="{ active: activeTab === SidepanelTab.Settings }"
+				:class="{ active: activeTab === SidePanelTab.Settings }"
 				type="button"
-				@click="setActiveTab(SidepanelTab.Settings)">
+				@click="setActiveTab(SidePanelTab.Settings)">
 				设置
 			</button>
 		</nav>

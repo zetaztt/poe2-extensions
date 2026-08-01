@@ -7,13 +7,13 @@ import {
 	type TradeBookmarkItem,
 	type TradeBookmarkRoot,
 } from "@poe2-extensions/core/bookmarks";
-import { useTradeBookmarkStore } from "./bookmarks-store";
-import { closeMenu, openMenu as openSidepanelMenu } from "../../common/menu/sidepanel-menu";
-import { dismissSnackBar, showSnackBar, SidepanelSnackBarType } from "../../common/snack-bar/sidepanel-snack-bar";
-import BookmarkFolder from "./bookmark-folder.vue";
-import BookmarkItem from "./bookmark-item.vue";
-import BookmarkTreeHeader from "./bookmark-tree-header.vue";
-import { SidepanelMenuOptions, SidepanelMenuItem, SidepanelMenuAlign } from "../../common/menu/sidepanel-menu-types.ts";
+import { useTradeBookmarkStore } from "./side-panel-bookmarks-store";
+import { closeMenu, openMenu as openSidePanelMenu } from "../../common/menu/side-panel-menu";
+import { dismissSnackBar, showSnackBar, SidePanelSnackBarType } from "../../common/snack-bar/side-panel-snack-bar";
+import SidePanelBookmarkFolder from "./side-panel-bookmark-folder.vue";
+import SidePanelBookmarkItem from "./side-panel-bookmark-item.vue";
+import SidePanelBookmarkTreeHeader from "./side-panel-bookmark-tree-header.vue";
+import { SidePanelMenuOptions, SidePanelMenuItem, SidePanelMenuAlign } from "../../common/menu/side-panel-menu-types.ts";
 
 enum BookmarkDragItemType {
 	Folder = 1,
@@ -90,11 +90,11 @@ onDeactivated(() => {
 });
 
 function showBookmarkSuccess(message: string): void {
-	showSnackBar(message, SidepanelSnackBarType.Success);
+	showSnackBar(message, SidePanelSnackBarType.Success);
 }
 
 function showBookmarkError(message: string): void {
-	if (message) showSnackBar(message, SidepanelSnackBarType.Error);
+	if (message) showSnackBar(message, SidePanelSnackBarType.Error);
 }
 
 async function loadBookmarks(): Promise<void> {
@@ -253,8 +253,8 @@ async function openBookmarkContextMenu(
 
 async function openBookmarkMenu(
 	event: MouseEvent,
-	position: SidepanelMenuOptions,
-	items: SidepanelMenuItem[],
+	position: SidePanelMenuOptions,
+	items: SidePanelMenuItem[],
 ): Promise<void> {
 	if (isBusy.value) return;
 
@@ -262,10 +262,10 @@ async function openBookmarkMenu(
 	event.stopPropagation();
 	if (isBusy.value) return;
 
-	openSidepanelMenu(items, position);
+	openSidePanelMenu(items, position);
 }
 
-function getButtonMenuPosition(event: MouseEvent): SidepanelMenuOptions {
+function getButtonMenuPosition(event: MouseEvent): SidePanelMenuOptions {
 	const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
 	const fallbackTarget = event.target instanceof HTMLElement ? event.target.closest("button") : null;
 	const element = target ?? fallbackTarget;
@@ -275,11 +275,11 @@ function getButtonMenuPosition(event: MouseEvent): SidepanelMenuOptions {
 	return {
 		x: rect.right,
 		y: rect.bottom + 1,
-		align: SidepanelMenuAlign.End,
+		align: SidePanelMenuAlign.End,
 	};
 }
 
-function getRootFolderMenuItems(): SidepanelMenuItem[] {
+function getRootFolderMenuItems(): SidePanelMenuItem[] {
 	return [
 		{ id: "create", label: "添加文件夹", run: () => onCreateFolder(rootFolderId) },
 		{ id: "import", label: "导入 JSON", run: onImportBookmarksClick },
@@ -288,7 +288,7 @@ function getRootFolderMenuItems(): SidepanelMenuItem[] {
 	];
 }
 
-function getFolderMenuItems(folder: TradeBookmarkFolder, startRename: StartRename): SidepanelMenuItem[] {
+function getFolderMenuItems(folder: TradeBookmarkFolder, startRename: StartRename): SidePanelMenuItem[] {
 	return [
 		{ id: "add-bookmark", label: "添加当前搜索", run: () => addCurrentSearchToFolder(folder.id) },
 		{ id: "collapse-others", label: "折叠其他文件夹", run: () => collapseOtherFolders(folder) },
@@ -308,7 +308,7 @@ function getFolderMenuItems(folder: TradeBookmarkFolder, startRename: StartRenam
 	];
 }
 
-function getBookmarkMenuItems(bookmark: TradeBookmarkItem, startRename: StartRename): SidepanelMenuItem[] {
+function getBookmarkMenuItems(bookmark: TradeBookmarkItem, startRename: StartRename): SidePanelMenuItem[] {
 	return [
 		{ id: "rename", label: "重命名", run: startRename },
 		{ id: "replace", label: "用当前搜索替换", run: () => onReplaceBookmark(bookmark) },
@@ -718,7 +718,7 @@ function isBookmarkDropTarget(
 
 function isInteractiveDragSource(event: DragEvent): boolean {
 	const target = event.target;
-	return target instanceof HTMLElement && Boolean(target.closest("button, input, textarea, select, .sidepanel-menu"));
+	return target instanceof HTMLElement && Boolean(target.closest("button, input, textarea, select, .side-panel-menu"));
 }
 
 function prepareDragEvent(event: DragEvent): void {
@@ -743,7 +743,7 @@ function clearDragState(): void {
 			accept="application/json,.json"
 			@change="onImportBookmarksChange" />
 		<section class="bookmark-list" @click="closeMenu">
-			<BookmarkTreeHeader
+			<SidePanelBookmarkTreeHeader
 				v-if="rootBookmarkFolder"
 				:folder="rootBookmarkFolder"
 				:busy="isBusy"
@@ -764,7 +764,7 @@ function clearDragState(): void {
 						<div
 							class="bookmark-folder-group"
 							:class="{ expanded: hasFolderContent(folder) && isFolderExpanded(folder) }">
-							<BookmarkFolder
+							<SidePanelBookmarkFolder
 								:folder="folder"
 								:expanded="isFolderExpanded(folder)"
 								:has-content="hasFolderContent(folder)"
@@ -785,7 +785,7 @@ function clearDragState(): void {
 								:on-cancel-rename="() => cancelFolderRename(folder.id)" />
 
 							<div v-show="isFolderExpanded(folder)" class="bookmark-folder-body">
-								<BookmarkItem
+								<SidePanelBookmarkItem
 									v-for="bookmark in folder.bookmarks"
 									:key="bookmark.id"
 									:bookmark="bookmark"

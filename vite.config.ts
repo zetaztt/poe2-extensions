@@ -26,7 +26,7 @@ const manifest = {
 		service_worker: "projects/apps/background/src/background.ts",
 	},
 	side_panel: {
-		default_path: "projects/apps/sidepanel/src/sidepanel.html",
+		default_path: "projects/apps/side-panel/src/side-panel.html",
 	},
 	content_scripts: [
 		{

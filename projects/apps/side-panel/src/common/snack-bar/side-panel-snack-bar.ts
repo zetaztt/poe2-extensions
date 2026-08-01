@@ -1,14 +1,14 @@
 import { createVNode, reactive, render, type VNode } from "vue";
-import SidepanelSnackBar from "./sidepanel-snack-bar.vue";
-import { SidepanelSnackBarType, type SidepanelSnackBarState } from "./sidepanel-snack-bar-types.ts";
+import SidePanelSnackBar from "./side-panel-snack-bar.vue";
+import { SidePanelSnackBarType, type SidePanelSnackBarState } from "./side-panel-snack-bar-types.ts";
 
-export { SidepanelSnackBarType } from "./sidepanel-snack-bar-types.ts";
+export { SidePanelSnackBarType } from "./side-panel-snack-bar-types.ts";
 
 const successDurationMs = 3000;
-const snackBarState = reactive<SidepanelSnackBarState>({
+const snackBarState = reactive<SidePanelSnackBarState>({
 	open: false,
 	message: "",
-	type: SidepanelSnackBarType.Success,
+	type: SidePanelSnackBarType.Success,
 	version: 0,
 });
 
@@ -16,7 +16,7 @@ let snackBarContainer: HTMLElement | null = null;
 let snackBarVNode: VNode | null = null;
 let dismissTimeout: ReturnType<typeof setTimeout> | null = null;
 
-export function showSnackBar(message: string, type: SidepanelSnackBarType): void {
+export function showSnackBar(message: string, type: SidePanelSnackBarType): void {
 	const normalizedMessage = message.trim();
 	if (!normalizedMessage) {
 		dismissSnackBar();
@@ -31,7 +31,7 @@ export function showSnackBar(message: string, type: SidepanelSnackBarType): void
 	snackBarState.open = true;
 	snackBarState.version += 1;
 
-	if (type === SidepanelSnackBarType.Success) {
+	if (type === SidePanelSnackBarType.Success) {
 		const currentVersion = snackBarState.version;
 		dismissTimeout = setTimeout(() => {
 			// 版本校验避免已被替换的成功消息计时器关闭后续通知。
@@ -56,10 +56,10 @@ function ensureSnackBar(): void {
 	if (snackBarContainer?.isConnected && snackBarVNode) return;
 
 	snackBarContainer = document.createElement("div");
-	snackBarContainer.className = "sidepanel-snack-bar-container";
+	snackBarContainer.className = "side-panel-snack-bar-container";
 	document.body.append(snackBarContainer);
 
-	snackBarVNode = createVNode(SidepanelSnackBar, {
+	snackBarVNode = createVNode(SidePanelSnackBar, {
 		state: snackBarState,
 		dismissSnackBar,
 	});

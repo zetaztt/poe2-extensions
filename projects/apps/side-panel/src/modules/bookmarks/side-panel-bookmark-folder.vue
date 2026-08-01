@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, watch, type Directive } from "vue";
 import type { TradeBookmarkFolder } from "@poe2-extensions/core/bookmarks";
-import BookmarkIconButton from "./bookmark-icon-button.vue";
+import SidePanelBookmarkIconButton from "./side-panel-bookmark-icon-button.vue";
 
 const props = defineProps<{
 	folder: TradeBookmarkFolder;
@@ -127,8 +127,8 @@ function cancelRename(): void {
 							class="tree-toggle-icon"
 							:src="
 								hasContent && expanded
-									? '/assets/sidepanel/filter-toggle-expanded.png'
-									: '/assets/sidepanel/filter-toggle-collapsed.png'
+									? '/assets/side-panel/filter-toggle-expanded.png'
+									: '/assets/side-panel/filter-toggle-collapsed.png'
 							"
 							alt=""
 							aria-hidden="true" />
@@ -153,23 +153,23 @@ function cancelRename(): void {
 					<span v-else class="bookmark-folder-title" @click.stop="toggleFolderExpanded" @dblclick.stop>
 						<span class="bookmark-folder-title-text">{{ folder.title }}</span>
 					</span>
-					<BookmarkIconButton
+					<SidePanelBookmarkIconButton
 						class="bookmark-folder-header-action bookmark-folder-add-action"
-						icon="/assets/sidepanel/bookmark-add.png"
+						icon="/assets/side-panel/bookmark-add.png"
 						:disabled="busy"
 						title="添加书签"
 						:on-click="addBookmark" />
 
-					<BookmarkIconButton
+					<SidePanelBookmarkIconButton
 						v-if="folder.canModify"
 						class="bookmark-folder-header-action bookmark-folder-rename-action"
-						icon="/assets/sidepanel/bookmark-rename.png"
+						icon="/assets/side-panel/bookmark-rename.png"
 						:disabled="busy"
 						title="重命名文件夹"
 						:on-click="startRename" />
-					<BookmarkIconButton
+					<SidePanelBookmarkIconButton
 						class="bookmark-folder-header-action bookmark-folder-menu-action"
-						icon="/assets/sidepanel/bookmark-more.png"
+						icon="/assets/side-panel/bookmark-more.png"
 						:disabled="busy"
 						title="更多"
 						:on-click="openMenu" />

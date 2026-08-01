@@ -12,7 +12,7 @@ import {
 	type TradeSettingKey,
 	type TradeSettings,
 } from "@poe2-extensions/core/trade";
-import { settingsService } from "./settings-service";
+import { settingsService } from "./side-panel-settings-service";
 
 interface SettingsStoreError {
 	sequence: number;

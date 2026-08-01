@@ -2,7 +2,7 @@
 import { storeToRefs } from "pinia";
 import { computed, onActivated, ref, watch } from "vue";
 import { SettingsServiceErrorCode, tradeSettings, type TradeSetting } from "@poe2-extensions/core/trade";
-import { useSettingsStore } from "./settings-store";
+import { useSettingsStore } from "./side-panel-settings-store";
 
 const settingsStore = useSettingsStore();
 const { settings, isLoading: isLoadingSettings, isSaving: isSavingSettings, lastError } = storeToRefs(settingsStore);
