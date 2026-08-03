@@ -1,7 +1,7 @@
-import { isIpcMessage, type IpcMessage } from "./ipc-connection";
+import { isIpcMessage, type IpcMessage } from "./ipc-message";
 
 // 该值同时识别扩展 IPC 和 wire format；只有不兼容的 envelope 变更才能升级。
-const ipcVersion = "poe2-extensions:ipc:3";
+const ipcVersion = "poe2-extensions:ipc:4";
 
 /**
  * 区分共享 transport 上互不相干的 background RPC 与 MAIN world RPC 链路。

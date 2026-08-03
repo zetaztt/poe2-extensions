@@ -7,7 +7,7 @@ export enum IpcProtocolMemberKind {
 }
 
 /**
- * RPC member 的传输选项；timeoutMs 由调用端转换为绝对 deadline。
+ * RPC member 的调用选项；timeoutMs 仅限制调用端等待响应的时间。
  */
 export interface IpcRpcOptions {
 	timeoutMs?: number;

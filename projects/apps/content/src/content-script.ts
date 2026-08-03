@@ -1,5 +1,7 @@
 import browser from "webextension-polyfill";
-import "./content-ipc-channels";
+import { installContentIpcRelays } from "./content-ipc-relays";
+
+installContentIpcRelays();
 
 export type ContentScriptMain = () => void | Promise<void>;
 

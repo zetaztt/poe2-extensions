@@ -242,7 +242,7 @@ function createSnapshot<TKey extends string, TValue>(
 }
 
 function createId(): string {
-	return globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+	return crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 function logListenerError(error: unknown): void {

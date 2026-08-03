@@ -6,6 +6,7 @@
 	"exports": {
 		"./bookmarks": "./src/bookmarks/index.ts",
 		"./dictionary": "./src/dictionary/index.ts",
+		"./result": "./src/result/index.ts",
 		"./settings": "./src/settings/index.ts",
 		"./trade": "./src/trade/index.ts",
 		"./ipc": "./src/ipc/index.ts",

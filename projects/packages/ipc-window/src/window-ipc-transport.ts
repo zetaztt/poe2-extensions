@@ -1,53 +1,26 @@
-import {
-	createIpcEnvelope,
-	createIpcConnection,
-	isIpcEnvelope,
-	type IpcScope,
-	type IpcTarget,
-	type IpcConnection,
-	type IpcMessage,
-} from "@poe2-extensions/core/ipc/transport";
+import type { IpcConnectionHubTransport } from "@poe2-extensions/core/ipc";
 
 /**
- * 创建通过同源 window.postMessage 通信的连接。
- * Window 没有请求返回通道，response 会按相反逻辑 target 再次发送，入站 target 同时用于过滤自身回声；
- * 调用方负责在所属入口结束时执行 dispose。
+ * 创建通过同源 window.postMessage 发送和接收原始 IPC envelope 的 transport。
+ * scope 与 target 由使用该 transport 的 Hub 校验，因此同一页面可安全安装多个逻辑链路。
  */
-export function createWindowIpcConnection(
-	scope: IpcScope,
-	outgoingTarget: IpcTarget,
-	incomingTarget: IpcTarget,
-): { connection: IpcConnection; dispose: () => void } {
-	const sendMessage = (message: IpcMessage): undefined => {
-		window.postMessage(createIpcEnvelope(scope, outgoingTarget, message), window.location.origin);
-		return undefined;
-	};
-	const connection = createIpcConnection(sendMessage);
-	const listener = (event: MessageEvent<unknown>) => {
-		if (
-			event.source !== window
-			|| event.origin !== window.location.origin
-			|| !isIpcEnvelope(event.data, scope, incomingTarget)
-		) {
-			return;
-		}
-
-		void connection
-			.receive(event.data.message)
-			.then((response) => {
-				if (response) sendMessage(response);
-			})
-			.catch((error) => {
-				console.error("[poe2-extensions] window IPC 消息处理失败", error);
-			});
-	};
-
-	window.addEventListener("message", listener);
+export function createWindowIpcTransport(): IpcConnectionHubTransport {
 	return {
-		connection,
-		dispose: () => {
-			window.removeEventListener("message", listener);
-			connection.dispose();
+		sendMessage(envelope) {
+			window.postMessage(envelope, window.location.origin);
+			return Promise.resolve(undefined);
+		},
+		addMessageListener(listener) {
+			window.addEventListener("message", (event: MessageEvent<unknown>) => {
+				if (event.source !== window || event.origin !== window.location.origin) return;
+				void Promise.resolve(listener(event.data))
+					.then((response) => {
+						if (response !== undefined) window.postMessage(response, window.location.origin);
+					})
+					.catch((error) => {
+						console.error("[poe2-extensions] window IPC 消息处理失败", error);
+					});
+			});
 		},
 	};
 }

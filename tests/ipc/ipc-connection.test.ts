@@ -5,10 +5,6 @@ import type {
 	ipcWindow as backgroundIpcWindow,
 } from "../../projects/apps/background/src/background-ipc-channels";
 import type {
-	ipcMain as contentIpcMain,
-	ipcWindow as contentIpcWindow,
-} from "../../projects/apps/content/src/content-ipc-channels";
-import type {
 	ipcMain as injectIpcMain,
 	ipcWindow as injectIpcWindow,
 } from "../../projects/apps/inject/src/inject-ipc-channels";
@@ -16,14 +12,10 @@ import type {
 	ipcMain as sidePanelIpcMain,
 	ipcWindow as sidePanelIpcWindow,
 } from "../../projects/apps/side-panel/src/side-panel-ipc-channels";
-import {
-	createTabIpcChannelRouter,
-	type TabIpcRouterPlatform,
-} from "../../projects/packages/ipc-webextension/src/tab-ipc-channel-router";
-import { createWindowIpcConnection } from "@poe2-extensions/ipc-window";
+import { createWindowIpcTransport } from "@poe2-extensions/ipc-window";
+import { Result } from "@poe2-extensions/core/result";
 import {
 	createIpcEnvelope,
-	createIpcConnection,
 	isIpcEnvelope,
 	IpcError,
 	IpcErrorCode,
@@ -31,7 +23,6 @@ import {
 	IpcScope,
 	IpcTarget,
 	isIpcMessage,
-	type IpcConnection,
 	type IpcEnvelope,
 	type IpcMessage,
 	type IpcRequestMessage,
@@ -40,14 +31,23 @@ import {
 	defineIpcProtocol,
 	defineNotification,
 	defineRpc,
+	IpcAddressedChannel,
+	IpcAddressedConnectionHub,
 	IpcChannel,
 	IpcConnectionHub,
+	IpcEnvelopeRelay,
 	IpcHandlerChannel,
+	IpcHandlerConnectionHub,
+	type IpcAddressedConnectionHubTransport,
+	type IpcConnectionHubOptions,
+	type IpcConnectionHubTransport,
 } from "@poe2-extensions/core/ipc";
 
-interface ConnectionPair {
-	left: IpcConnection;
-	right: IpcConnection;
+interface HubOptionsPair {
+	left: IpcConnectionHubOptions;
+	right: IpcConnectionHubOptions;
+	leftSent: IpcEnvelope[];
+	rightSent: IpcEnvelope[];
 }
 
 const channelTestProtocol = defineIpcProtocol({
@@ -56,16 +56,28 @@ const channelTestProtocol = defineIpcProtocol({
 	changed: defineNotification<{ value: string }>(),
 });
 
-test("四个运行环境只向 RPC 服务端公开 handle", () => {
+test("Result 使用 ok 判别成功值与显式错误", () => {
+	const empty = Result.ok();
+	const success: Result<string, Error> = Result.ok("value");
+	const failure: Result<string, Error> = Result.err(new Error("failed"));
+	const read = (result: Result<string, Error>) => (Result.isOk(result) ? result.value : result.error.message);
+
+	assert.equal(empty.ok, true);
+	assert.equal(empty.value, undefined);
+	assert.equal(read(success), "value");
+	assert.equal(read(failure), "failed");
+});
+
+test("持有 channel 的运行环境只向 RPC 服务端公开 handle", () => {
 	type HasHandle<T> = "handle" extends keyof T ? true : false;
+	const hubCapabilities = {
+		connection: false satisfies HasHandle<IpcConnectionHub>,
+		handlerConnection: true satisfies HasHandle<IpcHandlerConnectionHub>,
+	};
 	const capabilities = {
 		background: {
 			ipcMain: true satisfies HasHandle<typeof backgroundIpcMain>,
 			ipcWindow: false satisfies HasHandle<typeof backgroundIpcWindow>,
-		},
-		content: {
-			ipcMain: false satisfies HasHandle<typeof contentIpcMain>,
-			ipcWindow: false satisfies HasHandle<typeof contentIpcWindow>,
 		},
 		inject: {
 			ipcMain: false satisfies HasHandle<typeof injectIpcMain>,
@@ -77,17 +89,20 @@ test("四个运行环境只向 RPC 服务端公开 handle", () => {
 		},
 	};
 
+	assert.deepEqual(hubCapabilities, {
+		connection: false,
+		handlerConnection: true,
+	});
 	assert.deepEqual(capabilities, {
 		background: { ipcMain: true, ipcWindow: false },
-		content: { ipcMain: false, ipcWindow: false },
 		inject: { ipcMain: false, ipcWindow: true },
 		"side-panel": { ipcMain: false, ipcWindow: false },
 	});
 });
 
 test("IpcChannel 构造时注册且相同 key 只创建一个 hub", () => {
-	const pair = createConnectionPair();
-	const hub = new IpcConnectionHub<void>(() => pair.left);
+	const pair = createHubOptionsPair(IpcScope.Main);
+	const hub = new IpcConnectionHub(pair.left);
 	const registrationKey = Symbol("constructor-registration");
 	let factoryCalls = 0;
 	const factory = () => {
@@ -95,8 +110,8 @@ test("IpcChannel 构造时注册且相同 key 只创建一个 hub", () => {
 		return hub;
 	};
 
-	const firstChannel = new IpcChannel<void>(registrationKey, false, factory);
-	new IpcChannel<void>(registrationKey, false, factory);
+	const firstChannel = new IpcChannel(registrationKey, factory);
+	new IpcChannel(registrationKey, factory);
 	type HasRegister = "register" extends keyof typeof firstChannel ? true : false;
 	const hasRegister: HasRegister = false;
 
@@ -105,7 +120,7 @@ test("IpcChannel 构造时注册且相同 key 只创建一个 hub", () => {
 	assert.equal("register" in firstChannel, false);
 });
 
-test("共享 v3 envelope 隔离 scope 和 target 并拒绝旧 transport envelope", () => {
+test("共享 v4 envelope 隔离 scope 和 target 并拒绝旧 transport envelope", () => {
 	const envelope = createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
 		kind: IpcMessageKind.Notification,
 		method: "changed",
@@ -116,7 +131,7 @@ test("共享 v3 envelope 隔离 scope 和 target 并拒绝旧 transport envelope
 	assert.equal(isIpcEnvelope(envelope, IpcScope.Window, IpcTarget.Server), false);
 	assert.equal(
 		isIpcEnvelope(
-			{ ...envelope, version: "poe2-extensions:ipc:2", endpointId: "old-endpoint" },
+			{ ...envelope, version: "poe2-extensions:ipc:3", endpointId: "old-endpoint" },
 			IpcScope.Window,
 			IpcTarget.Clients,
 		),
@@ -138,45 +153,55 @@ test("共享 v3 envelope 隔离 scope 和 target 并拒绝旧 transport envelope
 
 test("Window transport 使用共享 envelope 完成双 scope 双向通信并过滤自身消息", async () => {
 	const restoreWindow = installFakeWindow();
-	const mainServer = createWindowIpcConnection(IpcScope.Main, IpcTarget.Clients, IpcTarget.Server);
-	const mainClient = createWindowIpcConnection(IpcScope.Main, IpcTarget.Server, IpcTarget.Clients);
-	const windowServer = createWindowIpcConnection(IpcScope.Window, IpcTarget.Clients, IpcTarget.Server);
-	const windowClient = createWindowIpcConnection(IpcScope.Window, IpcTarget.Server, IpcTarget.Clients);
+	const mainServer = new IpcHandlerConnectionHub({
+		scope: IpcScope.Main,
+		outgoingTarget: IpcTarget.Clients,
+		incomingTarget: IpcTarget.Server,
+		transport: createWindowIpcTransport(),
+	});
+	const mainClient = new IpcConnectionHub({
+		scope: IpcScope.Main,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport: createWindowIpcTransport(),
+	});
+	const windowServer = new IpcHandlerConnectionHub({
+		scope: IpcScope.Window,
+		outgoingTarget: IpcTarget.Clients,
+		incomingTarget: IpcTarget.Server,
+		transport: createWindowIpcTransport(),
+	});
+	const windowClient = new IpcConnectionHub({
+		scope: IpcScope.Window,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport: createWindowIpcTransport(),
+	});
 
 	try {
-		mainServer.connection.onRequest(channelTestProtocol.echo.method, (data) => (data as { value: string }).value);
-		windowServer.connection.onRequest(channelTestProtocol.echo.method, (data) => (data as { value: string }).value);
+		mainServer.handle(channelTestProtocol.echo.method, (data) => (data as { value: string }).value);
+		windowServer.handle(channelTestProtocol.echo.method, (data) => (data as { value: string }).value);
 		assert.deepEqual(
 			await Promise.all([
-				mainClient.connection.sendRequest(channelTestProtocol.echo.method, { value: "main" }),
-				windowClient.connection.sendRequest(channelTestProtocol.echo.method, { value: "window" }),
+				mainClient.invoke(channelTestProtocol.echo.method, { value: "main" }, 1_000),
+				windowClient.invoke(channelTestProtocol.echo.method, { value: "window" }, 1_000),
 			]),
 			["main", "window"],
 		);
 
-		const mainServerNotifications: string[] = [];
 		const mainClientNotifications: string[] = [];
 		const windowClientNotifications: string[] = [];
-		mainServer.connection.onNotification(channelTestProtocol.changed.method, (data) => {
-			mainServerNotifications.push((data as { value: string }).value);
-		});
-		mainClient.connection.onNotification(channelTestProtocol.changed.method, (data) => {
+		mainClient.on(channelTestProtocol.changed.method, (data) => {
 			mainClientNotifications.push((data as { value: string }).value);
 		});
-		windowClient.connection.onNotification(channelTestProtocol.changed.method, (data) => {
+		windowClient.on(channelTestProtocol.changed.method, (data) => {
 			windowClientNotifications.push((data as { value: string }).value);
 		});
 
-		await mainClient.connection.sendNotification(channelTestProtocol.changed.method, { value: "to-server" });
-		await mainServer.connection.sendNotification(channelTestProtocol.changed.method, { value: "to-client" });
-		assert.deepEqual(mainServerNotifications, ["to-server"]);
+		await mainServer.send(channelTestProtocol.changed.method, { value: "to-client" });
 		assert.deepEqual(mainClientNotifications, ["to-client"]);
 		assert.deepEqual(windowClientNotifications, []);
 	} finally {
-		mainServer.dispose();
-		mainClient.dispose();
-		windowServer.dispose();
-		windowClient.dispose();
 		restoreWindow();
 	}
 });
@@ -185,16 +210,21 @@ test("Tab IPC 无状态分发 notification 并拒绝反向 RPC", async () => {
 	type ClientMessageListener = (value: unknown, senderTabId: number | undefined) => unknown;
 	let clientMessageListener: ClientMessageListener = () => undefined;
 	const sends: Array<{ tabId: number; envelope: IpcEnvelope }> = [];
-	const platform: TabIpcRouterPlatform = {
-		sendTabMessage(tabId, envelope) {
+	const transport: IpcAddressedConnectionHubTransport<number> = {
+		sendMessage(tabId, envelope) {
 			sends.push({ tabId, envelope });
 			return Promise.resolve(undefined);
 		},
-		addClientMessageListener(listener) {
+		addMessageListener(listener) {
 			clientMessageListener = listener;
 		},
 	};
-	const hub = createTabIpcChannelRouter(platform);
+	const hub = new IpcAddressedConnectionHub({
+		scope: IpcScope.Window,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport,
+	});
 	const addresses: number[] = [];
 	hub.on(channelTestProtocol.changed.method, (address) => {
 		addresses.push(address);
@@ -233,7 +263,7 @@ test("Tab IPC 无状态分发 notification 并拒绝反向 RPC", async () => {
 	const reverseResponse = (await clientMessageListener(
 		createIpcEnvelope(IpcScope.Window, IpcTarget.Server, {
 			kind: IpcMessageKind.Request,
-			id: 7,
+			id: "0:7",
 			method: channelTestProtocol.echo.method,
 		}),
 		41,
@@ -242,18 +272,21 @@ test("Tab IPC 无状态分发 notification 并拒绝反向 RPC", async () => {
 	const acceptedReverseResponse = (await clientMessageListener(
 		createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
 			kind: IpcMessageKind.Request,
-			id: 8,
+			id: "0:8",
 			method: channelTestProtocol.echo.method,
 		}),
 		41,
 	)) as IpcEnvelope;
 	assert.equal(acceptedReverseResponse.target, IpcTarget.Server);
 	assert.equal(acceptedReverseResponse.message.kind, IpcMessageKind.Response);
-	assert.equal(
+	assert.deepEqual(
 		acceptedReverseResponse.message.kind === IpcMessageKind.Response
-			? acceptedReverseResponse.message.error?.code
+			? acceptedReverseResponse.message.error
 			: undefined,
-		IpcErrorCode.MethodNotFound,
+		{
+			code: IpcErrorCode.InternalError,
+			message: `IPC 消息处理未定义: ${IpcMessageKind.Request}`,
+		},
 	);
 
 	await hub.send(42, channelTestProtocol.changed.method, { value: "to-tab" });
@@ -262,26 +295,52 @@ test("Tab IPC 无状态分发 notification 并拒绝反向 RPC", async () => {
 	assert.equal(sends.at(-1)?.envelope.target, IpcTarget.Server);
 });
 
-test("Tab IPC 并发 RPC 使用独立临时 connection 且失败后不保留状态", async () => {
+test("Tab IPC 并发 RPC 共享请求管理器并按 address 隔离 response", async () => {
 	interface PendingSend {
 		tabId: number;
 		envelope: IpcEnvelope;
 		resolve: (value: unknown) => void;
 	}
 	let timeoutAttempts = 0;
+	let clientMessageListener: (value: unknown, address: number | undefined) => unknown = () => undefined;
+	let asyncRequestEnvelope: IpcEnvelope | undefined;
+	let timeoutRequestEnvelope: IpcEnvelope | undefined;
 	const pendingSends: PendingSend[] = [];
-	const platform: TabIpcRouterPlatform = {
-		sendTabMessage(tabId, envelope) {
+	const transport: IpcAddressedConnectionHubTransport<number> = {
+		sendMessage(tabId, envelope) {
 			if (tabId === 99) return Promise.reject(new Error("tab 不存在"));
+			if (tabId === 45) {
+				asyncRequestEnvelope = envelope;
+				return Promise.resolve(undefined);
+			}
+			if (tabId === 46 && envelope.message.kind === IpcMessageKind.Request) {
+				return Promise.resolve(
+					createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
+						kind: IpcMessageKind.Response,
+						id: envelope.message.id,
+						error: { code: 1234, message: "remote error", data: { source: "remote" } },
+					}),
+				);
+			}
 			if (tabId === 44) {
 				timeoutAttempts += 1;
-				if (timeoutAttempts === 1) return new Promise(() => undefined);
+				if (timeoutAttempts === 1) {
+					timeoutRequestEnvelope = envelope;
+					return new Promise(() => undefined);
+				}
 			}
 			return new Promise((resolve) => pendingSends.push({ tabId, envelope, resolve }));
 		},
-		addClientMessageListener() {},
+		addMessageListener(listener) {
+			clientMessageListener = listener;
+		},
 	};
-	const hub = createTabIpcChannelRouter(platform);
+	const hub = new IpcAddressedConnectionHub({
+		scope: IpcScope.Window,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport,
+	});
 	const first = hub.invoke(42, channelTestProtocol.echo.method, { value: "first" }, 10_000);
 	const second = hub.invoke(42, channelTestProtocol.echo.method, { value: "second" }, 10_000);
 	const third = hub.invoke(43, channelTestProtocol.echo.method, { value: "third" }, 10_000);
@@ -292,9 +351,9 @@ test("Tab IPC 并发 RPC 使用独立临时 connection 且失败后不保留状�
 			id: envelope.message.kind === IpcMessageKind.Request ? envelope.message.id : undefined,
 		})),
 		[
-			{ tabId: 42, id: 1 },
-			{ tabId: 42, id: 1 },
-			{ tabId: 43, id: 1 },
+			{ tabId: 42, id: "0:0" },
+			{ tabId: 42, id: "0:1" },
+			{ tabId: 43, id: "0:2" },
 		],
 	);
 	for (const index of [2, 0, 1]) {
@@ -310,14 +369,54 @@ test("Tab IPC 并发 RPC 使用独立临时 connection 且失败后不保留状�
 	}
 	assert.deepEqual(await Promise.all([first, second, third]), ["first", "second", "third"]);
 
-	await assert.rejects(hub.send(99, channelTestProtocol.changed.method, undefined), /tab 不存在/);
+	let asyncSettled = false;
+	const asyncRequest = hub.invoke(45, channelTestProtocol.echo.method, { value: "async" }, 10_000).finally(() => {
+		asyncSettled = true;
+	});
+	assert.equal(asyncRequestEnvelope?.message.kind, IpcMessageKind.Request);
+	if (asyncRequestEnvelope?.message.kind === IpcMessageKind.Request) {
+		const response = createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
+			kind: IpcMessageKind.Response,
+			id: asyncRequestEnvelope.message.id,
+			result: "async",
+		});
+		clientMessageListener(response, 46);
+		await Promise.resolve();
+		assert.equal(asyncSettled, false);
+		clientMessageListener(response, 45);
+	}
+	assert.equal(await asyncRequest, "async");
+
+	await assert.rejects(
+		hub.invoke(46, channelTestProtocol.echo.method, undefined, 10_000),
+		(error) =>
+			error instanceof IpcError
+			&& error.code === 1234
+			&& error.message === "remote error"
+			&& (error.data as { source?: unknown }).source === "remote",
+	);
+	await assert.rejects(hub.invoke(99, channelTestProtocol.echo.method, undefined, 10_000), /tab 不存在/);
 	await assert.rejects(
 		hub.invoke(44, channelTestProtocol.echo.method, { value: "timeout" }, 10),
 		(error) => error instanceof IpcError && error.code === IpcErrorCode.Timeout,
 	);
+	if (timeoutRequestEnvelope?.message.kind === IpcMessageKind.Request) {
+		clientMessageListener(
+			createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
+				kind: IpcMessageKind.Response,
+				id: timeoutRequestEnvelope.message.id,
+				result: "late",
+			}),
+			44,
+		);
+	}
 	const retry = hub.invoke(44, channelTestProtocol.echo.method, { value: "retry" }, 10_000);
 	const retrySend = pendingSends.at(-1);
 	assert.equal(retrySend?.tabId, 44);
+	assert.equal(
+		retrySend?.envelope.message.kind === IpcMessageKind.Request ? retrySend.envelope.message.id : undefined,
+		"0:7",
+	);
 	if (retrySend?.envelope.message.kind === IpcMessageKind.Request) {
 		retrySend.resolve(
 			createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
@@ -330,13 +429,13 @@ test("Tab IPC 并发 RPC 使用独立临时 connection 且失败后不保留状�
 	assert.equal(await retry, "retry");
 });
 
-test("无地址 IpcChannel 支持 invoke 和 publish", async () => {
-	const pair = createConnectionPair();
-	const hub = new IpcConnectionHub<void>(() => pair.left);
-	hub.addConnection(pair.left);
-	const channel = new IpcHandlerChannel<void>(Symbol("unaddressed-ipc-channel"), false, () => hub);
+test("IpcHandlerChannel 使用不含 address 的 invoke、send、on 和 handle", async () => {
+	const pair = createHubOptionsPair(IpcScope.Main);
+	const hub = new IpcHandlerConnectionHub(pair.left);
+	const remoteHub = new IpcHandlerConnectionHub(pair.right);
+	const channel = new IpcHandlerChannel(Symbol("unaddressed-ipc-channel"), () => hub);
 
-	pair.right.onRequest(channelTestProtocol.echo.method, (data) => (data as { value: string }).value);
+	remoteHub.handle(channelTestProtocol.echo.method, (data) => (data as { value: string }).value);
 	channel.handle(channelTestProtocol.echo, ({ value }) => value);
 	const notifications: string[] = [];
 	channel.on(channelTestProtocol.changed, ({ value }) => {
@@ -344,121 +443,332 @@ test("无地址 IpcChannel 支持 invoke 和 publish", async () => {
 	});
 
 	assert.equal(await channel.invoke(channelTestProtocol.echo, { value: "invoke" }), "invoke");
-	assert.equal(await pair.right.sendRequest(channelTestProtocol.echo.method, { value: "handle" }), "handle");
+	assert.equal(await remoteHub.invoke(channelTestProtocol.echo.method, { value: "handle" }, 1_000), "handle");
 	await channel.send(channelTestProtocol.changed, { value: "publish" });
 	assert.deepEqual(notifications, ["publish"]);
 });
 
-test("有地址 IpcChannel 使用 address-first 的 invoke 和 send", async () => {
-	const pair = createConnectionPair();
-	const resolvedAddresses: number[] = [];
-	const hub = new IpcConnectionHub<number>((address) => {
-		resolvedAddresses.push(address);
-		return pair.left;
-	});
-	const channel = new IpcChannel<number>(Symbol("addressed-ipc-channel"), true, () => hub);
+test("IpcHandlerConnectionHub 独立替换并注销 handler", async () => {
+	const pair = createHubOptionsPair(IpcScope.Main);
+	const hub = new IpcHandlerConnectionHub(pair.left);
+	const remoteHub = new IpcConnectionHub(pair.right);
 
-	pair.right.onRequest(channelTestProtocol.echo.method, (data) => (data as { value: string }).value);
-	const notifications: string[] = [];
-	pair.right.onNotification(channelTestProtocol.changed.method, (data) => {
-		notifications.push((data as { value: string }).value);
+	const disposeFirst = hub.handle(channelTestProtocol.echo.method, () => "first");
+	const disposeSecond = hub.handle(channelTestProtocol.echo.method, () => "second");
+	disposeFirst();
+	assert.equal(await remoteHub.invoke(channelTestProtocol.echo.method, undefined, 1_000), "second");
+
+	disposeSecond();
+	await assert.rejects(
+		remoteHub.invoke(channelTestProtocol.echo.method, undefined, 1_000),
+		(error) =>
+			error instanceof IpcError
+			&& error.code === IpcErrorCode.MethodNotFound
+			&& error.message === `IPC 方法未定义: ${channelTestProtocol.echo.method}`,
+	);
+});
+
+test("IpcAddressedChannel 使用 address-first 的 invoke 和 send", async () => {
+	let messageListener: ((value: unknown, address: number | undefined) => unknown) | undefined;
+	const sentAddresses: number[] = [];
+	const sentEnvelopes: IpcEnvelope[] = [];
+	const transport: IpcAddressedConnectionHubTransport<number> = {
+		sendMessage(address, envelope) {
+			sentAddresses.push(address);
+			sentEnvelopes.push(envelope);
+			if (envelope.message.kind !== IpcMessageKind.Request) return Promise.resolve(undefined);
+			return Promise.resolve(
+				createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, {
+					kind: IpcMessageKind.Response,
+					id: envelope.message.id,
+					result: (envelope.message.data as { value: string }).value,
+				}),
+			);
+		},
+		addMessageListener(listener) {
+			messageListener = listener;
+		},
+	};
+	const hub = new IpcAddressedConnectionHub<number>({
+		scope: IpcScope.Main,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport,
+	});
+	const channel = new IpcAddressedChannel<number>(Symbol("addressed-ipc-channel"), () => hub);
+	const listenerAddresses: number[] = [];
+	channel.on(channelTestProtocol.changed, (address) => {
+		listenerAddresses.push(address);
 	});
 
 	assert.equal(await channel.invoke(42, channelTestProtocol.echo, { value: "invoke" }), "invoke");
 	await channel.send(42, channelTestProtocol.changed, { value: "send" });
-	assert.deepEqual(resolvedAddresses, [42, 42]);
-	assert.deepEqual(notifications, ["send"]);
+	await messageListener?.(
+		createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, {
+			kind: IpcMessageKind.Notification,
+			method: channelTestProtocol.changed.method,
+			data: { value: "source" },
+		}),
+		41,
+	);
+
+	assert.deepEqual(sentAddresses, [42, 42]);
+	assert.equal(sentEnvelopes[0]?.scope, IpcScope.Main);
+	assert.equal(sentEnvelopes[0]?.target, IpcTarget.Server);
+	assert.equal(sentEnvelopes[0]?.message.kind, IpcMessageKind.Request);
+	assert.equal(sentEnvelopes[1]?.message.kind, IpcMessageKind.Notification);
+	assert.deepEqual(listenerAddresses, [41]);
 });
 
-test("有地址 IpcChannel 的 on 在回调中提供来源 address", async () => {
-	const existingPair = createConnectionPair();
-	const futurePair = createConnectionPair();
-	const hub = new IpcConnectionHub<number>(() => {
-		throw new Error("测试连接应通过 addConnection 注册");
+test("IpcAddressedConnectionHub 独立替换并注销 notification handler", async () => {
+	let messageListener: ((value: unknown, address: number | undefined) => unknown) | undefined;
+	const transport: IpcAddressedConnectionHubTransport<number> = {
+		sendMessage() {
+			return Promise.resolve(undefined);
+		},
+		addMessageListener(listener) {
+			messageListener = listener;
+		},
+	};
+	const hub = new IpcAddressedConnectionHub<number>({
+		scope: IpcScope.Window,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport,
 	});
-	hub.addConnection(existingPair.left, 41);
-	const channel = new IpcChannel<number>(Symbol("addressed-ipc-listeners"), true, () => hub);
-
-	const notifications: string[] = [];
-	const listenerAddresses: number[] = [];
-	channel.on(channelTestProtocol.changed, (address, { value }) => {
-		listenerAddresses.push(address);
-		notifications.push(value);
+	const received: string[] = [];
+	const disposeFirst = hub.on("changed", () => {
+		received.push("first");
 	});
-	hub.addConnection(futurePair.left, 42);
+	const disposeSecond = hub.on("changed", () => {
+		received.push("second");
+	});
+	disposeFirst();
 
-	await existingPair.right.sendNotification(channelTestProtocol.changed.method, { value: "existing" });
-	await futurePair.right.sendNotification(channelTestProtocol.changed.method, { value: "future" });
-	assert.deepEqual(listenerAddresses, [41, 42]);
-	assert.deepEqual(notifications, ["existing", "future"]);
+	await messageListener?.(
+		createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
+			kind: IpcMessageKind.Notification,
+			method: "changed",
+		}),
+		41,
+	);
+	assert.deepEqual(received, ["second"]);
+	disposeSecond();
+	await messageListener?.(
+		createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
+			kind: IpcMessageKind.Notification,
+			method: "changed",
+		}),
+		42,
+	);
+	assert.deepEqual(received, ["second"]);
+});
+
+test("IpcAddressedConnectionHub 子类通过 Result 实现入站 request", async () => {
+	class TestAddressedConnectionHub extends IpcAddressedConnectionHub<number> {
+		protected override async receiveMessage(
+			address: number,
+			message: IpcMessage,
+		): Promise<Result<unknown, IpcError>> {
+			if (message.kind === IpcMessageKind.Request && message.method === "implemented") {
+				return Result.ok({ address, data: message.data });
+			}
+			return super.receiveMessage(address, message);
+		}
+	}
+
+	let messageListener: ((value: unknown, address: number | undefined) => unknown) | undefined;
+	const hub = new TestAddressedConnectionHub({
+		scope: IpcScope.Window,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport: {
+			sendMessage: () => Promise.resolve(undefined),
+			addMessageListener(listener) {
+				messageListener = listener;
+			},
+		},
+	});
+	assert.ok(hub);
+
+	const success = (await messageListener?.(
+		createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
+			kind: IpcMessageKind.Request,
+			id: "0:11",
+			method: "implemented",
+			data: "value",
+		}),
+		41,
+	)) as IpcEnvelope;
+	assert.deepEqual(success.message, {
+		kind: IpcMessageKind.Response,
+		id: "0:11",
+		result: { address: 41, data: "value" },
+	});
+
+	const missing = (await messageListener?.(
+		createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
+			kind: IpcMessageKind.Request,
+			id: "0:12",
+			method: "missing",
+		}),
+		41,
+	)) as IpcEnvelope;
+	assert.equal(missing.message.kind, IpcMessageKind.Response);
+	assert.deepEqual(missing.message.kind === IpcMessageKind.Response ? missing.message.error : undefined, {
+		code: IpcErrorCode.InternalError,
+		message: `IPC 消息处理未定义: ${IpcMessageKind.Request}`,
+	});
 });
 
 test("request 支持无参数、undefined result 和并发乱序响应", async () => {
 	const sentMessages: IpcMessage[] = [];
-	const connection = createIpcConnection((message) => {
-		sentMessages.push(message);
-		return undefined;
+	let listener: (value: unknown) => unknown = () => undefined;
+	const hub = new IpcConnectionHub({
+		scope: IpcScope.Main,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport: {
+			async sendMessage(envelope) {
+				sentMessages.push(envelope.message);
+				return undefined;
+			},
+			addMessageListener(value) {
+				listener = value;
+			},
+		},
 	});
 
-	const first = connection.sendRequest("first");
-	const second = connection.sendRequest("second", { value: 2 });
+	const first = hub.invoke("first", undefined, 1_000);
+	const second = hub.invoke("second", { value: 2 }, 1_000);
 	const [firstRequest, secondRequest] = sentMessages as IpcRequestMessage[];
 
-	await connection.receive({
-		kind: IpcMessageKind.Response,
-		id: secondRequest.id,
-		result: "second-result",
-	});
-	await connection.receive({
-		kind: IpcMessageKind.Response,
-		id: firstRequest.id,
-	});
+	await listener(
+		createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, {
+			kind: IpcMessageKind.Response,
+			id: secondRequest.id,
+			result: "second-result",
+		}),
+	);
+	await listener(
+		createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, {
+			kind: IpcMessageKind.Response,
+			id: firstRequest.id,
+		}),
+	);
 
 	assert.equal(await first, undefined);
 	assert.equal(await second, "second-result");
 	assert.equal("data" in firstRequest, false);
 });
 
-test("具名 request、notification、fallback 和 handler 注销按预期工作", async () => {
-	const pair = createConnectionPair();
+test("request ID 使用可扩展 epoch chunk 进位并复用缓存前缀", async () => {
+	const connectionMessages: IpcRequestMessage[] = [];
+	const hub = new IpcConnectionHub({
+		scope: IpcScope.Main,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport: {
+			async sendMessage(envelope) {
+				if (envelope.message.kind !== IpcMessageKind.Request) return undefined;
+				connectionMessages.push(envelope.message);
+				return createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, {
+					kind: IpcMessageKind.Response,
+					id: envelope.message.id,
+					result: envelope.message.id,
+				});
+			},
+			addMessageListener() {},
+		},
+	});
+	Reflect.set(Reflect.get(hub, "requestIdAllocator"), "nextId", Number.MAX_SAFE_INTEGER);
+
+	assert.equal(await hub.invoke("last-sequence", undefined, 1_000), `0:${Number.MAX_SAFE_INTEGER}`);
+	assert.equal(await hub.invoke("next-epoch", undefined, 1_000), "1:0");
+	assert.deepEqual(
+		connectionMessages.map(({ id }) => id),
+		[`0:${Number.MAX_SAFE_INTEGER}`, "1:0"],
+	);
+
+	const allocator = Reflect.get(hub, "requestIdAllocator");
+	Reflect.set(allocator, "epoch", [Number.MAX_SAFE_INTEGER]);
+	Reflect.set(allocator, "prefix", `${Number.MAX_SAFE_INTEGER}`);
+	Reflect.set(allocator, "nextId", Number.MAX_SAFE_INTEGER);
+	assert.equal(
+		await hub.invoke("last-single-epoch", undefined, 1_000),
+		`${Number.MAX_SAFE_INTEGER}:${Number.MAX_SAFE_INTEGER}`,
+	);
+	assert.equal(await hub.invoke("extended-epoch", undefined, 1_000), `${Number.MAX_SAFE_INTEGER}:1:0`);
+
+	const addressedMessages: IpcRequestMessage[] = [];
+	const addressedHub = new IpcAddressedConnectionHub<number>({
+		scope: IpcScope.Window,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport: {
+			sendMessage(_address, envelope) {
+				if (envelope.message.kind !== IpcMessageKind.Request) return Promise.resolve(undefined);
+				addressedMessages.push(envelope.message);
+				return Promise.resolve(
+					createIpcEnvelope(IpcScope.Window, IpcTarget.Clients, {
+						kind: IpcMessageKind.Response,
+						id: envelope.message.id,
+						result: envelope.message.id,
+					}),
+				);
+			},
+			addMessageListener() {},
+		},
+	});
+	Reflect.set(Reflect.get(addressedHub, "requestIdAllocator"), "nextId", Number.MAX_SAFE_INTEGER);
+
+	assert.equal(await addressedHub.invoke(42, "last-sequence", undefined, 1_000), `0:${Number.MAX_SAFE_INTEGER}`);
+	assert.equal(await addressedHub.invoke(42, "next-epoch", undefined, 1_000), "1:0");
+	assert.deepEqual(
+		addressedMessages.map(({ id }) => id),
+		[`0:${Number.MAX_SAFE_INTEGER}`, "1:0"],
+	);
+});
+
+test("具名 request、notification 和 handler 注销按预期工作", async () => {
+	const pair = createHubOptionsPair(IpcScope.Main);
+	const left = new IpcConnectionHub(pair.left);
+	const right = new IpcHandlerConnectionHub(pair.right);
 	const notifications: unknown[] = [];
-	const namedRequest = pair.right.onRequest("named", (data) => ({ data }));
-	const namedNotification = pair.right.onNotification("changed", (data) => {
+	const removeRequest = right.handle("named", (data) => ({ data }));
+	const removeNotification = right.on("changed", (data) => {
 		notifications.push(data);
 	});
-	const fallbackRequest = pair.right.onRequest((method, data) => ({ method, data }));
-	const fallbackNotification = pair.right.onNotification((method, data) => {
-		notifications.push({ method, data });
-	});
 
-	assert.deepEqual(await pair.left.sendRequest("named", 1), { data: 1 });
-	assert.deepEqual(await pair.left.sendRequest("fallback", 2), { method: "fallback", data: 2 });
-	await pair.left.sendNotification("changed", 3);
-	await pair.left.sendNotification("fallback-notification", 4);
+	assert.deepEqual(await left.invoke("named", 1, 1_000), { data: 1 });
+	await left.send("changed", 3);
 	await Promise.resolve();
-	assert.deepEqual(notifications, [3, { method: "fallback-notification", data: 4 }]);
+	assert.deepEqual(notifications, [3]);
 
-	namedRequest.dispose();
-	namedNotification.dispose();
-	fallbackRequest.dispose();
-	fallbackNotification.dispose();
+	removeRequest();
+	removeNotification();
 	await assert.rejects(
-		pair.left.sendRequest("named"),
-		(error) => error instanceof IpcError && error.code === IpcErrorCode.MethodNotFound,
+		left.invoke("named", undefined, 1_000),
+		(error) =>
+			error instanceof IpcError
+			&& error.code === IpcErrorCode.MethodNotFound
+			&& error.message === "IPC 方法未定义: named",
 	);
 });
 
 test("远端 IpcError 保留 code/message/data，普通异常转换为 InternalError", async () => {
-	const pair = createConnectionPair();
-	pair.right.onRequest("structured", () => {
+	const pair = createHubOptionsPair(IpcScope.Main);
+	const left = new IpcConnectionHub(pair.left);
+	const right = new IpcHandlerConnectionHub(pair.right);
+	right.handle("structured", () => {
 		throw new IpcError(42, "结构化错误", { reason: "test" });
 	});
-	pair.right.onRequest("plain", () => {
+	right.handle("plain", () => {
 		throw new Error("普通错误");
 	});
 
 	await assert.rejects(
-		pair.left.sendRequest("structured"),
+		left.invoke("structured", undefined, 1_000),
 		(error) =>
 			error instanceof IpcError
 			&& error.code === 42
@@ -466,7 +776,7 @@ test("远端 IpcError 保留 code/message/data，普通异常转换为 InternalE
 			&& assert.deepEqual(error.data, { reason: "test" }) === undefined,
 	);
 	await assert.rejects(
-		pair.left.sendRequest("plain"),
+		left.invoke("plain", undefined, 1_000),
 		(error) =>
 			error instanceof IpcError && error.code === IpcErrorCode.InternalError && error.message === "普通错误",
 	);
@@ -474,11 +784,22 @@ test("远端 IpcError 保留 code/message/data，普通异常转换为 InternalE
 
 test("本地超时清理 pending，迟到响应被忽略且不会发送 cancel", async () => {
 	const sentMessages: IpcMessage[] = [];
-	const connection = createIpcConnection((message) => {
-		sentMessages.push(message);
-		return undefined;
+	let listener: (value: unknown) => unknown = () => undefined;
+	const hub = new IpcConnectionHub({
+		scope: IpcScope.Main,
+		outgoingTarget: IpcTarget.Server,
+		incomingTarget: IpcTarget.Clients,
+		transport: {
+			async sendMessage(envelope) {
+				sentMessages.push(envelope.message);
+				return undefined;
+			},
+			addMessageListener(value) {
+				listener = value;
+			},
+		},
 	});
-	const request = connection.sendRequest("slow", undefined, Date.now() + 20);
+	const request = hub.invoke("slow", undefined, 20);
 	const requestMessage = sentMessages[0] as IpcRequestMessage;
 
 	await assert.rejects(request, (error) => error instanceof IpcError && error.code === IpcErrorCode.Timeout);
@@ -487,70 +808,134 @@ test("本地超时清理 pending，迟到响应被忽略且不会发送 cancel",
 		[IpcMessageKind.Request],
 	);
 
-	await connection.receive({
-		kind: IpcMessageKind.Response,
-		id: requestMessage.id,
-		result: "late",
-	});
-	const next = connection.sendRequest("next");
+	await listener(
+		createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, {
+			kind: IpcMessageKind.Response,
+			id: requestMessage.id,
+			result: "late",
+		}),
+	);
+	const next = hub.invoke("next", undefined, 1_000);
 	const nextMessage = sentMessages[1] as IpcRequestMessage;
-	await connection.receive({
-		kind: IpcMessageKind.Response,
-		id: nextMessage.id,
-		result: "ok",
-	});
+	await listener(
+		createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, {
+			kind: IpcMessageKind.Response,
+			id: nextMessage.id,
+			result: "ok",
+		}),
+	);
 	assert.equal(await next, "ok");
 });
 
-test("relay 传播原始 deadline 并返回目标结果", async () => {
-	const sourcePair = createConnectionPair();
-	const targetPair = createConnectionPair();
-	const hub = new IpcConnectionHub<string>((address) => {
-		assert.equal(address, "target");
-		return targetPair.left;
+test("IpcEnvelopeRelay 双向原样转发 envelope 和 transport response", async () => {
+	let firstListener: (value: unknown) => unknown = () => undefined;
+	let secondListener: (value: unknown) => unknown = () => undefined;
+	const firstSent: unknown[] = [];
+	const secondSent: unknown[] = [];
+	const response = createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, {
+		kind: IpcMessageKind.Response,
+		id: "0:7",
+		result: "relayed",
 	});
-	hub.addRelay(sourcePair.right, "target");
-
-	let receivedDeadline: number | undefined;
-	targetPair.right.onRequest("relayed", (data, context) => {
-		receivedDeadline = context.deadline;
-		return data;
+	let rejectSecondSend = false;
+	const firstTransport: IpcConnectionHubTransport = {
+		sendMessage(envelope) {
+			firstSent.push(envelope);
+			return Promise.resolve(undefined);
+		},
+		addMessageListener(listener) {
+			firstListener = listener;
+		},
+	};
+	const secondTransport: IpcConnectionHubTransport = {
+		sendMessage(envelope) {
+			secondSent.push(envelope);
+			return rejectSecondSend ? Promise.reject(new Error("target failed")) : Promise.resolve(response);
+		},
+		addMessageListener(listener) {
+			secondListener = listener;
+		},
+	};
+	new IpcEnvelopeRelay({
+		first: {
+			scope: IpcScope.Main,
+			incomingTarget: IpcTarget.Server,
+			transport: firstTransport,
+		},
+		second: {
+			scope: IpcScope.Main,
+			incomingTarget: IpcTarget.Clients,
+			transport: secondTransport,
+		},
 	});
-	const deadline = Date.now() + 1_000;
-
-	assert.equal(await sourcePair.left.sendRequest("relayed", "value", deadline), "value");
-	assert.equal(receivedDeadline, deadline);
-});
-
-test("dispose 拒绝 pending、仅执行一次回调并阻止后续发送", async () => {
-	const connection = createIpcConnection(() => undefined);
-	let disposeCount = 0;
-	connection.onDispose(() => {
-		disposeCount += 1;
+	const request = createIpcEnvelope(IpcScope.Main, IpcTarget.Server, {
+		kind: IpcMessageKind.Request,
+		id: "0:7",
+		method: "relayed",
 	});
-	const pending = connection.sendRequest("pending");
 
-	connection.dispose();
-	connection.dispose();
+	assert.equal(await firstListener(request), response);
+	assert.equal(secondSent[0], request);
 
-	await assert.rejects(
-		pending,
-		(error) => error instanceof IpcError && error.code === IpcErrorCode.ConnectionDisposed,
-	);
-	await assert.rejects(
-		connection.sendNotification("after-dispose"),
-		(error) => error instanceof IpcError && error.code === IpcErrorCode.ConnectionDisposed,
-	);
-	assert.equal(disposeCount, 1);
+	const notification = createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, {
+		kind: IpcMessageKind.Notification,
+		method: "changed",
+		data: { value: "from-second" },
+	});
+	await secondListener(notification);
+	assert.equal(firstSent[0], notification);
+
+	for (const invalid of [
+		createIpcEnvelope(IpcScope.Window, IpcTarget.Server, request.message),
+		createIpcEnvelope(IpcScope.Main, IpcTarget.Clients, request.message),
+		{ ...request, version: "poe2-extensions:ipc:3" },
+		{ ...request, message: { kind: "invalid" } },
+	]) {
+		assert.equal(firstListener(invalid), undefined);
+	}
+	assert.equal(secondSent.length, 1);
+
+	rejectSecondSend = true;
+	await assert.rejects(Promise.resolve(firstListener(request)), /target failed/);
 });
 
 test("消息校验拒绝旧 JSON-RPC 和畸形内部消息", () => {
 	assert.equal(isIpcMessage({ jsonrpc: "2.0", id: 1, method: "old" }), false);
 	assert.equal(isIpcMessage({ kind: IpcMessageKind.Request, id: 0, method: "invalid" }), false);
+	assert.equal(isIpcMessage({ kind: IpcMessageKind.Request, id: "0:1", method: "valid" }), true);
+	assert.equal(isIpcMessage({ kind: IpcMessageKind.Request, id: "1:0", method: "valid" }), true);
+	assert.equal(isIpcMessage({ kind: IpcMessageKind.Request, id: "0:1:0", method: "valid" }), true);
+	assert.equal(
+		isIpcMessage({
+			kind: IpcMessageKind.Request,
+			id: `${Number.MAX_SAFE_INTEGER}:${Number.MAX_SAFE_INTEGER}`,
+			method: "valid",
+		}),
+		true,
+	);
+	for (const id of ["", "0", "00:1", "0:01", "-1:1", "0:-1", "0::1", "invalid:1"]) {
+		assert.equal(isIpcMessage({ kind: IpcMessageKind.Request, id, method: "invalid" }), false);
+	}
+	assert.equal(
+		isIpcMessage({
+			kind: IpcMessageKind.Request,
+			id: `${Number.MAX_SAFE_INTEGER + 1}:1`,
+			method: "invalid",
+		}),
+		false,
+	);
+	assert.equal(
+		isIpcMessage({
+			kind: IpcMessageKind.Request,
+			id: `0:${Number.MAX_SAFE_INTEGER + 1}`,
+			method: "invalid",
+		}),
+		false,
+	);
 	assert.equal(
 		isIpcMessage({
 			kind: IpcMessageKind.Response,
-			id: 1,
+			id: "0:1",
 			result: true,
 			error: { code: 1, message: "ambiguous" },
 		}),
@@ -559,12 +944,45 @@ test("消息校验拒绝旧 JSON-RPC 和畸形内部消息", () => {
 	assert.equal(isIpcMessage({ kind: IpcMessageKind.Notification, method: "valid" }), true);
 });
 
-function createConnectionPair(): ConnectionPair {
-	let left: IpcConnection;
-	let right: IpcConnection;
-	left = createIpcConnection((message) => right.receive(message));
-	right = createIpcConnection((message) => left.receive(message));
-	return { left, right };
+function createHubOptionsPair(scope: IpcScope): HubOptionsPair {
+	let leftListener: (value: unknown) => unknown = () => undefined;
+	let rightListener: (value: unknown) => unknown = () => undefined;
+	const leftSent: IpcEnvelope[] = [];
+	const rightSent: IpcEnvelope[] = [];
+	const leftTransport: IpcConnectionHubTransport = {
+		sendMessage(envelope) {
+			leftSent.push(envelope);
+			return Promise.resolve(rightListener(envelope));
+		},
+		addMessageListener(listener) {
+			leftListener = listener;
+		},
+	};
+	const rightTransport: IpcConnectionHubTransport = {
+		sendMessage(envelope) {
+			rightSent.push(envelope);
+			return Promise.resolve(leftListener(envelope));
+		},
+		addMessageListener(listener) {
+			rightListener = listener;
+		},
+	};
+	return {
+		leftSent,
+		rightSent,
+		left: {
+			scope,
+			outgoingTarget: IpcTarget.Server,
+			incomingTarget: IpcTarget.Clients,
+			transport: leftTransport,
+		},
+		right: {
+			scope,
+			outgoingTarget: IpcTarget.Clients,
+			incomingTarget: IpcTarget.Server,
+			transport: rightTransport,
+		},
+	};
 }
 
 function installFakeWindow(): () => void {
