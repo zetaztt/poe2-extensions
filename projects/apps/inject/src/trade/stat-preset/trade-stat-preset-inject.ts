@@ -1,7 +1,7 @@
 import { ensureBodyReady } from "../../utils";
-import { settingsIpcProtocol } from "@poe2-extensions/core/settings";
-import { tradeIpcProtocol, tradeSettings } from "@poe2-extensions/core/trade";
-import { ipcMain, ipcWindow } from "../../inject-ipc-channels";
+import { settingsIpcProtocol, type SettingValueSnapshot } from "@poe2-extensions/core/settings";
+import { tradeSettings } from "@poe2-extensions/core/trade";
+import { ipcMain } from "../../inject-ipc-channels";
 import { bootstrapInjectScript } from "../../inject-script";
 import { logPrefix } from "../trade-utils";
 import { resetStatPresetModal } from "./trade-stat-preset-modal";
@@ -16,8 +16,10 @@ import { requestPresetList } from "./trade-stat-preset-storage-client";
 import { installStatPresetStyle, removeStatPresetStyle } from "./trade-stat-preset-utils";
 
 let enabled = false;
-// 初始化 RPC 与侧边栏即时通知可能并发；一旦收到通知，就不能再用较旧的初始值覆盖它。
-let hasReceivedStatPresetUpdate = false;
+// 初始化 RPC 与通用设置通知可能并发；按 worker 实例和 revision 拒绝过期快照。
+let statPresetSettingsInstanceId: string | null = null;
+let statPresetSettingsRevision = -1;
+const retiredStatPresetSettingsInstanceIds = new Set<string>();
 
 async function initializeTradeStatPreset(): Promise<void> {
 	try {
@@ -25,11 +27,28 @@ async function initializeTradeStatPreset(): Promise<void> {
 			key: tradeSettings.statPreset.key,
 			defaultValue: tradeSettings.statPreset.defaultValue,
 		});
-		const initialEnabled = snapshot.value as boolean;
-		if (!hasReceivedStatPresetUpdate) setTradeStatPresetEnabled(initialEnabled);
+		applyStatPresetSettingSnapshot(snapshot);
 	} catch (error) {
 		console.warn(`${logPrefix} 筛选预设初始状态读取失败`, error);
 	}
+}
+
+/**
+ * 应用 statPreset 的权威设置快照，并隔离 service worker 重启前后可能乱序到达的广播。
+ */
+function applyStatPresetSettingSnapshot(snapshot: SettingValueSnapshot): void {
+	if (snapshot.key !== tradeSettings.statPreset.key) return;
+	if (retiredStatPresetSettingsInstanceIds.has(snapshot.instanceId)) return;
+
+	if (snapshot.instanceId !== statPresetSettingsInstanceId) {
+		if (statPresetSettingsInstanceId) retiredStatPresetSettingsInstanceIds.add(statPresetSettingsInstanceId);
+		statPresetSettingsInstanceId = snapshot.instanceId;
+		statPresetSettingsRevision = -1;
+	}
+
+	if (snapshot.revision < statPresetSettingsRevision) return;
+	statPresetSettingsRevision = snapshot.revision;
+	setTradeStatPresetEnabled(snapshot.value as boolean);
 }
 
 /**
@@ -89,9 +108,6 @@ bootstrapInjectScript(() => {
 		return;
 	}
 
-	ipcWindow.on(tradeIpcProtocol.statPresetUpdated, ({ enabled }) => {
-		hasReceivedStatPresetUpdate = true;
-		setTradeStatPresetEnabled(enabled);
-	});
+	ipcMain.on(settingsIpcProtocol.onChanged, applyStatPresetSettingSnapshot);
 	void initializeTradeStatPreset();
 });

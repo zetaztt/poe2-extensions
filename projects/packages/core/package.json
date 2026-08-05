@@ -9,7 +9,6 @@
 		"./result": "./src/result/index.ts",
 		"./settings": "./src/settings/index.ts",
 		"./trade": "./src/trade/index.ts",
-		"./ipc": "./src/ipc/index.ts",
-		"./ipc/transport": "./src/ipc/ipc-transport.ts"
+		"./ipc": "./src/ipc/index.ts"
 	}
 }

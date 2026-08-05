@@ -1,4 +1,4 @@
-import { createIpcEnvelope, isIpcEnvelope, type IpcEnvelope, type IpcScope, type IpcTarget } from "./ipc-envelope";
+import { createIpcEnvelope, getPeerIpcRole, isIpcEnvelope, type IpcEnvelope, type IpcRole } from "./ipc-envelope";
 import {
 	IpcError,
 	IpcErrorCode,
@@ -8,21 +8,11 @@ import {
 	type IpcRequestMessage,
 	type IpcResponseMessage,
 } from "./ipc-message";
-import { IpcRequestIdAllocator, type IpcRequestId } from "./ipc-request-id";
 import { Result } from "../result";
 import type { IpcChannelBackend, IpcHandlerChannelBackend } from "./ipc";
-import {
-	createPublishedNotification,
-	ipcPublishedNotificationMethod,
-	isPublishedNotification,
-	maxRememberedPublishedNotifications,
-	type IpcPublishedNotification,
-} from "./ipc-utils";
 
 type NotificationHandler = (params: unknown) => void | Promise<void>;
 type RequestHandler = (params: unknown) => unknown | Promise<unknown>;
-type TransportMessageListener = (value: unknown) => unknown;
-
 interface RegisteredNotificationHandler {
 	handler: NotificationHandler;
 }
@@ -33,22 +23,23 @@ interface PendingRequest {
 	timeoutId?: ReturnType<typeof setTimeout>;
 }
 
+type IpcRequestId = string;
+
 /**
- * 隔离无地址 Hub 与具体 transport 的 envelope 发送和入站监听。
+ * 将运行环境消息 API 适配为无地址 IPC 的 envelope 发送和入站监听。
  */
-export interface IpcConnectionHubTransport {
+
+export interface IpcMessageConnectionAdapter {
 	sendMessage(envelope: IpcEnvelope): Promise<unknown>;
-	addMessageListener(listener: TransportMessageListener): void;
+	addMessageListener(listener: (data: unknown) => unknown): void;
 }
 
 /**
- * 固定无地址 Hub 使用的单一 transport 及 envelope 路由方向。
+ * 固定无地址 Hub 使用的单一 adapter 及本地发送方角色。
  */
 export interface IpcConnectionHubOptions {
-	scope: IpcScope;
-	outgoingTarget: IpcTarget;
-	incomingTarget: IpcTarget;
-	transport: IpcConnectionHubTransport;
+	role: IpcRole;
+	adapter: IpcMessageConnectionAdapter;
 }
 
 /**
@@ -58,16 +49,43 @@ export interface IpcConnectionHubOptions {
 export class IpcConnectionHub implements IpcChannelBackend {
 	private readonly notificationHandlers = new Map<string, RegisteredNotificationHandler>();
 	private readonly pendingRequests = new Map<IpcRequestId, PendingRequest>();
-	private readonly requestIdAllocator = new IpcRequestIdAllocator();
-	private readonly publishedNotificationIds = new Set<string>();
-	private readonly publishedNotificationIdOrder: string[] = [];
 
 	public constructor(private readonly options: IpcConnectionHubOptions) {
 		this.install();
 	}
 
+	private install(): void {
+		const { adapter, role } = this.options;
+		const incomingRole = getPeerIpcRole(role);
+		adapter.addMessageListener((data) => {
+			if (!isIpcEnvelope(data, incomingRole)) return undefined;
+			const message = data.message;
+			const response = this.receiveMessage(message);
+			if (message.kind !== IpcMessageKind.Request) {
+				void response.catch((error) => {
+					console.error("[poe2-extensions] IPC 入站消息处理失败", error);
+				});
+				return undefined;
+			}
+			return response.then((result) => {
+				const responseMessage: IpcResponseMessage = Result.isOk(result)
+					? {
+							kind: IpcMessageKind.Response,
+							id: message.id,
+							...(result.value === undefined ? {} : { result: result.value }),
+						}
+					: {
+							kind: IpcMessageKind.Response,
+							id: message.id,
+							error: serializeIpcError(result.error),
+						};
+				return createIpcEnvelope(role, responseMessage);
+			});
+		});
+	}
+
 	public invoke(method: string, data: unknown | undefined, timeoutMs: number): Promise<unknown> {
-		const id = this.requestIdAllocator.allocate();
+		const id = crypto.randomUUID();
 		const message: IpcRequestMessage = {
 			kind: IpcMessageKind.Request,
 			id,
@@ -92,19 +110,19 @@ export class IpcConnectionHub implements IpcChannelBackend {
 	}
 
 	/**
-	 * 在本地分发后向当前 transport 发布 notification。
+	 * 在本地分发后，以原始业务 method 向当前 adapter 直接发送 notification。
+	 *
+	 * Hub 不包装或转发通知；需要多播时由发送端 adapter 显式投递全部接收端。
 	 */
 	public async send(method: string, data: unknown | undefined): Promise<void> {
-		const notification = createPublishedNotification(method, data);
-		this.rememberPublishedNotification(notification.id);
 		await Promise.allSettled([
-			this.dispatchPublishedNotification(notification),
-			this.sendNotification(ipcPublishedNotificationMethod, notification),
+			Promise.resolve(this.notificationHandlers.get(method)?.handler(data)),
+			this.sendNotification(method, data),
 		]);
 	}
 
 	/**
-	 * 同 method 后注册者替换旧 handler，并接收直接和发布的 notification。
+	 * 同 method 后注册者替换旧 handler，并接收当前 adapter 直达的 notification。
 	 */
 	public on(method: string, handler: NotificationHandler): () => void {
 		const registration = { handler };
@@ -114,35 +132,6 @@ export class IpcConnectionHub implements IpcChannelBackend {
 				this.notificationHandlers.delete(method);
 			}
 		};
-	}
-
-	private install(): void {
-		const { transport, scope, incomingTarget, outgoingTarget } = this.options;
-		transport.addMessageListener((value) => {
-			if (!isIpcEnvelope(value, scope, incomingTarget)) return undefined;
-			const message = value.message;
-			const response = this.receiveMessage(message);
-			if (message.kind !== IpcMessageKind.Request) {
-				void response.catch((error) => {
-					console.error("[poe2-extensions] IPC 入站消息处理失败", error);
-				});
-				return undefined;
-			}
-			return response.then((result) => {
-				const responseMessage: IpcResponseMessage = Result.isOk(result)
-					? {
-							kind: IpcMessageKind.Response,
-							id: message.id,
-							...(result.value === undefined ? {} : { result: result.value }),
-						}
-					: {
-							kind: IpcMessageKind.Response,
-							id: message.id,
-							error: serializeIpcError(result.error),
-						};
-				return createIpcEnvelope(scope, outgoingTarget, responseMessage);
-			});
-		});
 	}
 
 	/**
@@ -163,19 +152,8 @@ export class IpcConnectionHub implements IpcChannelBackend {
 		}
 	}
 
-	private async receiveNotification(method: string, data: unknown): Promise<void> {
-		if (method === ipcPublishedNotificationMethod) {
-			if (!isPublishedNotification(data) || this.publishedNotificationIds.has(data.id)) return;
-			this.rememberPublishedNotification(data.id);
-			await this.dispatchPublishedNotification(data);
-			return;
-		}
-
+	private receiveNotification(method: string, data: unknown): void {
 		this.dispatchNotification(method, data);
-	}
-
-	private dispatchPublishedNotification(notification: IpcPublishedNotification): Promise<void> {
-		return Promise.resolve(this.notificationHandlers.get(notification.method)?.handler(notification.data));
 	}
 
 	private dispatchNotification(method: string, data: unknown): void {
@@ -187,9 +165,10 @@ export class IpcConnectionHub implements IpcChannelBackend {
 	}
 
 	private async sendMessage(message: IpcMessage): Promise<IpcMessage | undefined> {
-		const { transport, scope, outgoingTarget, incomingTarget } = this.options;
-		const value = await transport.sendMessage(createIpcEnvelope(scope, outgoingTarget, message));
-		return isIpcEnvelope(value, scope, incomingTarget) ? value.message : undefined;
+		const { adapter, role } = this.options;
+		const incomingRole = getPeerIpcRole(role);
+		const value = await adapter.sendMessage(createIpcEnvelope(role, message));
+		return isIpcEnvelope(value, incomingRole) ? value.message : undefined;
 	}
 
 	private async sendNotification(method: string, data: unknown): Promise<void> {
@@ -218,14 +197,6 @@ export class IpcConnectionHub implements IpcChannelBackend {
 		this.pendingRequests.delete(id);
 		if (pending.timeoutId !== undefined) clearTimeout(pending.timeoutId);
 		pending.reject(error);
-	}
-
-	private rememberPublishedNotification(id: string): void {
-		this.publishedNotificationIds.add(id);
-		this.publishedNotificationIdOrder.push(id);
-		if (this.publishedNotificationIdOrder.length <= maxRememberedPublishedNotifications) return;
-		const expiredId = this.publishedNotificationIdOrder.shift();
-		if (expiredId) this.publishedNotificationIds.delete(expiredId);
 	}
 }
 

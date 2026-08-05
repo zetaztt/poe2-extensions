@@ -133,7 +133,7 @@ export default defineConfig((env) => {
 					...accessibleResources,
 				],
 				browser: "chrome",
-				watchFilePaths: ["package.json", "manifest.json"],
+				watchFilePaths: ["package.json"],
 				skipManifestValidation: true,
 			}),
 		],

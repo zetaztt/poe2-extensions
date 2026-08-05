@@ -6,7 +6,6 @@
 	"exports": {},
 	"dependencies": {
 		"@poe2-extensions/core": "0.0.0",
-		"@poe2-extensions/ipc-webextension": "0.0.0",
 		"pinia": "^4.0.2",
 		"vue": "^3.5.29",
 		"webextension-polyfill": "^0.12.0"

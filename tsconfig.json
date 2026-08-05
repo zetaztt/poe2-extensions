@@ -18,8 +18,6 @@
 	],
 	"references": [
 		{ "path": "./projects/packages/core" },
-		{ "path": "./projects/packages/ipc-window" },
-		{ "path": "./projects/packages/ipc-webextension" },
 		{ "path": "./projects/apps/background" },
 		{ "path": "./projects/apps/content" },
 		{ "path": "./projects/apps/inject" },

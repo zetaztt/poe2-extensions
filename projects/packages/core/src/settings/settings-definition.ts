@@ -7,9 +7,14 @@ export interface SettingOptions<TValue> {
 }
 
 /**
- * 已绑定稳定 key 的设置成员；key 同时用于 IPC 和 storage.sync。
+ * 已绑定稳定 key 和定义字段名的设置成员；key 同时用于 IPC 和 storage.sync。
  */
-export interface SettingMember<TValue, TKey extends string> {
+export interface SettingMember<TValue, TKey extends string, TMemberName extends string = string> {
+	/**
+	 * 设置值在所属定义的聚合对象中的字段名。
+	 * 不含 definition name，因此可直接用于 createDefaults() 返回值和页面聚合状态。
+	 */
+	readonly name: TMemberName;
 	readonly key: TKey;
 	readonly defaultValue: TValue;
 	// 仅用于从成员类型提取 TValue，不会写入运行时成员对象。
@@ -21,7 +26,9 @@ type AnySettingOptions = SettingOptions<unknown>;
 export type AnySettingMember = SettingMember<unknown, string>;
 
 type BindSettingMember<TName extends string, TMemberName extends string, TOptions> =
-	TOptions extends SettingOptions<infer TValue> ? SettingMember<TValue, `${TName}/${TMemberName}`> : never;
+	TOptions extends SettingOptions<infer TValue>
+		? SettingMember<TValue, `${TName}/${TMemberName}`, TMemberName>
+		: never;
 
 type BindSettingMembers<TName extends string, TDefinition> = {
 	[K in keyof Omit<TDefinition, "name">]: BindSettingMember<TName, Extract<K, string>, Omit<TDefinition, "name">[K]>;
@@ -82,25 +89,24 @@ export function defineSettings<const TDefinition extends { name: string }>(
 	const { name, ...memberOptions } = definition as { name: string } & Record<string, AnySettingOptions>;
 	const members: AnySettingMember[] = [];
 	const memberByKey = new Map<string, AnySettingMember>();
-	const memberNameByMember = new Map<AnySettingMember, string>();
 	const settingsDefinition: Record<string, unknown> = { name };
 
 	for (const [memberName, options] of Object.entries(memberOptions)) {
 		// 生成值同时用于 IPC 和 storage；修改 definition name 或成员名时必须提供持久化迁移。
 		const member: AnySettingMember = {
+			name: memberName,
 			key: `${name}/${memberName}`,
 			defaultValue: options.defaultValue,
 			equals: options.equals ?? Object.is,
 		};
 		memberByKey.set(member.key, member);
-		memberNameByMember.set(member, memberName);
 		members.push(member);
 		settingsDefinition[memberName] = member;
 	}
 
 	settingsDefinition.members = members;
 	settingsDefinition.resolve = (key: unknown) => (typeof key === "string" ? memberByKey.get(key) : undefined);
-	settingsDefinition.createDefaults = () => createDefaults(members, memberNameByMember);
+	settingsDefinition.createDefaults = () => createDefaults(members);
 
 	return settingsDefinition as DefinedSettings<
 		TDefinition["name"],
@@ -108,17 +114,8 @@ export function defineSettings<const TDefinition extends { name: string }>(
 	>;
 }
 
-function createDefaults(
-	members: readonly AnySettingMember[],
-	memberNameByMember: ReadonlyMap<AnySettingMember, string>,
-): Record<string, unknown> {
+function createDefaults(members: readonly AnySettingMember[]): Record<string, unknown> {
 	const values: Record<string, unknown> = {};
-	for (const member of members) values[getMemberName(member, memberNameByMember)] = member.defaultValue;
+	for (const member of members) values[member.name] = member.defaultValue;
 	return values;
-}
-
-function getMemberName(member: AnySettingMember, memberNameByMember: ReadonlyMap<AnySettingMember, string>): string {
-	const memberName = memberNameByMember.get(member);
-	if (!memberName) throw new Error(`设置成员不属于当前定义: ${member.key}`);
-	return memberName;
 }

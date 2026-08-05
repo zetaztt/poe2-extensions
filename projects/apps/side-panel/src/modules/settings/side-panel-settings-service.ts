@@ -23,15 +23,15 @@ function getValues<const TMembers extends readonly AnySettingMember[]>(
 	}) as Promise<SettingMemberSnapshots<TMembers>>;
 }
 
-function setTranslateEnabled(enabled: boolean): Promise<boolean> {
+function setTranslateEnabled(enabled: boolean): Promise<void> {
 	return ipcMain.invoke(tradeIpcProtocol.setTranslateEnabled, { enabled });
 }
 
-function setItemCopyEnabled(enabled: boolean): Promise<boolean> {
+function setItemCopyEnabled(enabled: boolean): Promise<void> {
 	return ipcMain.invoke(tradeIpcProtocol.setItemCopyEnabled, { enabled });
 }
 
-function setStatPresetEnabled(enabled: boolean): Promise<boolean> {
+function setStatPresetEnabled(enabled: boolean): Promise<void> {
 	return ipcMain.invoke(tradeIpcProtocol.setStatPresetEnabled, { enabled });
 }
 

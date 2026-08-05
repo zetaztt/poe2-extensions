@@ -1,38 +1,43 @@
-import { IpcEnvelopeRelay } from "@poe2-extensions/core/ipc";
-import { createRuntimeIpcClientTransport, createTabIpcServerTransport } from "@poe2-extensions/ipc-webextension";
-import { createWindowIpcTransport, IpcScope, IpcTarget } from "@poe2-extensions/ipc-window";
+import browser from "webextension-polyfill";
+import { installIpcEnvelopeRelay, IpcRole } from "@poe2-extensions/core/ipc";
 
 /**
- * 在 content composition root 安装两条跨 isolated/MAIN world 的透明 IPC relay。
+ * 在 content composition root 安装 MAIN world 与 background 之间的透明 IPC relay。
  *
  * 每个 content 运行环境只能调用一次，避免重复注册 window 和 runtime listener。
  */
 export function installContentIpcRelays(): void {
 	// isolated world 只作为 MAIN world 与 background 的透明边界，不拥有 ipcMain channel 或业务状态。
-	new IpcEnvelopeRelay({
-		first: {
-			scope: IpcScope.Main,
-			incomingTarget: IpcTarget.Server,
-			transport: createWindowIpcTransport(),
-		},
-		second: {
-			scope: IpcScope.Main,
-			incomingTarget: IpcTarget.Clients,
-			transport: createRuntimeIpcClientTransport(),
+	installIpcEnvelopeRelay({
+		sourceRole: IpcRole.Client,
+		adapter: {
+			addSourceMessageListener(listener) {
+				window.addEventListener("message", (event: MessageEvent<unknown>) => {
+					if (event.source !== window || event.origin !== window.location.origin) return;
+					void Promise.resolve(listener(event.data))
+						.then((response) => {
+							if (response !== undefined) window.postMessage(response, window.location.origin);
+						})
+						.catch((error) => {
+							console.error("[poe2-extensions] window IPC 消息处理失败", error);
+						});
+				});
+			},
+			sendTargetMessage(envelope) {
+				return browser.runtime.sendMessage(envelope);
+			},
 		},
 	});
-
-	// tab IPC 请求与 MAIN world 响应保持原 envelope 往返，content 不参与 handler 或请求状态管理。
-	new IpcEnvelopeRelay({
-		first: {
-			scope: IpcScope.Window,
-			incomingTarget: IpcTarget.Server,
-			transport: createTabIpcServerTransport(),
-		},
-		second: {
-			scope: IpcScope.Window,
-			incomingTarget: IpcTarget.Clients,
-			transport: createWindowIpcTransport(),
+	installIpcEnvelopeRelay({
+		sourceRole: IpcRole.Server,
+		adapter: {
+			addSourceMessageListener(listener) {
+				browser.runtime.onMessage.addListener((message: unknown) => listener(message));
+			},
+			sendTargetMessage(envelope) {
+				window.postMessage(envelope, window.location.origin);
+				return Promise.resolve(undefined);
+			},
 		},
 	});
 }

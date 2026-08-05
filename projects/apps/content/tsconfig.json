@@ -9,9 +9,5 @@
 		"types": []
 	},
 	"include": ["src/**/*.ts"],
-	"references": [
-		{ "path": "../../packages/core" },
-		{ "path": "../../packages/ipc-window" },
-		{ "path": "../../packages/ipc-webextension" }
-	]
+	"references": [{ "path": "../../packages/core" }]
 }

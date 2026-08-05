@@ -1,4 +1,4 @@
-import { isIpcRequestId, type IpcRequestId } from "./ipc-request-id";
+export type IpcRequestId = string;
 
 /**
  * Core IPC wire message 的判别值；属于跨 transport 共享格式。
@@ -33,7 +33,7 @@ export interface IpcErrorData {
 
 /**
  * RPC 请求 wire message。
- * ID 使用 `<epoch chunks>:<sequence>` 的安全整数字符串，避免数值回绕后复用。
+ * ID 使用每次请求新建的 UUID，隔离独立 Hub 的并行请求。
  */
 export interface IpcRequestMessage {
 	kind: typeof IpcMessageKind.Request;
@@ -87,10 +87,11 @@ export function isIpcMessage(value: unknown): value is IpcMessage {
 
 	switch (value.kind) {
 		case IpcMessageKind.Request:
-			return isIpcRequestId(value.id) && typeof value.method === "string";
+			return typeof value.id === "string" && value.id.length > 0 && typeof value.method === "string";
 		case IpcMessageKind.Response:
 			return (
-				isIpcRequestId(value.id)
+				typeof value.id === "string"
+				&& value.id.length > 0
 				&& (value.error === undefined || isIpcErrorData(value.error))
 				&& !(value.error !== undefined && "result" in value)
 			);

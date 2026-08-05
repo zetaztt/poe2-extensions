@@ -27,6 +27,8 @@ const mixedSettings = defineSettings({
 
 test("defineSettings 通过 name 和成员名生成 key", () => {
 	assert.equal(settings.name, "test");
+	assert.equal(settings.first.name, "first");
+	assert.equal(settings.second.name, "second");
 	assert.equal(settings.first.key, "test/first");
 	assert.equal(settings.second.key, "test/second");
 	assert.equal(settings.resolve("test/first"), settings.first);

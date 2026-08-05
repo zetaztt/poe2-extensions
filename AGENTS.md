@@ -10,9 +10,7 @@
 - `projects/apps/content/`：isolated world content 工程，负责编排 runtime/window IPC relay 和 MAIN world 脚本注入。
 - `projects/apps/inject/`：MAIN world 工程，维护 trade2 DOM 功能及其独立入口；不具备 Extension API，不得引入侧边栏页面框架或 store。
 - `projects/apps/side-panel/`：Vue 侧边栏工程。功能组件、store 和 service 统一归入 `src/modules/<feature>/`，根目录只保留组合入口，跨功能 UI 放入 `src/common/`；组件从模块 store 读取状态并调用 store action，只在组件内维护展示和临时交互状态。
-- `projects/packages/core/`：所有运行工程共同依赖的环境无关核心工程；领域子路径导出共享数据契约和 IPC protocol，`ipc/transport` 只公开供 transport 工程复用的 message、connection、envelope 和 connection hub，不创建运行环境 channel 单例。
-- `projects/packages/ipc-window/`：DOM 环境的 `window.postMessage` transport，仅供 content 和 inject 使用。
-- `projects/packages/ipc-webextension/`：Extension 环境的 runtime/tabs transport，仅供 background、content 和 side-panel 使用。
+- `projects/packages/core/`：所有运行工程共同依赖的环境无关核心工程；领域子路径导出共享数据契约和 IPC protocol，`ipc` 公开 channel、message、connection、envelope 和 connection hub，不创建运行环境 channel 单例。
 - `public/`：`icon/` 和 `data/` 保持稳定的扩展路径；页面图片、字体及后续同类静态资源放入 `assets/`，侧边栏资源位于 `assets/side-panel/`。
 - `data/trade-texts.po`：翻译人工维护源；`public/data/translate.json` 和 `public/data/translate-meta.json` 是生成产物及扩展内置 fallback。
 - `scripts/translate/`：拉取 trade 数据和生成字典；`projects/packages/trade-translate-tools/` 是 npm workspace 中供脚本和发布分支复用的源码包。
@@ -24,19 +22,17 @@
 3. 发现任务范围外的架构问题时，先完成并验证当前任务，再在交付说明中提出可独立评审的重构建议；若架构问题直接阻塞正确实现，才允许进行必要且影响范围最小的重构，并说明原因。
 4. 将改动放在现有职责层：组件处理展示和临时交互，store action 调用 service 并更新自身状态，service 返回不含响应式状态的普通结果，background 模块处理跨页面协调和持久化，storage 模块负责序列化与校验。
 5. 新增或调整跨环境能力时，同时检查注册该环境 IPC 实现的入口，以及 protocol、handler、调用方和清理逻辑。
-6. 新增浏览器运行入口时同步检查 `vite.config.ts` 的 `additionalInputs`、根 `manifest.json`、动态 content script 注册和 web accessible resources；仅更新实际需要的配置。
+6. 新增浏览器运行入口时同步检查 `vite.config.ts` 中的 manifest、`additionalInputs`、动态 content script 注册和 web accessible resources；仅更新实际需要的配置。
 7. 翻译文本先修改 `data/trade-texts.po`，再运行 `npm run build-translate`；不要手工编辑字典内容或版本号。
 8. 根据改动范围执行验证并检查最终 diff；生成命令产生的文件只有属于当前任务时才保留。
 
 ## 架构规则
 
-- 内部 Workspace 依赖矩阵固定为 background → core + ipc-webextension、content → core + 两种 transport、inject → core + ipc-window、side-panel → core + ipc-webextension；内部包必须同时声明于工程的 `package.json` dependencies 和 `tsconfig.json` references。
-- Workspace 包通过各自的 package exports 和 npm Workspace 链接解析；不要配置 TypeScript `paths`，也不要跨 Workspace 相对导入内部源码。所有 Workspace 都不得依赖 `@poe2-extensions/apps-*` 运行工程。
-- 依赖边界的自动检查以 `eslint.config.ts` 为准；`npm run compile` 先运行 ESLint，再运行 `vue-tsc --build`。ESLint 对所有 Workspace 检查未声明依赖、跨 Workspace 相对导入和 app 包导入，inject 的附加环境依赖限制也只在该配置中维护。
-- 跨 background、side-panel、content 和 MAIN world 的业务通信必须使用 `@poe2-extensions/core/ipc`、对应环境 transport 与具名领域 protocol；不要另建裸 `browser.runtime` 消息或 `window.postMessage` 协议。新增协议成员时同步 core 契约、handler 和调用方。
-- `ipcMain/ipcWindow` 单例由 background、content、inject 和 side-panel 各自创建，core 与 transport 包不得创建或导出运行环境单例。只有 background 的 `ipcMain` 和 inject 的 `ipcWindow` 使用 `IpcHandlerChannel`；其他环境只使用 `IpcChannel`，不得绕过能力边界注册 handler。
-- WebExtension tab IPC 使用无状态 `sendMessage`：RPC response 由对应 `tabs.sendMessage` Promise 原路返回，入站 address 取自 `MessageSender.tab.id`。不得增加握手、心跳、endpoint、peer 注册、在线状态或按 tab 缓存 connection；目标不存在时直接传播发送错误。
-- `ipcMainRegistrationKey`、`ipcWindowRegistrationKey` 和共享 envelope version 属于跨构建兼容约定。registration key 不得随实现重命名；只有不兼容 wire format 变更才升级 envelope version，并同步 Window 与 WebExtension transport。
+- 运行工程之间不得互相依赖；内部 Workspace 依赖只指向 core，不共享运行环境 adapter。少量 `window.postMessage` 和 WebExtension runtime/tabs 适配代码由使用它的 app 本地持有；内部依赖必须同时声明于工程的 `package.json` dependencies 和 `tsconfig.json` references。
+- Workspace 通过各自的 package exports 和 npm Workspace 链接解析，不配置 TypeScript `paths`，不跨 Workspace 相对导入内部源码。依赖边界以 `eslint.config.ts` 为权威，调整边界时同步更新该配置。
+- 跨 background、side-panel、content 和 MAIN world 的业务通信必须使用 `@poe2-extensions/core/ipc`、各 app 的环境 adapter 与具名领域 protocol；不要另建裸 `browser.runtime` 消息或 `window.postMessage` 协议。新增协议成员时同步 core 契约、handler 和调用方。
+- `ipcMain` 单例由 background、inject 和 side-panel 各自创建，core 不得创建或导出运行环境单例。只有 background 的 `ipcMain` 使用 `IpcHandlerChannel`；其他环境只使用 `IpcChannel`，不得绕过能力边界注册 handler。
+- 共享 envelope version 属于跨构建兼容约定。只有不兼容 wire format 变更才升级 envelope version，并同步 Window 与 WebExtension adapter。
 - 需要跨页面共享可变状态的业务模块由 background 模块持有权威状态。跨页面状态同步必须区分 background service worker 生命周期，并拒绝重复、过期或乱序状态；不得退化为组件本地副本或 mutation 返回值驱动的长期状态。
 - 模块 store 使用 Pinia Setup Store；action 负责 loading、错误、快照排序、乐观更新和失败恢复，并在 service 返回普通结果后修改自身状态。页面 service 不得导入 Pinia 或 store，也不得保存与 store 重复的可观察状态。
 - Store 只公开页面消费的响应式状态和业务 action；机械 mutation、订阅安装、快照处理及其他流程辅助函数保留在 Setup Store 闭包内。需要页面 store 的 Vue 运行环境在 composition root 创建并安装 Pinia，组件解构状态使用 `storeToRefs`。
@@ -46,7 +42,7 @@
 - 设置定义放在对应的 core 领域子路径；通用 core settings 与 background settings 不得依赖具体领域。`SettingMember.key` 同时作为 IPC 和 `storage.sync` 的稳定标识，由定义名称和成员名生成；重命名任一部分必须按 storage key 兼容性变更处理。
 - 通用 settings IPC 只提供读取、变化和持久化失败通知，不提供任意 key/value 写入。设置写入由领域 background 通过具名领域 RPC 接收，在调用通用 settings 状态模块后执行页面或浏览器副作用；页面不得绕过领域 background 直接写设置。
 - settings background 的内存缓存是当前 service worker 生命周期内的权威状态；写入先更新缓存、递增 revision 并广播，再按 key 串行异步写入 `storage.sync`。持久化失败只发送失败通知而不回滚当前值，调用方不得把设置 RPC 返回视为持久化已经完成。
-- 翻译通过 background 动态注册 `world: "MAIN"` 的 content script，仅在开启时加载；切换翻译设置通过注册状态同步和刷新活动 trade2 标签页生效。当前 hook 不支持卸载，不得改成无刷新即时切换，除非同时实现完整回滚。
+- 翻译通过 background 动态注册 `world: "MAIN"` 的 content script，仅在开启时加载。切换翻译设置只同步动态注册状态，不自动刷新已打开的 trade2 标签页；页面提示用户手动刷新后生效。当前 hook 不支持卸载，不得实现无刷新即时切换，除非同时提供完整回滚。
 - 物品复制和筛选预设脚本会预先注入，但必须按设置即时启停。关闭时恢复官方按钮行为，移除或停用扩展事件、观察器、样式、弹窗和插入 DOM；保留的惰性观察器不得继续产生功能副作用或重复绑定。
 - MAIN world hook 的影响范围必须限定在 `https://www.pathofexile.com/trade2`。翻译缓存必须与官方缓存隔离，避免中文数据污染英文缓存；现有 `_zh` namespace 属于持久化兼容约定，变更时必须提供迁移策略。
 - 翻译字典继续按“内置 fallback → 有效本地缓存 → 更高版本远端字典”选择，并在使用或缓存前校验 meta、缓存和字典结构；远端失败不能破坏可用 fallback。
@@ -79,7 +75,7 @@
 
 - 仅文档或注释：对改动文件运行 Prettier check；不需要构建。
 - TypeScript 或 Vue：`npm run compile`。
-- manifest、入口、IPC transport、side-panel 或 trade 注入链路：`npm run compile` 和 `npm run build`。
+- manifest、入口、IPC adapter/relay、envelope、side-panel 或 trade 注入链路：`npm run compile` 和 `npm run build`。
 - `projects/packages/trade-translate-tools/`：除根类型检查外运行 `npx tsc --noEmit -p projects/packages/trade-translate-tools/tsconfig.json`。
 - 翻译源：运行 `npm run build-translate`，确认两个字典产物同时更新，且内容未变化时 meta version 不应变化。
 - 所有纳管文件的格式检查使用 `npm run format:check`；只检查单个文档可使用 `npx prettier --check <file>`。
@@ -94,7 +90,7 @@
 ## 工具与依赖
 
 - 使用根 `package-lock.json` 管理 npm workspace 依赖。依赖变更必须同步 lockfile，不要引入第二套包管理器或独立子包 lockfile。
-- `projects/packages/core` 是单一环境无关 workspace package，通过领域、`ipc` 和 `ipc/transport` 子路径公开 API，不提供聚合根入口；DOM 和 Extension transport 必须分别留在独立 workspace 工程。
+- `projects/packages/core` 是单一环境无关 workspace package，通过领域和 `ipc` 子路径公开 API，不提供聚合根入口；DOM 和 Extension adapter 留在对应运行工程，不得移入 core。
 - 根 `dist/` 完全属于生成产物：Project References 的声明和增量缓存统一输出到 `dist/types/`，Vite 扩展输出到 `dist/poe2-extensions/`；浏览器加载未打包扩展时使用后者。Vite 以 `public/` 为 `publicDir`，源码入口由 manifest、HTML 或 `additionalInputs` 管理，不能仅创建文件而不接入构建。
 - `projects/packages/trade-translate-tools` 的源码位于 main 分支；`trade-translate-tools-package` 分支由 GitHub Actions 生成，不作为手工维护源。
 - `npm run pull-translate` 会访问外部 trade API 并重写翻译源及变更日志，只在任务明确需要同步上游数据时运行。

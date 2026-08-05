@@ -1,9 +1,7 @@
 import {
 	defaultRequestTimeoutMs,
 	getNotificationMember,
-	getRegisteredIpcBackend,
 	getRpcMember,
-	registerIpcBackend,
 	type IpcArguments,
 	type NotificationData,
 	type RpcParams,
@@ -31,22 +29,26 @@ export interface IpcHandlerChannelBackend extends IpcChannelBackend {
 }
 
 /**
- * 将具名 protocol member 映射到无地址 backend。
- * 构造时按稳定 key 首次注册当前运行环境的 backend。
+ * 将具名 protocol member 映射到当前运行环境的无地址 backend。
+ *
+ * 每个 channel 独占一个 backend。
+ * 独立构建产物必须各自安装消息监听，避免共享连接时互相覆盖 notification handler。
  */
-export class IpcChannel {
-	public constructor(
-		protected readonly registrationKey: symbol,
-		factory: () => IpcChannelBackend,
-	) {
-		registerIpcBackend(registrationKey, factory);
+export class IpcChannel<TBackend extends IpcChannelBackend = IpcChannelBackend> {
+	protected readonly backend: TBackend;
+
+	public constructor(backend: TBackend) {
+		this.backend = backend;
 	}
 
-	public invoke<TMember extends IpcRpcDefinition<any, any>>(
+	public async invoke<TMember extends IpcRpcDefinition<any, any>>(
 		member: TMember,
 		...args: IpcArguments<RpcParams<TMember>>
 	): Promise<RpcResult<TMember>> {
-		return invoke(this.registrationKey, member, args[0]);
+		const rpcMember = getRpcMember(member);
+		const timeoutMs = rpcMember.timeoutMs ?? defaultRequestTimeoutMs;
+		const result = await this.backend.invoke(rpcMember.method, args[0], timeoutMs);
+		return result as RpcResult<TMember>;
 	}
 
 	/**
@@ -56,79 +58,36 @@ export class IpcChannel {
 		member: TMember,
 		...args: IpcArguments<NotificationData<TMember>>
 	): Promise<void> {
-		return send(this.registrationKey, member, args[0]);
+		const notificationMember = getNotificationMember(member);
+		return this.backend.send(notificationMember.method, args[0]);
 	}
 
 	public on<TMember extends IpcNotificationDefinition<any>>(
 		member: TMember,
 		listener: IpcNotificationListener<NotificationData<TMember>>,
 	): () => void {
-		return on(this.registrationKey, member, listener);
+		const notificationMember = getNotificationMember(member);
+		return this.backend.on(notificationMember.method, (data) =>
+			(listener as unknown as (data: unknown) => void | Promise<void>)(data),
+		);
 	}
 }
 
 /**
  * 为无地址 channel 增加 RPC 服务端注册能力。
  */
-export class IpcHandlerChannel extends IpcChannel {
-	public constructor(registrationKey: symbol, factory: () => IpcHandlerChannelBackend) {
-		super(registrationKey, factory);
+export class IpcHandlerChannel extends IpcChannel<IpcHandlerChannelBackend> {
+	public constructor(backend: IpcHandlerChannelBackend) {
+		super(backend);
 	}
 
 	public handle<TMember extends IpcRpcDefinition<any, any>>(
 		member: TMember,
 		handler: IpcHandler<RpcParams<TMember>, RpcResult<TMember>>,
 	): () => void {
-		return handle(this.registrationKey, member, handler);
+		const rpcMember = getRpcMember(member);
+		return this.backend.handle(rpcMember.method, (params) =>
+			(handler as unknown as (params: unknown) => unknown)(params),
+		);
 	}
-}
-
-async function invoke<TMember extends IpcRpcDefinition<any, any>>(
-	registrationKey: symbol,
-	descriptor: TMember,
-	params: unknown | undefined,
-): Promise<RpcResult<TMember>> {
-	const member = getRpcMember(descriptor);
-	const timeoutMs = member.timeoutMs ?? defaultRequestTimeoutMs;
-	const result = await getBackend(registrationKey).invoke(member.method, params, timeoutMs);
-	return result as RpcResult<TMember>;
-}
-
-function send<TMember extends IpcNotificationDefinition<any>>(
-	registrationKey: symbol,
-	descriptor: TMember,
-	data: unknown | undefined,
-): Promise<void> {
-	const member = getNotificationMember(descriptor);
-	return getBackend(registrationKey).send(member.method, data);
-}
-
-function handle<TMember extends IpcRpcDefinition<any, any>>(
-	registrationKey: symbol,
-	descriptor: TMember,
-	handler: IpcHandler<RpcParams<TMember>, RpcResult<TMember>>,
-): () => void {
-	const member = getRpcMember(descriptor);
-	return getHandlerBackend(registrationKey).handle(member.method, (params) =>
-		(handler as unknown as (params: unknown) => unknown)(params),
-	);
-}
-
-function on<TMember extends IpcNotificationDefinition<any>>(
-	registrationKey: symbol,
-	descriptor: TMember,
-	listener: IpcNotificationListener<NotificationData<TMember>>,
-): () => void {
-	const member = getNotificationMember(descriptor);
-	return getBackend(registrationKey).on(member.method, (data) =>
-		(listener as unknown as (data: unknown) => void | Promise<void>)(data),
-	);
-}
-
-function getBackend(registrationKey: symbol): IpcChannelBackend {
-	return getRegisteredIpcBackend<IpcChannelBackend>(registrationKey);
-}
-
-function getHandlerBackend(registrationKey: symbol): IpcHandlerChannelBackend {
-	return getRegisteredIpcBackend<IpcHandlerChannelBackend>(registrationKey);
 }

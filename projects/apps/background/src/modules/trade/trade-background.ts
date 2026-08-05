@@ -1,7 +1,5 @@
-import browser from "webextension-polyfill";
-import type { IpcNotificationDefinition } from "@poe2-extensions/core/ipc";
-import { ipcMain, ipcWindow } from "../../background-ipc-channels";
-import { tradeIpcProtocol, tradeSettings, type TradeFeatureUpdateData } from "@poe2-extensions/core/trade";
+import { ipcMain } from "../../background-ipc-channels";
+import { tradeIpcProtocol, tradeSettings } from "@poe2-extensions/core/trade";
 import { settingsBackground } from "../settings/settings-background";
 import { tradeStatPresetBackground } from "./stat-preset/stat-preset-background";
 
@@ -20,12 +18,6 @@ function install(): void {
 	ipcMain.handle(tradeIpcProtocol.setItemCopyEnabled, ({ enabled }) => setItemCopyEnabled(enabled));
 	ipcMain.handle(tradeIpcProtocol.setStatPresetEnabled, ({ enabled }) => setStatPresetEnabled(enabled));
 	settingsBackground.onChanged(tradeSettings.translate, ({ value }) => queueTranslateInjectionSync(value));
-	settingsBackground.onChanged(tradeSettings.itemCopy, async ({ value }) => {
-		await applyTradeNotification(tradeIpcProtocol.itemCopyUpdated, value);
-	});
-	settingsBackground.onChanged(tradeSettings.statPreset, async ({ value }) => {
-		await applyTradeNotification(tradeIpcProtocol.statPresetUpdated, value);
-	});
 
 	// 动态 content script 会跨 service worker 生命周期保留，启动时必须按当前设置重新校准注册状态。
 	void initializeSettings().catch((error) => {
@@ -44,19 +36,17 @@ async function initializeSettings(): Promise<void> {
 	}
 }
 
-async function setTranslateEnabled(enabled: boolean): Promise<boolean> {
+async function setTranslateEnabled(enabled: boolean): Promise<void> {
 	await settingsBackground.set(tradeSettings.translate, enabled);
-	return applyTranslateSetting(enabled);
+	await queueTranslateInjectionSync(enabled);
 }
 
-async function setItemCopyEnabled(enabled: boolean): Promise<boolean> {
+async function setItemCopyEnabled(enabled: boolean): Promise<void> {
 	await settingsBackground.set(tradeSettings.itemCopy, enabled);
-	return applyTradeNotification(tradeIpcProtocol.itemCopyUpdated, enabled);
 }
 
-async function setStatPresetEnabled(enabled: boolean): Promise<boolean> {
+async function setStatPresetEnabled(enabled: boolean): Promise<void> {
 	await settingsBackground.set(tradeSettings.statPreset, enabled);
-	return applyTradeNotification(tradeIpcProtocol.statPresetUpdated, enabled);
 }
 
 async function getStatPresetEnabled(): Promise<boolean> {
@@ -66,39 +56,6 @@ async function getStatPresetEnabled(): Promise<boolean> {
 		console.warn("[poe2-extensions] 筛选预设保存设置读取失败", error);
 		return tradeSettings.statPreset.defaultValue;
 	}
-}
-
-async function applyTranslateSetting(enabled: boolean): Promise<boolean> {
-	try {
-		await queueTranslateInjectionSync(enabled);
-		const tabId = await getActiveTradeTabId();
-		if (tabId === null) return false;
-		await browser.tabs.reload(tabId);
-		return true;
-	} catch (error) {
-		console.warn("[poe2-extensions] trade2 页面设置同步失败", error);
-		return false;
-	}
-}
-
-async function applyTradeNotification(
-	notification: IpcNotificationDefinition<TradeFeatureUpdateData>,
-	enabled: boolean,
-): Promise<boolean> {
-	try {
-		const tabId = await getActiveTradeTabId();
-		if (tabId === null) return false;
-		await ipcWindow.send(tabId, notification, { enabled });
-		return true;
-	} catch (error) {
-		console.warn("[poe2-extensions] trade2 页面设置同步失败", error);
-		return false;
-	}
-}
-
-async function getActiveTradeTabId(): Promise<number | null> {
-	const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-	return tab?.id && isTrade2Url(tab.url) ? tab.id : null;
 }
 
 function queueTranslateInjectionSync(enabled: boolean): Promise<void> {
@@ -137,16 +94,6 @@ async function syncTradeTranslateInjection(enabled: boolean): Promise<void> {
 			persistAcrossSessions: true,
 		},
 	]);
-}
-
-function isTrade2Url(url: string | undefined): boolean {
-	if (!url) return false;
-	try {
-		const parsedUrl = new URL(url);
-		return parsedUrl.origin === "https://www.pathofexile.com" && parsedUrl.pathname.startsWith("/trade2");
-	} catch {
-		return false;
-	}
 }
 
 /**

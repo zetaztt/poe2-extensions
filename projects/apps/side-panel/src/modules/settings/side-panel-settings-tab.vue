@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import { storeToRefs } from "pinia";
-import { computed, onActivated, ref, watch } from "vue";
-import { SettingsServiceErrorCode, tradeSettings, type TradeSetting } from "@poe2-extensions/core/trade";
+import { computed, onActivated, watch } from "vue";
+import { SettingsServiceErrorCode } from "@poe2-extensions/core/trade";
+import { showSnackBar, SidePanelSnackBarType } from "../../common/snack-bar/side-panel-snack-bar";
 import { useSettingsStore } from "./side-panel-settings-store";
 
 const settingsStore = useSettingsStore();
 const { settings, isLoading: isLoadingSettings, isSaving: isSavingSettings, lastError } = storeToRefs(settingsStore);
-const settingsStatusText = ref("");
 const tradeTranslateEnabled = computed(() => settings.value?.translate ?? false);
 const tradeItemCopyEnabled = computed(() => settings.value?.itemCopy ?? false);
 const tradeStatPresetEnabled = computed(() => settings.value?.statPreset ?? false);
@@ -29,38 +29,45 @@ onActivated(() => {
 watch(lastError, (error) => {
 	if (!error) return;
 	if (error.code === SettingsServiceErrorCode.LoadFailed) {
-		settingsStatusText.value = "设置读取失败，请稍后重试。";
+		showSnackBar("设置读取失败，请稍后重试。", SidePanelSnackBarType.Error);
 	} else if (error.code === SettingsServiceErrorCode.PersistenceFailed) {
-		settingsStatusText.value = "设置未能保存到同步存储，请稍后重试。";
-	} else {
-		settingsStatusText.value = "设置应用失败，请稍后重试。";
+		showSnackBar("设置未能保存到同步存储，请稍后重试。", SidePanelSnackBarType.Error);
 	}
 });
 
-function onTranslateChange(event: Event): void {
-	void onSettingToggle(event, tradeSettings.translate);
-}
-
-function onItemCopyChange(event: Event): void {
-	void onSettingToggle(event, tradeSettings.itemCopy);
-}
-
-function onStatPresetChange(event: Event): void {
-	void onSettingToggle(event, tradeSettings.statPreset);
-}
-
-async function onSettingToggle(event: Event, setting: TradeSetting): Promise<void> {
-	settingsStatusText.value = "";
+async function onTranslateChange(event: Event): Promise<void> {
 	const enabled = (event.target as HTMLInputElement).checked;
 
 	try {
-		const activeTradeTabUpdated = await settingsStore.setSetting(setting, enabled);
-		settingsStatusText.value = activeTradeTabUpdated
-			? "设置已应用，trade2 页面已更新。"
-			: "设置已应用，打开或刷新 trade2 页面后生效。";
+		await settingsStore.setTranslateEnabled(enabled);
+		showSnackBar("设置已应用，请刷新 trade2 页面查看效果。", SidePanelSnackBarType.Success);
 	} catch (error) {
-		settingsStatusText.value = "设置应用失败，请稍后重试。";
-		console.error("[poe2-extensions] trade 设置保存失败", error);
+		showSnackBar("设置应用失败，请稍后重试。", SidePanelSnackBarType.Error);
+		console.error("[poe2-extensions] 翻译设置保存失败", error);
+	}
+}
+
+async function onItemCopyChange(event: Event): Promise<void> {
+	const enabled = (event.target as HTMLInputElement).checked;
+
+	try {
+		await settingsStore.setItemCopyEnabled(enabled);
+		showSnackBar("设置已应用。", SidePanelSnackBarType.Success);
+	} catch (error) {
+		showSnackBar("设置应用失败，请稍后重试。", SidePanelSnackBarType.Error);
+		console.error("[poe2-extensions] 复制设置保存失败", error);
+	}
+}
+
+async function onStatPresetChange(event: Event): Promise<void> {
+	const enabled = (event.target as HTMLInputElement).checked;
+
+	try {
+		await settingsStore.setStatPresetEnabled(enabled);
+		showSnackBar("设置已应用。", SidePanelSnackBarType.Success);
+	} catch (error) {
+		showSnackBar("设置应用失败，请稍后重试。", SidePanelSnackBarType.Error);
+		console.error("[poe2-extensions] 筛选预设设置保存失败", error);
 	}
 }
 </script>
@@ -119,8 +126,6 @@ async function onSettingToggle(event: Event, setting: TradeSetting): Promise<voi
 					:class="{ active: tradeTranslateEnabled || tradeItemCopyEnabled || tradeStatPresetEnabled }"></span>
 				<span>{{ isLoadingSettings ? "读取设置中" : statusLabel }}</span>
 			</div>
-
-			<p v-if="settingsStatusText" class="message">{{ settingsStatusText }}</p>
 		</section>
 
 		<section class="panel muted">
@@ -164,7 +169,6 @@ h2 {
 }
 
 .setting-description,
-.message,
 .muted {
 	color: var(--color-text);
 }
@@ -270,13 +274,6 @@ h2 {
 	border-color: #a38d6d;
 	background: #a38d6d;
 	box-shadow: none;
-}
-
-.message {
-	padding: 8px 10px;
-	border: 1px solid #333;
-	font-size: 11px;
-	line-height: 1.4;
 }
 
 a {

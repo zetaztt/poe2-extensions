@@ -8,7 +8,6 @@ import {
 import {
 	SettingsServiceErrorCode,
 	tradeSettings,
-	type TradeSetting,
 	type TradeSettingKey,
 	type TradeSettings,
 } from "@poe2-extensions/core/trade";
@@ -56,7 +55,7 @@ export const useSettingsStore = defineStore("settings", () => {
 		ensureSettingsNotificationsInstalled();
 		isLoading.value = true;
 		loadPromise = settingsService
-			.getValues([tradeSettings.translate, tradeSettings.itemCopy, tradeSettings.statPreset] as const)
+			.getValues(tradeSettings.members)
 			.then((snapshots) => {
 				for (const snapshot of snapshots) applySettingSnapshot(snapshot);
 				areSettingsLoaded = true;
@@ -76,8 +75,8 @@ export const useSettingsStore = defineStore("settings", () => {
 	async function updateSetting<TKey extends keyof TradeSettings>(
 		settingKey: TKey,
 		value: TradeSettings[TKey],
-		update: (value: TradeSettings[TKey]) => Promise<boolean>,
-	): Promise<boolean> {
+		update: (value: TradeSettings[TKey]) => Promise<void>,
+	): Promise<void> {
 		if (isSaving.value) throw new Error("设置正在保存中");
 
 		ensureSettingsNotificationsInstalled();
@@ -96,7 +95,7 @@ export const useSettingsStore = defineStore("settings", () => {
 
 		settings.value = optimisticSettings;
 		try {
-			return await update(value);
+			await update(value);
 		} catch (error) {
 			// 若期间已收到 background 广播，则保留较新的权威快照，不用旧值覆盖。
 			if (settings.value === optimisticSettings) settings.value = previousSettings;
@@ -107,33 +106,16 @@ export const useSettingsStore = defineStore("settings", () => {
 		}
 	}
 
-	function setSetting<TMember extends TradeSetting>(
-		member: TMember,
-		value: SettingMemberValue<TMember>,
-	): Promise<boolean> {
-		// member key 在运行时重新关联聚合字段和具名 trade RPC；分支内断言恢复联合类型擦除的值类型。
-		switch (member.key) {
-			case tradeSettings.translate.key:
-				return updateSetting(
-					"translate",
-					value as TradeSettings["translate"],
-					settingsService.setTranslateEnabled,
-				);
-			case tradeSettings.itemCopy.key:
-				return updateSetting(
-					"itemCopy",
-					value as TradeSettings["itemCopy"],
-					settingsService.setItemCopyEnabled,
-				);
-			case tradeSettings.statPreset.key:
-				return updateSetting(
-					"statPreset",
-					value as TradeSettings["statPreset"],
-					settingsService.setStatPresetEnabled,
-				);
-			default:
-				throw new Error("未知的 trade 设置项");
-		}
+	function setTranslateEnabled(enabled: boolean): Promise<void> {
+		return updateSetting("translate", enabled, settingsService.setTranslateEnabled);
+	}
+
+	function setItemCopyEnabled(enabled: boolean): Promise<void> {
+		return updateSetting("itemCopy", enabled, settingsService.setItemCopyEnabled);
+	}
+
+	function setStatPresetEnabled(enabled: boolean): Promise<void> {
+		return updateSetting("statPreset", enabled, settingsService.setStatPresetEnabled);
 	}
 
 	function ensureSettingsNotificationsInstalled(): void {
@@ -155,22 +137,8 @@ export const useSettingsStore = defineStore("settings", () => {
 		const currentRevision = settingRevisions.get(member.key) ?? -1;
 		if (snapshot.revision < currentRevision) return;
 		settingRevisions.set(member.key, snapshot.revision);
-		applyKnownSettingSnapshot(member, snapshot);
+		applySettingValue(member.name, snapshot.value as SettingMemberValue<typeof member>);
 		clearError();
-	}
-
-	function applyKnownSettingSnapshot(member: TradeSetting, snapshot: SettingValueSnapshot): void {
-		switch (member.key) {
-			case tradeSettings.translate.key:
-				applySettingValue("translate", snapshot.value as TradeSettings["translate"]);
-				break;
-			case tradeSettings.itemCopy.key:
-				applySettingValue("itemCopy", snapshot.value as TradeSettings["itemCopy"]);
-				break;
-			case tradeSettings.statPreset.key:
-				applySettingValue("statPreset", snapshot.value as TradeSettings["statPreset"]);
-				break;
-		}
 	}
 
 	function applySettingValue<TKey extends keyof TradeSettings>(key: TKey, value: TradeSettings[TKey]): void {
@@ -195,7 +163,9 @@ export const useSettingsStore = defineStore("settings", () => {
 		isSaving,
 		lastError,
 		loadSettings,
-		setSetting,
+		setTranslateEnabled,
+		setItemCopyEnabled,
+		setStatPresetEnabled,
 	};
 });
 

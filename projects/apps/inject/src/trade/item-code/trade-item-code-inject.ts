@@ -1,6 +1,6 @@
-import { settingsIpcProtocol } from "@poe2-extensions/core/settings";
-import { tradeIpcProtocol, tradeSettings } from "@poe2-extensions/core/trade";
-import { ipcMain, ipcWindow } from "../../inject-ipc-channels";
+import { settingsIpcProtocol, type SettingValueSnapshot } from "@poe2-extensions/core/settings";
+import { tradeSettings } from "@poe2-extensions/core/trade";
+import { ipcMain } from "../../inject-ipc-channels";
 import { bootstrapInjectScript } from "../../inject-script";
 import { getTradeSearchItemById, logPrefix } from "../trade-utils";
 import { formatTradeItemText } from "./trade-item-code-format";
@@ -11,8 +11,10 @@ const itemCopyOriginalStyleKey = "poeItemCopyOriginalStyle";
 
 let enabled = false;
 let observer: MutationObserver | null = null;
-// 初始化 RPC 与侧边栏即时通知可能并发；一旦收到通知，就不能再用较旧的初始值覆盖它。
-let hasReceivedItemCopyUpdate = false;
+// 初始化 RPC 与通用设置通知可能并发；按 worker 实例和 revision 拒绝过期快照。
+let itemCopySettingsInstanceId: string | null = null;
+let itemCopySettingsRevision = -1;
+const retiredItemCopySettingsInstanceIds = new Set<string>();
 
 async function initializeTradeItemCopy(): Promise<void> {
 	try {
@@ -20,11 +22,28 @@ async function initializeTradeItemCopy(): Promise<void> {
 			key: tradeSettings.itemCopy.key,
 			defaultValue: tradeSettings.itemCopy.defaultValue,
 		});
-		const initialEnabled = snapshot.value as boolean;
-		if (!hasReceivedItemCopyUpdate) setTradeItemCopyEnabled(initialEnabled);
+		applyItemCopySettingSnapshot(snapshot);
 	} catch (error) {
 		console.warn(`${logPrefix} 复制物品文本初始状态读取失败`, error);
 	}
+}
+
+/**
+ * 应用 itemCopy 的权威设置快照，并隔离 service worker 重启前后可能乱序到达的广播。
+ */
+function applyItemCopySettingSnapshot(snapshot: SettingValueSnapshot): void {
+	if (snapshot.key !== tradeSettings.itemCopy.key) return;
+	if (retiredItemCopySettingsInstanceIds.has(snapshot.instanceId)) return;
+
+	if (snapshot.instanceId !== itemCopySettingsInstanceId) {
+		if (itemCopySettingsInstanceId) retiredItemCopySettingsInstanceIds.add(itemCopySettingsInstanceId);
+		itemCopySettingsInstanceId = snapshot.instanceId;
+		itemCopySettingsRevision = -1;
+	}
+
+	if (snapshot.revision < itemCopySettingsRevision) return;
+	itemCopySettingsRevision = snapshot.revision;
+	setTradeItemCopyEnabled(snapshot.value as boolean);
 }
 
 /**
@@ -168,9 +187,6 @@ bootstrapInjectScript(() => {
 		return;
 	}
 
-	ipcWindow.on(tradeIpcProtocol.itemCopyUpdated, ({ enabled }) => {
-		hasReceivedItemCopyUpdate = true;
-		setTradeItemCopyEnabled(enabled);
-	});
+	ipcMain.on(settingsIpcProtocol.onChanged, applyItemCopySettingSnapshot);
 	void initializeTradeItemCopy();
 });
