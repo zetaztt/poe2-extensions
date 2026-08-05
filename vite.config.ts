@@ -115,6 +115,11 @@ export default defineConfig((env) => {
 		define: {
 			CHROME: "true",
 		},
+		server: {
+			watch: {
+				ignored: [chromeProfileDir],
+			},
+		},
 		plugins: [
 			vue(),
 			webExtension({
@@ -132,7 +137,6 @@ export default defineConfig((env) => {
 					"projects/apps/inject/src/trade/translate/trade-translate-inject.ts",
 					...accessibleResources,
 				],
-				browser: "chrome",
 				watchFilePaths: ["package.json"],
 				skipManifestValidation: true,
 			}),
